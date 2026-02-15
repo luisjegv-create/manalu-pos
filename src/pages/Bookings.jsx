@@ -1,0 +1,216 @@
+import React, { useState } from 'react';
+import { useEvents } from '../context/EventContext';
+import {
+    ArrowLeft,
+    Calendar,
+    Users,
+    Trash2,
+    Plus,
+    Clock,
+    Phone,
+    MessageSquare,
+    Search,
+    CheckCircle2
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const Bookings = () => {
+    const navigate = useNavigate();
+    const { reservations, addReservation, deleteReservation } = useEvents();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isAdding, setIsAdding] = useState(false);
+
+    const [form, setForm] = useState({
+        customerName: '',
+        phone: '',
+        people: 2,
+        date: new Date().toISOString().split('T')[0],
+        time: '20:00',
+        tableId: '',
+        notes: ''
+    });
+
+    const filteredReservations = reservations.filter(r =>
+        r.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.phone.includes(searchTerm)
+    ).sort((a, b) => new Date(`${a.date} ${a.time}`) - new Date(`${b.date} ${b.time}`));
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        addReservation(form);
+        setIsAdding(false);
+        setForm({ customerName: '', phone: '', people: 2, date: new Date().toISOString().split('T')[0], time: '20:00', tableId: '', notes: '' });
+    };
+
+    return (
+        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button onClick={() => navigate('/')} className="btn-icon"><ArrowLeft /></button>
+                    <div>
+                        <h1 style={{ margin: 0 }}>Reservas de Mesas</h1>
+                        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Control de ocupación y clientes</p>
+                    </div>
+                </div>
+                <button className="btn-primary" onClick={() => setIsAdding(true)}>
+                    <Plus size={18} /> Nueva Reserva
+                </button>
+            </header>
+
+            <div style={{ marginBottom: '2rem', position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} size={18} />
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre o teléfono..."
+                    className="glass-panel"
+                    style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', color: 'white' }}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                {filteredReservations.map(res => (
+                    <motion.div
+                        layout
+                        key={res.id}
+                        className="glass-panel"
+                        style={{ padding: '1.5rem', borderLeft: '4px solid #fbbf24' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <div style={{ fontWeight: '800', fontSize: '1.2rem' }}>{res.customerName}</div>
+                            <button
+                                onClick={() => deleteReservation(res.id)}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Calendar size={16} /> {new Date(res.date).toLocaleDateString()}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Clock size={16} /> {res.time}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Users size={16} /> {res.people} personas
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <CheckCircle2 size={16} color="#fbbf24" /> {res.tableId ? `Mesa ${res.tableId}` : 'Mesa pendiente'}
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24' }}>
+                                <Phone size={14} /> {res.phone}
+                            </div>
+                            {res.notes && (
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                    <MessageSquare size={14} style={{ marginTop: '3px' }} /> {res.notes}
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                ))}
+
+                {filteredReservations.length === 0 && (
+                    <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', color: '#64748b' }}>
+                        <Calendar size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                        <p>No hay reservas próximas.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Modal de Nueva Reserva */}
+            <AnimatePresence>
+                {isAdding && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                        <motion.form
+                            onSubmit={handleSave}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="glass-panel"
+                            style={{ padding: '2rem', width: '90%', maxWidth: '500px', border: '1px solid #fbbf24' }}
+                        >
+                            <h2 style={{ marginTop: 0 }}>Nueva Reserva</h2>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label>Nombre del Cliente</label>
+                                    <input
+                                        required
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.customerName}
+                                        onChange={e => setForm({ ...form, customerName: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label>Teléfono</label>
+                                    <input
+                                        required
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.phone}
+                                        onChange={e => setForm({ ...form, phone: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label>Personas</label>
+                                    <input
+                                        type="number"
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.people}
+                                        onChange={e => setForm({ ...form, people: parseInt(e.target.value) })}
+                                    />
+                                </div>
+                                <div>
+                                    <label>Fecha</label>
+                                    <input
+                                        type="date"
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.date}
+                                        onChange={e => setForm({ ...form, date: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label>Hora</label>
+                                    <input
+                                        type="time"
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.time}
+                                        onChange={e => setForm({ ...form, time: e.target.value })}
+                                    />
+                                </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label>Mesa (Opcional)</label>
+                                    <input
+                                        placeholder="Ej. 4, Barra, Terraza..."
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        value={form.tableId}
+                                        onChange={e => setForm({ ...form, tableId: e.target.value })}
+                                    />
+                                </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label>Notas</label>
+                                    <textarea
+                                        className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white', minHeight: '80px' }}
+                                        value={form.notes}
+                                        onChange={e => setForm({ ...form, notes: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                                <button type="button" onClick={() => setIsAdding(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>Cancelar</button>
+                                <button type="submit" className="btn-primary">Guardar Reserva</button>
+                            </div>
+                        </motion.form>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+export default Bookings;

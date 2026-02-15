@@ -1,0 +1,12 @@
+export const categories = [
+    { id: 'tapas', name: 'Tapas', icon: 'Utensils' },
+    { id: 'bocatas', name: 'Bocatas', icon: 'Sandwich' },
+    { id: 'bebidas', name: 'Bebidas', icon: 'Beer' },
+    { id: 'vinos', name: 'Vinos', icon: 'Wine' },
+    { id: 'postres', name: 'Postres', icon: 'Cake' }
+];
+
+export const products = [
+    // { id: 1, name: 'Patatas Bravas', price: 4.50, category: 'tapas', image: '🥔' },
+    // ... products commented out for production
+];
