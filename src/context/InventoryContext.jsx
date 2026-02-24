@@ -306,22 +306,35 @@ export const InventoryProvider = ({ children }) => {
 
     const updateProduct = async (id, updatedData) => {
         try {
-            const { error } = await supabase.from('products').update({
-                name: updatedData.name,
-                price: parseFloat(updatedData.price) || 0,
-                category: updatedData.category,
-                image: updatedData.image,
-                description: updatedData.description,
-                allergens: updatedData.allergens,
-                recommended_wine: updatedData.recommendedWine,
-                is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false
-            }).eq('id', id);
+            // First check if it's a regular product
+            const { data: isProd } = await supabase.from('products').select('id').eq('id', id).single();
 
-            if (error) throw error;
-            setBaseProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+            if (isProd) {
+                const { error } = await supabase.from('products').update({
+                    name: updatedData.name,
+                    price: parseFloat(updatedData.price) || 0,
+                    category: updatedData.category,
+                    image: updatedData.image,
+                    description: updatedData.description,
+                    allergens: updatedData.allergens,
+                    recommended_wine: updatedData.recommendedWine,
+                    is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false
+                }).eq('id', id);
+
+                if (error) throw error;
+                setBaseProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+            } else {
+                // If not in products, check if it's a wine
+                const { data: isWine } = await supabase.from('wines').select('id').eq('id', id).single();
+                if (isWine) {
+                    await updateWine(id, updatedData);
+                } else {
+                    throw new Error("No se encontró el producto ni el vino para actualizar.");
+                }
+            }
         } catch (error) {
             console.error("Error al actualizar producto:", error);
-            alert("Error al actualizar el producto: " + (error.message || "Error desconocido"));
+            alert("Error al actualizar: " + (error.message || "Error desconocido"));
         }
     };
 
