@@ -145,6 +145,40 @@ const BarTapas = () => {
     };
 
 
+    const handleConfirmPartialPayment = async (method) => {
+        const success = await payPartialTable(currentTable.id, partialPaymentModal.itemsToPay, method);
+        if (success) {
+            alert('Pago parcial procesado correctamente.');
+            setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
+            if (!bill || bill.length === 0) {
+                navigate('/tables');
+            }
+        } else {
+            alert('Error al procesar el pago parcial.');
+        }
+    };
+
+    const updatePartialQuantity = (item, delta) => {
+        setPartialPaymentModal(prev => {
+            const existing = prev.itemsToPay.find(i => i.uniqueId === item.uniqueId);
+            const billItem = bill.find(i => i.uniqueId === item.uniqueId);
+
+            if (existing) {
+                const newQuantity = Math.max(0, Math.min(billItem.quantity, existing.quantity + delta));
+                if (newQuantity === 0) {
+                    return { ...prev, itemsToPay: prev.itemsToPay.filter(i => i.uniqueId !== item.uniqueId) };
+                }
+                return {
+                    ...prev,
+                    itemsToPay: prev.itemsToPay.map(i => i.uniqueId === item.uniqueId ? { ...i, quantity: newQuantity } : i)
+                };
+            } else if (delta > 0) {
+                return { ...prev, itemsToPay: [...prev.itemsToPay, { ...item, quantity: 1 }] };
+            }
+            return prev;
+        });
+    };
+
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -799,7 +833,19 @@ const BarTapas = () => {
                                     {bill.map((item, idx) => (
                                         <div key={idx} style={{ display: 'flex', flexDirection: 'column', fontSize: '0.85rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                <span style={{ flex: 1 }}>{item.name}</span>
+                                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(`¿Seguro que quieres borrar ${item.name} de la cuenta? El stock se recuperará automáticamente.`)) {
+                                                                removeProductFromBill(currentTable.id, item.uniqueId, item.quantity);
+                                                            }
+                                                        }}
+                                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 4px' }}
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                    <span>{item.name}</span>
+                                                </div>
                                                 <span style={{ width: '40px', textAlign: 'center' }}>{item.quantity}</span>
                                                 <span style={{ width: '60px', textAlign: 'right' }}>{(item.price * item.quantity).toFixed(2)}€</span>
                                             </div>
@@ -1046,7 +1092,137 @@ const BarTapas = () => {
             </AnimatePresence>
 
 
-            {/* MODIFIERS MODAL */}
+            {/* PARTIAL PAYMENT MODAL */}
+            <AnimatePresence>
+                {partialPaymentModal.isOpen && (
+                    <div style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200
+                    }}>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            className="glass-panel"
+                            style={{
+                                padding: '2rem',
+                                width: '90%',
+                                maxWidth: '600px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1.5rem',
+                                border: '1px solid var(--color-primary)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
+                                <h2 style={{ margin: 0 }}>Cobrar por Partes</h2>
+                                <button
+                                    onClick={() => setPartialPaymentModal({ isOpen: false, itemsToPay: [] })}
+                                    style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '50vh', overflowY: 'auto', padding: '0.5rem' }}>
+                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Indica cuánto se va a pagar de cada producto:</p>
+                                {bill.map(item => {
+                                    const selectedItem = partialPaymentModal.itemsToPay.find(i => i.uniqueId === item.uniqueId);
+                                    const currentQty = selectedItem ? selectedItem.quantity : 0;
+
+                                    return (
+                                        <div
+                                            key={item.uniqueId}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '1rem',
+                                                background: currentQty > 0 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.03)',
+                                                borderRadius: '12px',
+                                                border: currentQty > 0 ? '1px solid var(--color-primary)' : '1px solid var(--glass-border)',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '500' }}>{item.name}</div>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                                    Pendiente: {item.quantity} ud. a {item.price.toFixed(2)}€
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '25px', padding: '4px' }}>
+                                                    <button
+                                                        onClick={() => updatePartialQuantity(item, -1)}
+                                                        disabled={currentQty === 0}
+                                                        style={{
+                                                            width: '32px', height: '32px', borderRadius: '50%', border: 'none',
+                                                            background: currentQty > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                            color: currentQty > 0 ? '#ef4444' : '#64748b',
+                                                            cursor: currentQty > 0 ? 'pointer' : 'default',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        <Minus size={16} />
+                                                    </button>
+                                                    <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                                        {currentQty}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => updatePartialQuantity(item, 1)}
+                                                        disabled={currentQty >= item.quantity}
+                                                        style={{
+                                                            width: '32px', height: '32px', borderRadius: '50%', border: 'none',
+                                                            background: currentQty < item.quantity ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                            color: currentQty < item.quantity ? '#10b981' : '#64748b',
+                                                            cursor: currentQty < item.quantity ? 'pointer' : 'default',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                        }}
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+                                                <div style={{ width: '80px', textAlign: 'right', fontWeight: 'bold', color: currentQty > 0 ? 'var(--color-primary)' : 'white' }}>
+                                                    {(item.price * currentQty).toFixed(2)}€
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', marginTop: 'auto' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
+                                    <span>Total a Cobrar:</span>
+                                    <span style={{ color: 'var(--color-primary)' }}>
+                                        {partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(2)}€
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <button
+                                        disabled={partialPaymentModal.itemsToPay.length === 0}
+                                        className="btn-primary"
+                                        style={{ background: '#10b981', opacity: partialPaymentModal.itemsToPay.length === 0 ? 0.5 : 1 }}
+                                        onClick={() => handleConfirmPartialPayment('Efectivo')}
+                                    >
+                                        <Banknote size={20} /> Efectivo
+                                    </button>
+                                    <button
+                                        disabled={partialPaymentModal.itemsToPay.length === 0}
+                                        className="btn-primary"
+                                        style={{ background: '#3b82f6', opacity: partialPaymentModal.itemsToPay.length === 0 ? 0.5 : 1 }}
+                                        onClick={() => handleConfirmPartialPayment('Tarjeta')}
+                                    >
+                                        <CreditCard size={20} /> Tarjeta
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
             <AnimatePresence>
                 {modifierModal.isOpen && modifierModal.product && (
                     <div style={{

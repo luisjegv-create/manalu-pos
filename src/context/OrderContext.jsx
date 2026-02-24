@@ -331,11 +331,15 @@ export const OrderProvider = ({ children }) => {
             total,
             payment_method: paymentMethod,
             items: JSON.stringify(itemsToPay),
-            table_id: tableId,
-            notes: 'Pago parcial'
+            table_id: tableId
         }]).select();
 
-        if (!error && data) {
+        if (error) {
+            console.error("Error en pago parcial Supabase:", error);
+            return false;
+        }
+
+        if (data) {
             const saleRecord = {
                 ...data[0],
                 date: new Date(data[0].created_at),
