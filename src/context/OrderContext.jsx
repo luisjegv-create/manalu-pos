@@ -13,22 +13,25 @@ export const OrderProvider = ({ children }) => {
     const { deductStockForOrder } = useInventory();
     const { recordSale } = useCustomers();
 
+    // Helper for safe parsing
+    const safeParse = (key, fallback) => {
+        try {
+            const saved = localStorage.getItem(key);
+            if (!saved) return fallback;
+            return JSON.parse(saved);
+        } catch (e) {
+            console.error(`Error parsing ${key}:`, e);
+            return fallback;
+        }
+    };
+
     // Tables state (Sync with Supabase in future if needed, for now local is okay for layout)
-    const [tables, setTables] = useState(() => {
-        const saved = localStorage.getItem('manalu_tables');
-        return saved ? JSON.parse(saved) : initialTables;
-    });
+    const [tables, setTables] = useState(() => safeParse('manalu_tables', initialTables));
 
     // Active orders (Drafts) - Keep in localStorage for low latency/offline safety during rush
-    const [tableOrders, setTableOrders] = useState(() => {
-        const saved = localStorage.getItem('manalu_table_orders');
-        return saved ? JSON.parse(saved) : {};
-    });
+    const [tableOrders, setTableOrders] = useState(() => safeParse('manalu_table_orders', {}));
 
-    const [tableBills, setTableBills] = useState(() => {
-        const saved = localStorage.getItem('manalu_table_bills');
-        return saved ? JSON.parse(saved) : {};
-    });
+    const [tableBills, setTableBills] = useState(() => safeParse('manalu_table_bills', {}));
 
     // Cloud Synchronized States
     const [kitchenOrders, setKitchenOrders] = useState([]);

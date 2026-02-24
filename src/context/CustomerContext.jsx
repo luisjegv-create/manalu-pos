@@ -11,10 +11,20 @@ const initialCustomers = [
 ];
 
 export const CustomerProvider = ({ children }) => {
-    const [customers, setCustomers] = useState(() => {
-        const saved = localStorage.getItem('manalu_customers');
-        return saved ? JSON.parse(saved) : initialCustomers;
-    });
+    // Helper for safe parsing
+    const safeParse = (key, fallback) => {
+        try {
+            const saved = localStorage.getItem(key);
+            if (!saved) return fallback;
+            const parsed = JSON.parse(saved);
+            return (Array.isArray(fallback) && !Array.isArray(parsed)) ? fallback : parsed;
+        } catch (e) {
+            console.error(`Error parsing ${key}:`, e);
+            return fallback;
+        }
+    };
+
+    const [customers, setCustomers] = useState(() => safeParse('manalu_customers', initialCustomers));
 
     useEffect(() => {
         localStorage.setItem('manalu_customers', JSON.stringify(customers));
