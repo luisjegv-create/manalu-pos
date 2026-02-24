@@ -110,7 +110,21 @@ export const EventProvider = ({ children }) => {
 
     const addReservation = (res) => {
         setReservations(prev => {
-            const next = [...prev, { ...res, id: Date.now().toString(), status: 'confirmed' }];
+            const next = [...prev, {
+                ...res,
+                id: Date.now().toString(),
+                status: res.status || 'confirmado',
+                tags: res.tags || [],
+                createdAt: new Date().toISOString()
+            }];
+            localStorage.setItem('manalu_reservations', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const updateReservation = (resId, updates) => {
+        setReservations(prev => {
+            const next = prev.map(r => r.id === resId ? { ...r, ...updates } : r);
             localStorage.setItem('manalu_reservations', JSON.stringify(next));
             return next;
         });
@@ -220,6 +234,7 @@ export const EventProvider = ({ children }) => {
             toggleTask,
             deleteEvent,
             addReservation,
+            updateReservation,
             deleteReservation,
             addMenu,
             updateMenu,
