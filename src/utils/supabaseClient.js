@@ -25,5 +25,12 @@ export const supabase = supabaseUrl
             delete: () => ({
                 eq: () => Promise.resolve({ data: null, error: 'Missing Credentials' })
             })
-        })
+        }),
+        channel: () => ({
+            on: () => ({
+                subscribe: () => ({})
+            }),
+            subscribe: () => ({})
+        }),
+        removeChannel: () => { }
     };
