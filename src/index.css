@@ -2,6 +2,7 @@
   --color-bg: #0f172a;
   --color-surface: #1e293b;
   --color-primary: #3b82f6;
+  --color-primary-rgb: 59, 130, 246;
   --color-secondary: #ec4899;
   --color-accent: #8b5cf6;
   --color-text: #f8fafc;
@@ -25,13 +26,16 @@ body {
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--color-bg);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-surface);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-primary);
 }
@@ -39,8 +43,8 @@ body {
 /* Utilities */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -62,6 +66,8 @@ body {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   letter-spacing: -0.025em;
 }

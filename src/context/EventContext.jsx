@@ -16,23 +16,50 @@ export const EventProvider = ({ children }) => {
         const syncEvents = async () => {
             setLoading(true);
             try {
-                const { data: agendaData } = await supabase.from('agenda').select('*').order('date', { ascending: true });
+                const { data: agendaData, error: agendaError } = await supabase.from('agenda').select('*').order('date', { ascending: true });
+                if (agendaError) console.error("Agenda Fetch Error:", agendaError);
+
                 if (agendaData) {
-                    setAgenda(agendaData.map(a => ({
-                        ...a,
-                        tasks: typeof a.tasks === 'string' ? JSON.parse(a.tasks) : (a.tasks || []),
-                        selectedMenus: typeof a.selected_menus === 'string'
-                            ? JSON.parse(a.selected_menus)
-                            : (a.selected_menus || (a.menu_id ? [{ menuId: a.menu_id, quantity: a.guests || 0 }] : []))
-                    })));
+                    setAgenda(agendaData.map(a => {
+                        let parsedTasks = [];
+                        try {
+                            parsedTasks = typeof a.tasks === 'string' ? JSON.parse(a.tasks) : (a.tasks || []);
+                        } catch (e) {
+                            console.warn("Failed to parse tasks for event:", a.id, e);
+                            parsedTasks = [];
+                        }
+
+                        let parsedMenus = [];
+                        try {
+                            parsedMenus = typeof a.selected_menus === 'string'
+                                ? JSON.parse(a.selected_menus)
+                                : (a.selected_menus || (a.menu_id ? [{ menuId: a.menu_id, quantity: a.guests || 0 }] : []));
+                        } catch (e) {
+                            console.warn("Failed to parse menus for event:", a.id, e);
+                            parsedMenus = a.menu_id ? [{ menuId: a.menu_id, quantity: a.guests || 0 }] : [];
+                        }
+
+                        return {
+                            ...a,
+                            tasks: parsedTasks,
+                            selectedMenus: parsedMenus
+                        };
+                    }));
                 }
 
-                const { data: menuData } = await supabase.from('event_menus').select('*');
+                const { data: menuData, error: menuError } = await supabase.from('event_menus').select('*');
+                if (menuError) console.error("Menu Fetch Error:", menuError);
+
                 if (menuData) {
-                    setEventMenus(menuData.map(m => ({
-                        ...m,
-                        items: typeof m.items === 'string' ? JSON.parse(m.items) : (m.items || [])
-                    })));
+                    setEventMenus(menuData.map(m => {
+                        let items = [];
+                        try {
+                            items = typeof m.items === 'string' ? JSON.parse(m.items) : (m.items || []);
+                        } catch (e) {
+                            console.warn("Failed to parse items for menu:", m.id, e);
+                        }
+                        return { ...m, items };
+                    }));
                 }
 
                 // Note: reservations table not yet created in sql script, using local for now or assume it exists
