@@ -12,18 +12,18 @@ export const supabase = supabaseUrl
     : {
         from: () => ({
             select: () => ({
-                single: () => Promise.resolve({ data: null, error: 'Missing Credentials' }),
-                order: () => ({ limit: () => Promise.resolve({ data: [], error: 'Missing Credentials' }) }),
-                eq: () => Promise.resolve({ data: [], error: 'Missing Credentials' })
+                single: () => Promise.resolve({ data: null, error: { message: 'Faltan las credenciales de Supabase en Vercel' } }),
+                order: () => ({ limit: () => Promise.resolve({ data: [], error: { message: 'Faltan las credenciales de Supabase en Vercel' } }) }),
+                eq: () => Promise.resolve({ data: [], error: { message: 'Faltan las credenciales de Supabase en Vercel' } })
             }),
             insert: () => ({
-                select: () => Promise.resolve({ data: [], error: 'Missing Credentials' })
+                select: () => Promise.resolve({ data: [], error: { message: 'Faltan las credenciales de Supabase en Vercel' } })
             }),
             update: () => ({
-                eq: () => Promise.resolve({ data: null, error: 'Missing Credentials' })
+                eq: () => Promise.resolve({ data: null, error: { message: 'Faltan las credenciales de Supabase en Vercel' } })
             }),
             delete: () => ({
-                eq: () => Promise.resolve({ data: null, error: 'Missing Credentials' })
+                eq: () => Promise.resolve({ data: null, error: { message: 'Faltan las credenciales de Supabase en Vercel' } })
             })
         }),
         channel: () => ({
