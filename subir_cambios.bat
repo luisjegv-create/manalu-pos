@@ -12,7 +12,7 @@ git commit -m "Actualizacion: Mejoras en Eventos, Calendario y TPV"
 
 echo.
 echo 3. Enviando a la nube (Vercel)...
-git push
+git push origin main
 
 echo.
 echo ==========================================
