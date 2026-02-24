@@ -458,6 +458,27 @@ export const InventoryProvider = ({ children }) => {
         });
     };
 
+    const returnStockForItems = async (items) => {
+        items.forEach(async item => {
+            if (item.isWine) {
+                const currentStock = wines.find(w => w.id === item.id)?.stock || 0;
+                await updateWine(item.id, { stock: currentStock + item.quantity });
+            }
+
+            const productRecipe = recipes[item.id];
+            if (productRecipe) {
+                productRecipe.forEach(async recipeItem => {
+                    const amount = recipeItem.quantity * item.quantity;
+                    const ing = ingredients.find(i => i.id === (recipeItem.ingredient_id || recipeItem.ingredientId));
+                    if (ing) {
+                        const newQty = ing.quantity + amount;
+                        await updateIngredient(ing.id, { ...ing, quantity: newQty });
+                    }
+                });
+            }
+        });
+    };
+
     const addProductWithRecipe = async (product, recipeItems) => {
         try {
             const { data, error } = await supabase.from('products').insert([{
@@ -603,6 +624,7 @@ export const InventoryProvider = ({ children }) => {
             updateRecipe,
             getProductCost,
             deductStockForOrder,
+            returnStockForItems,
             addProduct,
             addProductWithRecipe,
             updateProduct,

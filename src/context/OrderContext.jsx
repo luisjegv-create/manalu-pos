@@ -321,6 +321,84 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
+    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo') => {
+        if (!itemsToPay || itemsToPay.length === 0) return;
+
+        const total = calculateOrderTotal(itemsToPay);
+
+        // Save partial sale to Supabase
+        const { data, error } = await supabase.from('sales').insert([{
+            total,
+            payment_method: paymentMethod,
+            items: JSON.stringify(itemsToPay),
+            table_id: tableId,
+            notes: 'Pago parcial'
+        }]).select();
+
+        if (!error && data) {
+            const saleRecord = {
+                ...data[0],
+                date: new Date(data[0].created_at),
+                total,
+                items: itemsToPay,
+                paymentMethod,
+                tableId
+            };
+            setSalesHistory(prev => [saleRecord, ...prev]);
+
+            // Update bill: deduct paid quantities
+            setTableBills(prev => {
+                const currentBill = prev[tableId] || [];
+                const nextBill = currentBill.map(item => {
+                    const paidItem = itemsToPay.find(p => p.uniqueId === item.uniqueId);
+                    if (paidItem) {
+                        return { ...item, quantity: item.quantity - paidItem.quantity };
+                    }
+                    return item;
+                }).filter(item => item.quantity > 0);
+
+                if (nextBill.length === 0) {
+                    updateTableStatus(tableId, 'free');
+                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                    const next = { ...prev };
+                    delete next[tableId];
+                    return next;
+                }
+                return { ...prev, [tableId]: nextBill };
+            });
+            return true;
+        }
+        return false;
+    };
+
+    const { returnStockForItems } = useInventory(); // Ensure it's available
+
+    const removeProductFromBill = (tableId, uniqueId, quantityToRemove) => {
+        setTableBills(prev => {
+            const currentBill = prev[tableId] || [];
+            const itemToRemove = currentBill.find(item => item.uniqueId === uniqueId);
+
+            if (itemToRemove) {
+                // Return stock
+                const returningItems = [{ ...itemToRemove, quantity: Math.min(itemToRemove.quantity, quantityToRemove) }];
+                returnStockForItems(returningItems);
+
+                const nextBill = currentBill.map(item => {
+                    if (item.uniqueId === uniqueId) {
+                        return { ...item, quantity: item.quantity - quantityToRemove };
+                    }
+                    return item;
+                }).filter(item => item.quantity > 0);
+
+                if (nextBill.length === 0 && (!tableOrders[tableId] || tableOrders[tableId].length === 0)) {
+                    updateTableStatus(tableId, 'free');
+                }
+                return { ...prev, [tableId]: nextBill };
+            }
+            return prev;
+        });
+    };
+
     const selectCustomer = (customer) => {
         setSelectedCustomer(customer);
     };
@@ -439,6 +517,8 @@ export const OrderProvider = ({ children }) => {
             calculateBillTotal: () => calculateOrderTotal(bill),
             sendToKitchen,
             closeTable,
+            payPartialTable,
+            removeProductFromBill,
             markOrderReady,
             removeOrder,
             addTable,

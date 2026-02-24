@@ -52,6 +52,8 @@ const BarTapas = () => {
         calculateBillTotal,
         sendToKitchen,
         closeTable,
+        payPartialTable,
+        removeProductFromBill,
         currentTable,
         tables, // Added tables from context
         selectTable, // Added selectTable
@@ -98,6 +100,12 @@ const BarTapas = () => {
 
     // Modifiers State
     const [modifierModal, setModifierModal] = useState({ isOpen: false, product: null, selections: {} });
+
+    // Partial Payment State
+    const [partialPaymentModal, setPartialPaymentModal] = useState({
+        isOpen: false,
+        itemsToPay: []
+    });
 
     const handleProductClick = (product) => {
         if (product.modifiers && product.modifiers.length > 0) {
@@ -272,8 +280,8 @@ const BarTapas = () => {
                     overflowY: 'auto',
                     padding: '1rem',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                    gap: '1.25rem',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                    gap: '1.5rem',
                     alignContent: 'start'
                 }}>
                     <AnimatePresence mode='popLayout'>
@@ -300,6 +308,23 @@ const BarTapas = () => {
                                 whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--color-primary)' }}
                                 whileTap={{ scale: 0.95 }}
                             >
+                                {/* Stock Indicator */}
+                                {product.isWine && product.stock <= 5 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '0.5rem',
+                                        right: '0.5rem',
+                                        background: product.stock === 0 ? '#ef4444' : '#f59e0b',
+                                        color: 'white',
+                                        fontSize: '0.7rem',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontWeight: 'bold',
+                                        zIndex: 5
+                                    }}>
+                                        {product.stock === 0 ? 'AGOTADO' : `QUEDAN ${product.stock}`}
+                                    </div>
+                                )}
                                 <div style={{
                                     width: '120px',
                                     height: '110px',
@@ -691,9 +716,29 @@ const BarTapas = () => {
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 gap: '0.5rem',
+                                background: bill.length > 0 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                color: bill.length > 0 ? '#3b82f6' : '#64748b',
+                                border: bill.length > 0 ? '1px solid #3b82f6' : '1px solid var(--glass-border)',
+                                fontWeight: 'bold'
+                            }}
+                            onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
+                            disabled={bill.length === 0}
+                        >
+                            <CreditCard size={18} /> Cobrar Partes
+                        </button>
+
+                        <button
+                            className="glass-panel"
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: '0.5rem',
                                 background: bill.length > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
                                 color: bill.length > 0 ? '#10b981' : '#64748b',
-                                border: bill.length > 0 ? '1px solid #10b981' : '1px solid var(--glass-border)'
+                                border: bill.length > 0 ? '1px solid #10b981' : '1px solid var(--glass-border)',
+                                fontWeight: 'bold'
                             }}
                             onClick={() => setShowTicket(true)}
                             disabled={bill.length === 0}

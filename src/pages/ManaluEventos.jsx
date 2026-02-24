@@ -287,8 +287,8 @@ const ManaluEventos = () => {
                                     eventMenus.map(menu => (
                                         <div key={menu.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
                                             <div>
-                                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{menu.name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{menu.price}€</div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{menu.name}</div>
+                                                <div style={{ fontSize: '1rem', color: '#94a3b8' }}>{menu.price}€</div>
                                             </div>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <button onClick={() => handleEditMenu(menu)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}><Edit size={14} /></button>
@@ -350,7 +350,7 @@ const ManaluEventos = () => {
                                         <div key={m.menuId} className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)' }}>
                                             <div>
                                                 <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{m.quantity}x</span> {m.name}
-                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{m.price}€ / pax</div>
+                                                <div style={{ fontSize: '1rem', color: '#94a3b8' }}>{m.price}€ / pax</div>
                                             </div>
                                             <button onClick={() => handleRemoveSelectedMenu(m.menuId)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
                                                 <Trash2 size={16} />
@@ -433,7 +433,7 @@ const ManaluEventos = () => {
                                             <div style={{ fontWeight: 'bold' }}>{menu.name}</div>
                                             <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{menu.items?.join(', ')}</div>
                                         </div>
-                                        <div style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{menu.price}€/pax</div>
+                                        <div style={{ fontWeight: 'bold', color: 'var(--color-primary)', fontSize: '1.2rem' }}>{menu.price}€/pax</div>
                                     </button>
                                 ))}
                             </div>

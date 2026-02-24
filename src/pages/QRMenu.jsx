@@ -277,7 +277,7 @@ const QRMenu = () => {
                                                 padding: '0.25rem 0.6rem',
                                                 borderRadius: '8px',
                                                 fontWeight: '700',
-                                                fontSize: '0.9rem',
+                                                fontSize: '1.2rem',
                                                 whiteSpace: 'nowrap',
                                                 marginLeft: '0.5rem',
                                                 boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
