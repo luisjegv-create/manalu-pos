@@ -305,31 +305,39 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const updateProduct = async (id, updatedData) => {
-        const { error } = await supabase.from('products').update({
-            name: updatedData.name,
-            price: updatedData.price,
-            category: updatedData.category,
-            image: updatedData.image,
-            description: updatedData.description,
-            allergens: updatedData.allergens,
-            recommended_wine: updatedData.recommendedWine,
-            is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false
-        }).eq('id', id);
+        try {
+            const { error } = await supabase.from('products').update({
+                name: updatedData.name,
+                price: parseFloat(updatedData.price) || 0,
+                category: updatedData.category,
+                image: updatedData.image,
+                description: updatedData.description,
+                allergens: updatedData.allergens,
+                recommended_wine: updatedData.recommendedWine,
+                is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false
+            }).eq('id', id);
 
-        if (!error) {
+            if (error) throw error;
             setBaseProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+        } catch (error) {
+            console.error("Error al actualizar producto:", error);
+            alert("Error al actualizar el producto: " + (error.message || "Error desconocido"));
         }
     };
 
     const deleteProduct = async (id) => {
-        const { error } = await supabase.from('products').delete().eq('id', id);
-        if (!error) {
+        try {
+            const { error } = await supabase.from('products').delete().eq('id', id);
+            if (error) throw error;
             setBaseProducts(prev => prev.filter(p => p.id !== id));
             setRecipes(prev => {
                 const newRecipes = { ...prev };
                 delete newRecipes[id];
                 return newRecipes;
             });
+        } catch (error) {
+            console.error("Error al borrar producto:", error);
+            alert("Error al borrar el producto: " + (error.message || "Error desconocido"));
         }
     };
 
