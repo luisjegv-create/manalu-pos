@@ -64,7 +64,13 @@ export const EventProvider = ({ children }) => {
 
                 // Note: reservations table not yet created in sql script, using local for now or assume it exists
                 const savedRes = localStorage.getItem('manalu_reservations');
-                setReservations(savedRes ? JSON.parse(savedRes) : []);
+                let parsedRes = [];
+                try {
+                    parsedRes = savedRes ? JSON.parse(savedRes) : [];
+                } catch (e) {
+                    console.error("Error parsing reservations:", e);
+                }
+                setReservations(parsedRes);
 
             } catch (err) {
                 console.error("Event Sync Error:", err);
