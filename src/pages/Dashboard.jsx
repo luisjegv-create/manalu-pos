@@ -111,23 +111,32 @@ const Dashboard = () => {
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <header style={{
+                marginBottom: '3rem',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '0 1rem'
+            }}>
                 <img
-                    src={restaurantInfo.logo || "/logo.png"}
+                    src={restaurantInfo.logo || "/logo-principal.png"}
                     alt={restaurantInfo.name}
                     style={{
-                        height: '180px',
+                        height: 'clamp(100px, 20vw, 180px)',
                         marginBottom: '1rem',
-                        filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.1))'
+                        filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.1))',
+                        maxWidth: '90%'
                     }}
                 />
-                <h1 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{restaurantInfo.name}</h1>
+                <h1 style={{ margin: 0, fontSize: 'clamp(1rem, 4vw, 1.2rem)', color: 'var(--color-text-muted)' }}>{restaurantInfo.name}</h1>
             </header>
 
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '2rem'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 45vw, 300px), 1fr))',
+                gap: 'clamp(1rem, 3vw, 2rem)',
+                padding: '0 0.5rem'
             }}>
                 {modules.map((module, index) => (
                     <Card

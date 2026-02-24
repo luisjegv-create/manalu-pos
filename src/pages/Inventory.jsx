@@ -31,6 +31,14 @@ const Inventory = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
+    // Mobile Responsiveness
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // Ingredient Form Data
     const [formData, setFormData] = useState({
         name: '',
@@ -73,7 +81,7 @@ const Inventory = () => {
         setFormData({
             name: ing.name,
             quantity: ing.quantity,
-            critical: ing.critical || 5,
+            critical: ing.critical || ing.min_stock || 5,
             unit: ing.unit || 'uds',
             cost: ing.cost || 0,
             provider: ing.provider || 'Sin asignar',
@@ -82,6 +90,11 @@ const Inventory = () => {
     };
 
     const handleSave = () => {
+        if (!formData.name || formData.name.trim() === '') {
+            alert("El nombre del ingrediente es obligatorio");
+            return;
+        }
+
         if (editingId) {
             updateIngredient(editingId, formData);
             setEditingId(null);
@@ -210,10 +223,20 @@ const Inventory = () => {
 
             {/* SUPPLIER MANAGEMENT MODE */}
             {activeTab === 'distribuidores' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', minHeight: '600px' }}>
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '300px 1fr',
+                    gap: isMobile ? '1rem' : '2rem',
+                    minHeight: '600px'
+                }}>
 
                     {/* Left: Supplier List */}
-                    <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+                    <div className="glass-panel" style={{
+                        padding: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        maxHeight: isMobile ? '300px' : 'none'
+                    }}>
                         <button
                             className="btn-primary"
                             style={{ marginBottom: '1rem', width: '100%', justifyContent: 'center' }}
@@ -249,11 +272,11 @@ const Inventory = () => {
                     </div>
 
                     {/* Right: Details & Invoices */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
+                    <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '2rem' }}>
                         {selectedSupplierId ? (
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                                    <h2 style={{ margin: 0 }}>{selectedSupplierId === 'new' ? 'Nuevo Distribuidor' : 'Editar Distribuidor'}</h2>
+                                    <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.5rem' }}>{selectedSupplierId === 'new' ? 'Nuevo Distribuidor' : 'Editar Distribuidor'}</h2>
                                     {selectedSupplierId !== 'new' && (
                                         <button
                                             onClick={() => { deleteSupplier(selectedSupplierId); setSelectedSupplierId(null); }}
@@ -265,7 +288,7 @@ const Inventory = () => {
                                 </div>
 
                                 {/* Supplier Form */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
                                     <div>
                                         <label>Nombre Empresa</label>
                                         <input
@@ -304,7 +327,7 @@ const Inventory = () => {
                                     </div>
                                 </div>
 
-                                <button className="btn-primary" onClick={handleSaveSupplier} style={{ marginBottom: '3rem' }}>
+                                <button className="btn-primary" onClick={handleSaveSupplier} style={{ marginBottom: '3rem', width: isMobile ? '100%' : 'auto' }}>
                                     <Save size={16} style={{ marginRight: '0.5rem' }} /> Guardar Datos
                                 </button>
 
@@ -323,10 +346,10 @@ const Inventory = () => {
                                         </div>
 
                                         {/* Invoice List */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1rem' }}>
                                             {invoices.filter(i => i.supplierId === selectedSupplierId).map(inv => (
                                                 <div key={inv.id} className="glass-panel" style={{ padding: '0.5rem', position: 'relative' }}>
-                                                    <div style={{ height: '100px', background: '#000', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
+                                                    <div style={{ height: '80px', background: '#000', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
                                                         {inv.image ? (
                                                             <img src={inv.image} alt="Factura" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         ) : (
@@ -334,7 +357,7 @@ const Inventory = () => {
                                                         )}
                                                     </div>
                                                     <div style={{ fontWeight: 'bold' }}>{inv.amount.toFixed(2)}€</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'gray' }}>{inv.date}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'gray' }}>{inv.date}</div>
                                                     <button
                                                         onClick={() => deleteInvoice(inv.id)}
                                                         style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.7)', border: 'none', color: 'white', borderRadius: '50%', padding: '2px', cursor: 'pointer' }}
@@ -416,9 +439,111 @@ const Inventory = () => {
                         )}
                     </div>
                 </div>
+            ) : activeTab === 'gastos' ? (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '350px 1fr',
+                    gap: isMobile ? '1rem' : '2rem'
+                }}>
+                    <div className="glass-panel" style={{ padding: '2rem', alignSelf: 'start' }}>
+                        <h3 style={{ marginTop: 0 }}>Registrar Gasto</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label>Concepto</label>
+                                <input
+                                    value={expenseForm.concept}
+                                    onChange={e => setExpenseForm({ ...expenseForm, concept: e.target.value })}
+                                    placeholder="Ej. Alquiler Local Enero"
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Importe (€)</label>
+                                <input
+                                    type="number"
+                                    value={expenseForm.amount}
+                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                                    placeholder="0.00"
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Categoría</label>
+                                <select
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '0.75rem', background: '#1e293b', color: 'white' }}
+                                    value={expenseForm.category}
+                                    onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                                >
+                                    {expenseCategories.map(c => <option key={c} value={c} style={{ background: '#0f172a' }}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Fecha</label>
+                                <input
+                                    type="date"
+                                    value={expenseForm.date}
+                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
+                                />
+                            </div>
+                            <button
+                                className="btn-primary"
+                                style={{ marginTop: '1rem', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                onClick={() => {
+                                    if (!expenseForm.concept || !expenseForm.amount) return alert("Completa los campos");
+                                    addExpense({ ...expenseForm, amount: parseFloat(expenseForm.amount) });
+                                    setExpenseForm({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
+                                }}
+                            >
+                                <Save size={18} /> Guardar Gasto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0 }}>Historial de Gastos</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(exp => (
+                                <div key={exp.id} style={{
+                                    padding: '1rem',
+                                    background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    border: '1px solid rgba(255,255,255,0.05)'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{exp.concept}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                            {exp.date} • <span style={{ color: 'var(--color-primary)' }}>{exp.category}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1.5rem' }}>
+                                        <div style={{ fontWeight: '800', fontSize: isMobile ? '1rem' : '1.1rem', color: '#ef4444' }}>-{exp.amount.toFixed(2)}€</div>
+                                        <button
+                                            onClick={() => deleteExpense(exp.id)}
+                                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {expenses.length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                    No hay gastos registrados.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {/* Content Control Bar */}
                     <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
                         <div style={{ flex: 1, position: 'relative' }}>
                             <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} size={18} />
@@ -433,7 +558,6 @@ const Inventory = () => {
                         </div>
                     </div>
 
-                    {/* Modal / Inline Add/Edit Form */}
                     <AnimatePresence>
                         {(isAdding || editingId) && (
                             <motion.div
@@ -441,7 +565,7 @@ const Inventory = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 className="glass-panel"
-                                style={{ padding: '2rem', marginBottom: '2rem', border: '1px solid var(--color-primary)' }}
+                                style={{ padding: isMobile ? '1rem' : '2rem', marginBottom: '2rem', border: '1px solid var(--color-primary)' }}
                             >
                                 <h3 style={{ marginTop: 0 }}>{editingId ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
@@ -463,7 +587,7 @@ const Inventory = () => {
                                             value={formData.category}
                                             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                         >
-                                            {categories.filter(c => c.id !== 'distribuidores').map(cat => (
+                                            {categories.filter(c => c.id !== 'distribuidores' && c.id !== 'gastos').map(cat => (
                                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                                             ))}
                                         </select>
@@ -536,179 +660,119 @@ const Inventory = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* Inventory List */}
-                    <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                <tr>
-                                    <th style={{ padding: '1.5rem' }}>Ingrediente</th>
-                                    <th style={{ padding: '1.5rem' }}>Categoría</th>
-                                    <th style={{ padding: '1.5rem' }}>Stock Actual</th>
-                                    <th style={{ padding: '1.5rem' }}>Estado</th>
-                                    <th style={{ padding: '1.5rem' }}>Coste Unit.</th>
-                                    <th style={{ padding: '1.5rem' }}>Proveedor</th>
-                                    <th style={{ padding: '1.5rem' }}>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                    <div className="glass-panel" style={{ overflow: isMobile ? 'visible' : 'hidden' }}>
+                        {isMobile ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
                                 {filteredIngredients.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                            No hay ingredientes en esta categoría.
-                                        </td>
-                                    </tr>
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                        No hay ingredientes en esta categoría.
+                                    </div>
                                 ) : (
                                     filteredIngredients.map(ing => {
-                                        const isLow = ing.quantity <= (ing.critical || 5);
+                                        const isLow = ing.quantity <= (ing.critical || ing.min_stock || 5);
                                         return (
-                                            <tr key={ing.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <div style={{ fontWeight: 'bold' }}>{ing.name}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>ID: {ing.id}</div>
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <span style={{ fontSize: '0.9rem', padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
-                                                        {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{ing.quantity}</span>
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '0.25rem' }}>{ing.unit || 'uds'}</span>
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    {isLow ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                            <AlertTriangle size={16} /> STOCK BAJO
-                                                        </div>
-                                                    ) : (
-                                                        <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 'bold' }}>OK</div>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    {ing.cost ? `${ing.cost.toFixed(2)}€` : '0.00€'}
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                                    {ing.provider || 'Sin asignar'}
-                                                </td>
-                                                <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button
-                                                            onClick={() => handleEdit(ing)}
-                                                            style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
-                                                        >
-                                                            <Edit2 size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteIngredient(ing.id)}
-                                                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                            <div key={ing.id} className="glass-panel" style={{ padding: '1rem', border: isLow ? '1px solid #ef4444' : '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ing.name}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{categories.find(c => c.id === (ing.category || 'alimentos'))?.label}</div>
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <button onClick={() => handleEdit(ing)} style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}><Edit2 size={16} /></button>
+                                                        <button onClick={() => deleteIngredient(ing.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '8px' }}><Trash2 size={16} /></button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{ing.quantity} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: 'var(--color-text-muted)' }}>{ing.unit || 'uds'}</span></div>
+                                                        {isLow && <div style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={12} /> STOCK BAJO</div>}
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{ing.cost ? `${ing.cost.toFixed(2)}€` : '0.00€'}</div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{ing.provider || 'Sin asignar'}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         );
                                     })
                                 )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-            {/* --- GASTOS GENERALES TAB --- */}
-            {activeTab === 'gastos' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
-                    {/* Add Expense Form */}
-                    <div className="glass-panel" style={{ padding: '2rem', alignSelf: 'start' }}>
-                        <h3 style={{ marginTop: 0 }}>Registrar Gasto</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>Concepto</label>
-                                <input
-                                    value={expenseForm.concept}
-                                    onChange={e => setExpenseForm({ ...expenseForm, concept: e.target.value })}
-                                    placeholder="Ej. Alquiler Local Enero"
-                                />
                             </div>
-                            <div className="form-group">
-                                <label>Importe (€)</label>
-                                <input
-                                    type="number"
-                                    value={expenseForm.amount}
-                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Categoría</label>
-                                <select
-                                    className="glass-panel"
-                                    style={{ width: '100%', padding: '0.5rem', background: 'transparent', color: 'white' }}
-                                    value={expenseForm.category}
-                                    onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                                >
-                                    {expenseCategories.map(c => <option key={c} value={c} style={{ background: '#0f172a' }}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Fecha</label>
-                                <input
-                                    type="date"
-                                    value={expenseForm.date}
-                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
-                                />
-                            </div>
-                            <button
-                                className="btn-primary"
-                                style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }}
-                                onClick={() => {
-                                    if (!expenseForm.concept || !expenseForm.amount) return alert("Completa los campos");
-                                    addExpense({ ...expenseForm, amount: parseFloat(expenseForm.amount) });
-                                    setExpenseForm({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
-                                }}
-                            >
-                                <Save size={18} /> Guardar Gasto
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Expense List */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0 }}>Historial de Gastos</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(exp => (
-                                <div key={exp.id} style={{
-                                    padding: '1rem',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    border: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>{exp.concept}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                            {exp.date} • <span style={{ color: 'var(--color-primary)' }}>{exp.category}</span>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                        <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#ef4444' }}>-{exp.amount.toFixed(2)}€</div>
-                                        <button
-                                            onClick={() => deleteExpense(exp.id)}
-                                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                            {expenses.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                                    No hay gastos registrados.
-                                </div>
-                            )}
-                        </div>
+                        ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                    <tr>
+                                        <th style={{ padding: '1.5rem' }}>Ingrediente</th>
+                                        <th style={{ padding: '1.5rem' }}>Categoría</th>
+                                        <th style={{ padding: '1.5rem' }}>Stock Actual</th>
+                                        <th style={{ padding: '1.5rem' }}>Estado</th>
+                                        <th style={{ padding: '1.5rem' }}>Coste Unit.</th>
+                                        <th style={{ padding: '1.5rem' }}>Proveedor</th>
+                                        <th style={{ padding: '1.5rem' }}>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredIngredients.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                                No hay ingredientes en esta categoría.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredIngredients.map(ing => {
+                                            const isLow = ing.quantity <= (ing.critical || ing.min_stock || 5);
+                                            return (
+                                                <tr key={ing.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        <div style={{ fontWeight: 'bold' }}>{ing.name}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>ID: {ing.id}</div>
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        <span style={{ fontSize: '0.9rem', padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
+                                                            {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{ing.quantity}</span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '0.25rem' }}>{ing.unit || 'uds'}</span>
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        {isLow ? (
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                                <AlertTriangle size={16} /> STOCK BAJO
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 'bold' }}>OK</div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        {ing.cost ? `${ing.cost.toFixed(2)}€` : '0.00€'}
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
+                                                        {ing.provider || 'Sin asignar'}
+                                                    </td>
+                                                    <td style={{ padding: '1rem 1.5rem' }}>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                            <button
+                                                                onClick={() => handleEdit(ing)}
+                                                                style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => deleteIngredient(ing.id)}
+                                                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
             )}

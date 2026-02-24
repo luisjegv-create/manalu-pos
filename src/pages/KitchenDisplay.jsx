@@ -7,20 +7,50 @@ import { motion, AnimatePresence } from 'framer-motion';
 const KitchenDisplay = () => {
     const { kitchenOrders, markOrderReady, removeOrder } = useOrder();
     const navigate = useNavigate();
+    const [soundEnabled, setSoundEnabled] = React.useState(false);
+    const lastOrderCount = React.useRef(kitchenOrders.length);
 
     const pendingOrders = kitchenOrders.filter(o => o.status === 'pending');
     const readyOrders = kitchenOrders.filter(o => o.status === 'ready');
 
+    // Audio Alert Logic
+    React.useEffect(() => {
+        if (soundEnabled && kitchenOrders.length > lastOrderCount.current) {
+            const hasNewPending = kitchenOrders.some(o => o.status === 'pending');
+            if (hasNewPending) {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                audio.play().catch(e => console.log("Autoplay blocked:", e));
+            }
+        }
+        lastOrderCount.current = kitchenOrders.length;
+    }, [kitchenOrders, soundEnabled]);
+
     return (
         <div style={{ padding: '2rem' }}>
-            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                 <button
                     onClick={() => navigate('/')}
                     style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
                 >
                     <ArrowLeft />
                 </button>
-                <h1 style={{ margin: 0 }}>Cocina (KDS)</h1>
+                <h1 style={{ margin: 0, flex: 1 }}>Cocina (KDS)</h1>
+
+                <button
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className="glass-panel"
+                    style={{
+                        padding: '0.5rem 1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        cursor: 'pointer',
+                        border: soundEnabled ? '1px solid #10b981' : '1px solid #ef4444',
+                        background: soundEnabled ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'
+                    }}
+                >
+                    {soundEnabled ? '🔔 Alerta Sonora: ON' : '🔕 Alerta Sonora: OFF'}
+                </button>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>

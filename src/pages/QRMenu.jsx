@@ -238,40 +238,95 @@ const QRMenu = () => {
                                     position: 'relative'
                                 }}
                             >
-                                {/* Header / Trigger */}
+                                {/* Header / Trigger - LIST STYLE */}
                                 <div
                                     onClick={() => setSelectedProduct(selectedProduct === product.id ? null : product.id)}
-                                    style={{ cursor: 'pointer', position: 'relative' }}
+                                    style={{
+                                        cursor: 'pointer',
+                                        position: 'relative',
+                                        display: 'flex',
+                                        gap: '1rem',
+                                        padding: '1rem',
+                                        background: selectedProduct === product.id ? 'rgba(30, 41, 59, 0.8)' : 'transparent'
+                                    }}
                                 >
-                                    {/* Full Width Image Background for Closed State */}
-                                    <div style={{ height: '140px', overflow: 'hidden', position: 'relative' }}>
+                                    {/* Square Image */}
+                                    <div style={{
+                                        width: '110px',
+                                        height: '110px',
+                                        borderRadius: '16px',
+                                        overflow: 'hidden',
+                                        flexShrink: 0,
+                                        position: 'relative',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)'
+                                    }}>
                                         {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
                                             ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(45deg, #1e293b, #0f172a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>{product.image || '🍽️'}</div>
+                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>{product.image || '🍽️'}</div>
                                         }
-                                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0f172a 0%, transparent 80%)' }} />
                                     </div>
 
-                                    <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', right: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                        <div>
-                                            <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '800', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{product.name}</h3>
-                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                                                {(product.allergens || []).map(a => {
-                                                    const info = ALLERGEN_ICONS[a];
-                                                    return info ? <info.icon key={a} size={14} color={info.color} /> : null;
-                                                })}
+                                    {/* Content Info */}
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.3' }}>{product.name}</h3>
+                                            <div style={{
+                                                background: '#fbbf24',
+                                                color: '#000',
+                                                padding: '0.25rem 0.6rem',
+                                                borderRadius: '8px',
+                                                fontWeight: '700',
+                                                fontSize: '0.9rem',
+                                                whiteSpace: 'nowrap',
+                                                marginLeft: '0.5rem',
+                                                boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                                            }}>
+                                                {product.price.toFixed(2)}€
                                             </div>
                                         </div>
-                                        <div style={{
-                                            background: '#fbbf24',
-                                            color: '#000',
-                                            padding: '0.4rem 0.8rem',
-                                            borderRadius: '12px',
-                                            fontWeight: '800',
-                                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-                                        }}>
-                                            {product.price.toFixed(2)}€
+
+                                        {product.description && (
+                                            <p style={{
+                                                fontSize: '0.85rem',
+                                                color: '#94a3b8',
+                                                margin: '0 0 0.5rem 0',
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 2,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden',
+                                                lineHeight: '1.4'
+                                            }}>
+                                                {product.description}
+                                            </p>
+                                        )}
+
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                                            {(product.allergens || []).slice(0, 4).map(a => {
+                                                const info = ALLERGEN_ICONS[a];
+                                                return info ? (
+                                                    <div key={a} style={{ background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '6px' }} title={info.label}>
+                                                        <info.icon size={12} color={info.color} />
+                                                    </div>
+                                                ) : null;
+                                            })}
+                                            {(product.allergens || []).length > 4 && (
+                                                <div style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
+                                                    +{product.allergens.length - 4}
+                                                </div>
+                                            )}
                                         </div>
+                                    </div>
+
+                                    {/* Expansion Indicator */}
+                                    <div style={{ alignSelf: 'center', color: '#64748b' }}>
+                                        <ChevronRight
+                                            size={20}
+                                            style={{
+                                                transform: selectedProduct === product.id ? 'rotate(90deg)' : 'rotate(0deg)',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
                                     </div>
                                 </div>
 
@@ -284,11 +339,18 @@ const QRMenu = () => {
                                             exit={{ height: 0, opacity: 0 }}
                                             transition={{ duration: 0.3 }}
                                         >
-                                            <div style={{ padding: '1.5rem', background: '#1e293b' }}>
+                                            <div style={{ padding: '0 1.5rem 1.5rem', background: 'rgba(30, 41, 59, 0.8)' }}>
                                                 {product.description && (
-                                                    <p style={{ color: '#cbd5e1', fontSize: '1rem', lineHeight: '1.6', margin: '0 0 1.5rem' }}>
-                                                        {product.description}
-                                                    </p>
+                                                    <div style={{
+                                                        marginBottom: '1.5rem',
+                                                        paddingTop: '1rem',
+                                                        borderTop: '1px solid rgba(255,255,255,0.05)'
+                                                    }}>
+                                                        <h4 style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Descripción</h4>
+                                                        <p style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>
+                                                            {product.description}
+                                                        </p>
+                                                    </div>
                                                 )}
 
                                                 {/* --- WINE PAIRING SECTION --- */}
@@ -395,7 +457,21 @@ const QRMenu = () => {
                                                 border: '1px solid rgba(255,255,255,0.05)',
                                                 textAlign: 'center'
                                             }}>
-                                                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{wine.image}</div>
+                                                <div style={{
+                                                    height: '120px',
+                                                    marginBottom: '0.5rem',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    overflow: 'hidden',
+                                                    borderRadius: '12px',
+                                                    background: 'rgba(0,0,0,0.2)'
+                                                }}>
+                                                    {(String(wine.image || '').startsWith('data:image') || String(wine.image || '').startsWith('http') || String(wine.image || '').startsWith('/'))
+                                                        ? <img src={wine.image} alt={wine.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                        : <span style={{ fontSize: '3rem' }}>{wine.image || '🍷'}</span>
+                                                    }
+                                                </div>
                                                 <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem' }}>{wine.name}</h4>
                                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{wine.bodega}</p>
                                                 <div style={{ marginTop: '0.75rem', color: '#fbbf24', fontWeight: 'bold' }}>

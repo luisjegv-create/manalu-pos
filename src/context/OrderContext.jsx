@@ -35,26 +35,110 @@ export const OrderProvider = ({ children }) => {
     const [salesHistory, setSalesHistory] = useState([]);
     const [cashCloses, setCashCloses] = useState([]);
 
+    // Local Loader state
+    const [isLoading, setLoadingState] = useState(false);
+    const [syncStatus, setSyncStatus] = useState({
+        sales: { count: 0, error: null },
+        kitchen: { count: 0, error: null },
+        closes: { count: 0, error: null },
+        totalSales: 0
+    });
+
     // --- INITIAL CLOUD SYNC ---
     useEffect(() => {
         const syncWithCloud = async () => {
-            // Fetch Sales
-            const { data: salesData } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(100);
-            if (salesData) {
-                setSalesHistory(salesData.map(s => ({
-                    ...s,
-                    date: new Date(s.created_at),
-                    items: typeof s.items === 'string' ? JSON.parse(s.items) : s.items
-                })));
-            }
+            setLoadingState(true);
+            try {
 
-            // Note: Kitchen orders and Cash closes would follow similar pattern
-            // For now, let's keep them in localStorage for backward compatibility or add tables to Supabase later
+                // 1. Fetch Sales
+                const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(1000);
+                if (salesError) {
+                    setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
+                } else if (salesData) {
+                    const mappedSales = salesData.map(s => ({
+                        ...s,
+                        date: new Date(s.created_at),
+                        total: parseFloat(s.total || s.total_amount || 0),
+                        items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
+                        paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
+                        tableId: s.table_id || s.tableId
+                    }));
+                    setSalesHistory(mappedSales);
+                    setSyncStatus(prev => ({ ...prev, sales: { count: mappedSales.length, error: null }, totalSales: mappedSales.length }));
+                }
+
+                // 2. Fetch Kitchen Orders
+                const { data: kitchenData, error: kitchenError } = await supabase.from('kitchen_orders')
+                    .select('*')
+                    .or('status.eq.pending,status.eq.ready')
+                    .order('created_at', { ascending: true });
+                if (kitchenError) {
+                    setSyncStatus(prev => ({ ...prev, kitchen: { count: 0, error: kitchenError.message } }));
+                } else if (kitchenData) {
+                    const mappedKitchen = kitchenData.map(o => ({
+                        ...o,
+                        items: typeof o.items === 'string' ? (o.items.startsWith('[') ? JSON.parse(o.items) : []) : (o.items || []),
+                        timestamp: new Date(o.created_at),
+                        table: o.table_name,
+                        customer: typeof o.customer_info === 'string' ? (o.customer_info.startsWith('{') ? JSON.parse(o.customer_info) : null) : o.customer_info
+                    }));
+                    setKitchenOrders(mappedKitchen);
+                    setSyncStatus(prev => ({ ...prev, kitchen: { count: mappedKitchen.length, error: null } }));
+                }
+
+                // 3. Fetch Cash Closes
+                const { data: closeData, error: closeError } = await supabase.from('cash_closes').select('*').order('created_at', { ascending: false }).limit(50);
+                if (closeError) {
+                    setSyncStatus(prev => ({ ...prev, closes: { count: 0, error: closeError.message } }));
+                } else if (closeData) {
+                    const mappedCloses = closeData.map(c => ({
+                        ...c,
+                        id: c.id,
+                        date: new Date(c.created_at),
+                        total: c.total_ventas,
+                        salesCount: c.sales_count
+                    }));
+                    setCashCloses(mappedCloses);
+                    setSyncStatus(prev => ({ ...prev, closes: { count: mappedCloses.length, error: null } }));
+                }
+            } catch (err) {
+                console.error("Error crítico de sincronización:", err);
+            } finally {
+                setLoadingState(false);
+            }
         };
         syncWithCloud();
+
+        // Realtime subscriptions
+        const kitchenSubscription = supabase
+            .channel('kitchen-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_orders' }, () => {
+                syncWithCloud(); // Refresh kitchen
+            })
+            .subscribe();
+
+        const salesSubscription = supabase
+            .channel('sales-updates')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+                const newSale = {
+                    ...payload.new,
+                    date: new Date(payload.new.created_at),
+                    total: parseFloat(payload.new.total || payload.new.total_amount || 0),
+                    items: typeof payload.new.items === 'string' ? JSON.parse(payload.new.items) : (payload.new.items || []),
+                    paymentMethod: payload.new.payment_method || payload.new.paymentMethod || 'Efectivo',
+                    tableId: payload.new.table_id || payload.new.tableId
+                };
+                setSalesHistory(prev => [newSale, ...prev]);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(kitchenSubscription);
+            supabase.removeChannel(salesSubscription);
+        };
     }, []);
 
-    // Persistence Effects for local-only state
+    // Persistence Effects for local-only state (Drafts)
     useEffect(() => {
         localStorage.setItem('manalu_tables', JSON.stringify(tables));
     }, [tables]);
@@ -156,15 +240,28 @@ export const OrderProvider = ({ children }) => {
             recordSale(selectedCustomer.id, calculateOrderTotal(order), order);
         }
 
-        const newKitchenOrder = {
-            id: Date.now(),
-            items: [...order],
-            timestamp: new Date(),
-            status: 'pending',
-            table: currentTable.name,
-            customer: selectedCustomer
-        };
-        setKitchenOrders(prev => [...prev, newKitchenOrder]);
+        // Save to Supabase (KDS)
+        try {
+            const { data, error } = await supabase.from('kitchen_orders').insert([{
+                table_name: currentTable.name,
+                items: JSON.stringify(order),
+                customer_info: JSON.stringify(selectedCustomer),
+                status: 'pending'
+            }]).select();
+
+            if (!error && data) {
+                const newKo = {
+                    ...data[0],
+                    items: order,
+                    timestamp: new Date(data[0].created_at),
+                    table: data[0].table_name,
+                    customer: selectedCustomer
+                };
+                setKitchenOrders(prev => [...prev, newKo]);
+            }
+        } catch (err) {
+            console.error("Error sending to kitchen:", err);
+        }
 
         setTableBills(prev => {
             const currentBill = prev[currentTable.id] || [];
@@ -201,7 +298,10 @@ export const OrderProvider = ({ children }) => {
                 const saleRecord = {
                     ...data[0],
                     date: new Date(data[0].created_at),
-                    items: finalBill
+                    total: parseFloat(data[0].total || data[0].total_amount || 0),
+                    items: finalBill,
+                    paymentMethod: data[0].payment_method || 'Efectivo',
+                    tableId: data[0].table_id
                 };
                 setSalesHistory(prev => [saleRecord, ...prev]);
             }
@@ -222,14 +322,24 @@ export const OrderProvider = ({ children }) => {
         setSelectedCustomer(customer);
     };
 
-    const markOrderReady = (orderId) => {
-        setKitchenOrders(prev => prev.map(o =>
-            o.id === orderId ? { ...o, status: 'ready' } : o
-        ));
+    const markOrderReady = async (orderId) => {
+        try {
+            await supabase.from('kitchen_orders').update({ status: 'ready' }).eq('id', orderId);
+            setKitchenOrders(prev => prev.map(o =>
+                o.id === orderId ? { ...o, status: 'ready' } : o
+            ));
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const removeOrder = (orderId) => {
-        setKitchenOrders(prev => prev.filter(o => o.id !== orderId));
+    const removeOrder = async (orderId) => {
+        try {
+            await supabase.from('kitchen_orders').update({ status: 'archived' }).eq('id', orderId);
+            setKitchenOrders(prev => prev.filter(o => o.id !== orderId));
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     const updateItemNote = (uniqueId, note) => {
@@ -263,14 +373,40 @@ export const OrderProvider = ({ children }) => {
     };
 
     const performCashClose = async (totals) => {
-        // Implementation for Supabase cash closes would go here
-        const newClose = {
-            id: `close-${Date.now()}`,
-            date: new Date(),
-            ...totals
-        };
-        setCashCloses(prev => [newClose, ...prev]);
-        return newClose;
+        try {
+            const { data, error } = await supabase.from('cash_closes').insert([{
+                total_efectivo: totals.efectivo || 0,
+                total_tarjeta: totals.tarjeta || 0,
+                total_ventas: totals.total || 0,
+                sales_count: totals.salesCount || 0,
+                notes: totals.notes || ''
+            }]).select();
+
+            if (!error && data) {
+                const newClose = {
+                    ...data[0],
+                    date: new Date(data[0].created_at)
+                };
+                setCashCloses(prev => [newClose, ...prev]);
+                return newClose;
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        return null;
+    };
+
+
+    const deleteSale = async (saleId) => {
+        try {
+            const { error } = await supabase.from('sales').delete().eq('id', saleId);
+            if (error) throw error;
+            setSalesHistory(prev => prev.filter(s => s.id !== saleId));
+            return true;
+        } catch (err) {
+            console.error("Error deleting sale:", err);
+            return false;
+        }
     };
 
     const updateTableDetails = (tableId, updates) => {
@@ -304,13 +440,15 @@ export const OrderProvider = ({ children }) => {
             removeOrder,
             addTable,
             deleteTable,
+            deleteSale,
             updateTableDetails,
+            syncStatus,
+            performCashClose,
+            isLoading,
             salesHistory,
-            cashCloses,
-            performCashClose
+            cashCloses
         }}>
             {children}
         </OrderContext.Provider>
     );
 };
-

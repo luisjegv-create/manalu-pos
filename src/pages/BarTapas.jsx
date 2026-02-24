@@ -23,7 +23,8 @@ import {
     X,
     FileText,
     Wine,
-    MessageSquare
+    MessageSquare,
+    Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printKitchenTicket, printBillTicket } from '../utils/printHelpers';
@@ -64,6 +65,19 @@ const BarTapas = () => {
     const [showTicket, setShowTicket] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [noteDraft, setNoteDraft] = useState('');
+
+    // Mobile Responsiveness State
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const [showOrderMobile, setShowOrderMobile] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 1024);
+            if (window.innerWidth >= 1024) setShowOrderMobile(false);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Quick Mode Effect
     useEffect(() => {
@@ -123,6 +137,21 @@ const BarTapas = () => {
     };
 
 
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 500 * 1024) {
+                alert("La imagen es demasiado grande (máx 500KB).");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewProductForm(prev => ({ ...prev, image: reader.result }));
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSaveNewProduct = () => {
         if (!newProductForm.name || newProductForm.price <= 0) {
             alert('Por favor, introduce un nombre y precio válido.');
@@ -160,10 +189,10 @@ const BarTapas = () => {
     const subtotal = totalBill - iva;
 
     return (
-        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
 
             {/* LEFT SECTION: Catalog */}
-            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--glass-border)' }}>
+            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', borderRight: isMobile ? 'none' : '1px solid var(--glass-border)' }}>
 
                 <header style={{ padding: '1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -182,19 +211,25 @@ const BarTapas = () => {
                         </div>
                     </div>
 
-                    {/* Quick Round Buttons (Revo Style) */}
+                    {/* Quick Mode Button (Added) */}
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
-                            onClick={() => addToOrder(salesProducts.find(p => p.name === 'Cerveza Doble'))}
-                            style={{ background: '#eab308', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', color: 'black', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            onClick={() => setIsAddingProduct(true)}
+                            className="btn-primary"
+                            style={{
+                                background: 'rgba(16, 185, 129, 0.2)',
+                                border: '1px solid #10b981',
+                                color: '#10b981',
+                                borderRadius: '8px',
+                                padding: '0.5rem 1rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}
                         >
-                            🍺 Caña Rápida
-                        </button>
-                        <button
-                            onClick={() => addToOrder(salesProducts.find(p => p.id === 1))} // Bravas
-                            style={{ background: '#ef4444', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                            🥔 Bravas Express
+                            <Plus size={18} /> Crear Producto
                         </button>
                     </div>
                 </header>
@@ -237,8 +272,8 @@ const BarTapas = () => {
                     overflowY: 'auto',
                     padding: '1rem',
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                    gap: '1rem',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: '1.25rem',
                     alignContent: 'start'
                 }}>
                     <AnimatePresence mode='popLayout'>
@@ -252,27 +287,29 @@ const BarTapas = () => {
                                 onClick={() => handleProductClick(product)}
                                 className="glass-panel"
                                 style={{
-                                    padding: '1rem',
+                                    padding: '1.25rem',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
                                     textAlign: 'center',
-                                    gap: '0.5rem',
-                                    transition: 'background 0.2s'
+                                    gap: '0.75rem',
+                                    transition: 'background 0.2s',
+                                    border: '1px solid var(--glass-border)'
                                 }}
-                                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--color-primary)' }}
                                 whileTap={{ scale: 0.95 }}
                             >
                                 <div style={{
-                                    width: '80px',
-                                    height: '80px',
+                                    width: '120px',
+                                    height: '110px',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '2.5rem',
+                                    fontSize: '3rem',
                                     overflow: 'hidden',
-                                    borderRadius: '8px'
+                                    borderRadius: '12px',
+                                    background: 'rgba(0,0,0,0.2)'
                                 }}>
                                     {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
                                         ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -317,19 +354,17 @@ const BarTapas = () => {
                                             padding: '0.5rem',
                                             borderRadius: '8px',
                                             marginBottom: '0.5rem',
-                                            display: 'none', // Shown via CSS in styles.css or inline hover logic if possible, but simpler to use React state if we wanted complex logic. 
-                                            // Since we can't easily add global CSS, we'll use a specific class pattern or simple onMouseEnter/Leave if strict React.
-                                            // Let's rely on a simple title attribute for fallback or try a cleaner React approach if this was a separate component.
-                                            // actually, let's just make it visible on hover with inline styles injected via a standard CSS class if it existed, 
-                                            // BUT simpler: Render conditionally on hover? No, that triggers re-renders. 
-                                            // Let's use the 'title' attribute for the simplest "Folder" effect, 
-                                            // OR actually render the prices but make them hidden until hover.
+                                            display: 'none',
                                             width: 'max-content',
                                             zIndex: 10
                                         }}
                                     >
                                         <div style={{ color: '#10b981', fontWeight: 'bold' }}>PVP: {product.price.toFixed(2)}€</div>
-                                        <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Coste: {getProductCost(product.id).toFixed(2)}€</div>
+                                        {product.isWine ? (
+                                            <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Compra: {product.purchasePrice?.toFixed(2)}€</div>
+                                        ) : (
+                                            <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Coste Receta: {getProductCost(product.id).toFixed(2)}€</div>
+                                        )}
                                     </div>
 
                                     {/* Inline Hover Logic via style block in render is tricky. 
@@ -347,10 +382,58 @@ const BarTapas = () => {
                         ))}
                     </AnimatePresence>
                 </div>
+
+                {/* Mobile Floating Button */}
+                {isMobile && !showOrderMobile && order.length > 0 && (
+                    <button
+                        onClick={() => setShowOrderMobile(true)}
+                        style={{
+                            position: 'fixed',
+                            bottom: '2rem',
+                            right: '2rem',
+                            padding: '1rem 2rem',
+                            borderRadius: '50px',
+                            background: 'var(--color-primary)',
+                            color: 'white',
+                            border: 'none',
+                            boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            zIndex: 40,
+                            fontWeight: 'bold',
+                            fontSize: '1.1rem'
+                        }}
+                    >
+                        <Wine size={20} />
+                        Ver Pedido ({calculateTotal().toFixed(2)}€)
+                    </button>
+                )}
             </div>
 
             {/* RIGHT SECTION: Order Summary */}
-            <div style={{ width: '400px', display: 'flex', flexDirection: 'column', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+            <div style={{
+                width: isMobile ? '100%' : '480px',
+                height: isMobile ? '100%' : 'auto',
+                position: isMobile ? 'fixed' : 'relative',
+                top: 0,
+                right: isMobile ? (showOrderMobile ? 0 : '-100%') : 0,
+                zIndex: 50,
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: isMobile ? '#0f172a' : 'rgba(0,0,0,0.2)',
+                transition: 'right 0.3s ease'
+            }}>
+                {isMobile && (
+                    <div style={{ padding: '1rem', display: 'flex', justifyContent: 'flex-start', borderBottom: '1px solid var(--glass-border)' }}>
+                        <button
+                            onClick={() => setShowOrderMobile(false)}
+                            style={{ background: 'none', border: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                            <ArrowLeft size={20} /> Volver a la Carta
+                        </button>
+                    </div>
+                )}
 
                 {/* Customer Selector */}
                 <div style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(59, 130, 246, 0.05)' }}>
@@ -458,7 +541,7 @@ const BarTapas = () => {
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <div style={{ fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
+                                                <div style={{ fontWeight: '500', flex: 1, paddingRight: '0.5rem' }}>{item.name}</div>
                                                 <div style={{ display: 'flex', gap: '0.25rem' }}>
                                                     <button
                                                         onClick={() => {
@@ -811,6 +894,12 @@ const BarTapas = () => {
                                                             {emoji}
                                                         </button>
                                                     ))}
+                                                </div>
+                                                <div style={{ marginTop: '1rem' }}>
+                                                    <label className="btn-secondary" style={{ width: '100%', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', border: '1px dashed var(--glass-border)' }}>
+                                                        <Camera size={18} /> Hacer Foto / Subir
+                                                        <input type="file" hidden accept="image/*" capture="environment" onChange={handleImageUpload} />
+                                                    </label>
                                                 </div>
                                             </div>
                                         </div>

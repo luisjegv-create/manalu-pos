@@ -80,26 +80,34 @@ const Settings = () => {
         }
     };
 
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
-        <div style={{ padding: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ padding: isMobile ? '1rem' : '2rem', maxWidth: '1000px', margin: '0 auto' }}>
             <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <button onClick={() => navigate('/')} className="btn-icon">
                     <ArrowLeft />
                 </button>
                 <div>
-                    <h1 style={{ margin: 0 }}>Configuración</h1>
-                    <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Ajustes generales del sistema</p>
+                    <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2rem' }}>Configuración</h1>
+                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Ajustes generales del sistema</p>
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1.5rem' : '2rem' }}>
 
                 {/* --- Left Column: Info --- */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2rem' }}>
 
                     {/* Restaurant Info */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
                             <Building size={20} /> Datos del Establecimiento
                         </h3>
 
@@ -109,7 +117,7 @@ const Settings = () => {
                                 background: 'rgba(255,255,255,0.05)',
                                 borderRadius: '12px', border: '1px dashed var(--glass-border)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                overflow: 'hidden'
+                                overflow: 'hidden', flexShrink: 0
                             }}>
                                 {formData.logo ? (
                                     <img src={formData.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -130,7 +138,7 @@ const Settings = () => {
                                 <label>Dirección</label>
                                 <input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                                 <div className="form-group">
                                     <label>Teléfono</label>
                                     <input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
@@ -147,8 +155,8 @@ const Settings = () => {
                     </div>
 
                     {/* Printers */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
                             <Printer size={20} /> Impresoras
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -164,11 +172,11 @@ const Settings = () => {
                 </div>
 
                 {/* --- Right Column: System & Tools --- */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2rem' }}>
 
                     {/* Storage & System */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
                             <Database size={20} /> Almacenamiento Local
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
@@ -207,8 +215,8 @@ const Settings = () => {
                     </div>
 
                     {/* QR Config */}
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
                             <Info size={20} /> Menú Digital (QR)
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
