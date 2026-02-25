@@ -58,7 +58,9 @@ const BarTapas = () => {
         tables, // Added tables from context
         selectTable, // Added selectTable
         selectedCustomer,
-        selectCustomer
+        selectCustomer,
+        serviceRequests, // Added serviceRequests
+        clearServiceRequest // Added clearServiceRequest
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('tapas');
@@ -182,13 +184,13 @@ const BarTapas = () => {
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 500 * 1024) {
-                alert("La imagen es demasiado grande (máx 500KB).");
+            if (file.size > 2 * 1024 * 1024) { // Increased limit as we compress anyway
+                alert("La imagen es demasiado grande (máx 2MB).");
                 return;
             }
             const reader = new FileReader();
             reader.onloadend = () => {
-                setNewProductForm(prev => ({ ...prev, image: reader.result }));
+                setNewProductForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
             };
             reader.readAsDataURL(file);
         }
@@ -236,7 +238,52 @@ const BarTapas = () => {
             {/* LEFT SECTION: Catalog */}
             <div style={{ flex: '1', display: 'flex', flexDirection: 'column', borderRight: isMobile ? 'none' : '1px solid var(--glass-border)' }}>
 
-                <header style={{ padding: '1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+                {/* Service Requests Banner */}
+                <AnimatePresence>
+                    {serviceRequests.length > 0 && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            style={{
+                                overflow: 'hidden',
+                                background: '#fbbf24',
+                                color: '#000',
+                                padding: serviceRequests.length > 0 ? '1rem 2rem' : '0',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.5rem',
+                                borderBottom: '2px solid rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            {serviceRequests.map(req => (
+                                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {req.type === 'waiter' ? '🛎️ LLAMADA:' : '🧾 CUENTA:'} {req.table_name || `Mesa ${req.table_id}`}
+                                    </div>
+                                    <button
+                                        onClick={() => clearServiceRequest(req.id)}
+                                        style={{
+                                            background: 'rgba(0,0,0,0.1)',
+                                            border: '1px solid black',
+                                            padding: '0.25rem 0.75rem',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.8rem'
+                                        }}
+                                    >
+                                        ATENDIDO
+                                    </button>
+                                </div>
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <header style={{
+                    padding: '1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between'
+                }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <button
                             onClick={() => navigate('/tables')}

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { uploadImage, compressImage } from '../utils/storageUtils';
 
 const InventoryContext = createContext();
 
@@ -278,11 +279,17 @@ export const InventoryProvider = ({ children }) => {
     // --- Product Actions ---
     const addProduct = async (product) => {
         try {
+            let imageUrl = product.image;
+            if (product.imageFile) {
+                const compressed = await compressImage(product.imageFile);
+                imageUrl = await uploadImage(compressed);
+            }
+
             const { data, error } = await supabase.from('products').insert([{
                 name: product.name,
                 price: product.price,
                 category: product.category,
-                image: product.image,
+                image: imageUrl,
                 description: product.description,
                 allergens: product.allergens,
                 recommended_wine: product.recommendedWine,
@@ -357,6 +364,12 @@ export const InventoryProvider = ({ children }) => {
     // --- Wine Actions ---
     const addWine = async (wine) => {
         try {
+            let imageUrl = wine.image;
+            if (wine.imageFile) {
+                const compressed = await compressImage(wine.imageFile);
+                imageUrl = await uploadImage(compressed, 'product-images', 'wines');
+            }
+
             const { data, error } = await supabase.from('wines').insert([{
                 name: wine.name,
                 bodega: wine.bodega,
@@ -367,7 +380,7 @@ export const InventoryProvider = ({ children }) => {
                 price: parseFloat(wine.price) || 0,
                 purchase_price: parseFloat(wine.purchasePrice) || 0,
                 type: wine.type || 'Tinto',
-                image: wine.image
+                image: imageUrl
             }]).select();
 
             if (error) throw error;
@@ -481,11 +494,17 @@ export const InventoryProvider = ({ children }) => {
 
     const addProductWithRecipe = async (product, recipeItems) => {
         try {
+            let imageUrl = product.image;
+            if (product.imageFile) {
+                const compressed = await compressImage(product.imageFile);
+                imageUrl = await uploadImage(compressed);
+            }
+
             const { data, error } = await supabase.from('products').insert([{
                 name: product.name,
                 price: product.price,
                 category: product.category,
-                image: product.image
+                image: imageUrl
             }]).select();
 
             if (error) throw error;

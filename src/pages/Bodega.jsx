@@ -71,9 +71,9 @@ const Bodega = () => {
             reader.onloadend = () => {
                 const result = reader.result;
                 if (isEditing) {
-                    setEditingWine(prev => ({ ...prev, image: result }));
+                    setEditingWine(prev => ({ ...prev, image: result, imageFile: file }));
                 } else {
-                    setNewWine(prev => ({ ...prev, image: result }));
+                    setNewWine(prev => ({ ...prev, image: result, imageFile: file }));
                 }
             };
             reader.readAsDataURL(file);

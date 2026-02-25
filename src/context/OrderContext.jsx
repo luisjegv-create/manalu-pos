@@ -37,6 +37,7 @@ export const OrderProvider = ({ children }) => {
     const [kitchenOrders, setKitchenOrders] = useState([]);
     const [salesHistory, setSalesHistory] = useState([]);
     const [cashCloses, setCashCloses] = useState([]);
+    const [serviceRequests, setServiceRequests] = useState([]);
 
     // Local Loader state
     const [isLoading, setLoadingState] = useState(false);
@@ -104,6 +105,15 @@ export const OrderProvider = ({ children }) => {
                     setCashCloses(mappedCloses);
                     setSyncStatus(prev => ({ ...prev, closes: { count: mappedCloses.length, error: null } }));
                 }
+
+                // 4. Fetch Service Requests
+                const { data: requestData } = await supabase.from('service_requests')
+                    .select('*')
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false });
+                if (requestData) {
+                    setServiceRequests(requestData);
+                }
             } catch (err) {
                 console.error("Error crítico de sincronización:", err);
             } finally {
@@ -135,9 +145,17 @@ export const OrderProvider = ({ children }) => {
             })
             .subscribe();
 
+        const serviceSubscription = supabase
+            .channel('service-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests' }, () => {
+                syncWithCloud();
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(kitchenSubscription);
             supabase.removeChannel(salesSubscription);
+            supabase.removeChannel(serviceSubscription);
         };
     }, []);
 
@@ -500,6 +518,34 @@ export const OrderProvider = ({ children }) => {
         ));
     };
 
+    const requestService = async (tableId, tableName, type) => {
+        try {
+            const { error } = await supabase.from('service_requests').insert([{
+                table_id: tableId,
+                table_name: tableName,
+                type,
+                status: 'pending'
+            }]);
+            if (error) throw error;
+            return true;
+        } catch (err) {
+            console.error("Error requesting service:", err);
+            return false;
+        }
+    };
+
+    const clearServiceRequest = async (requestId) => {
+        try {
+            const { error } = await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', requestId);
+            if (error) throw error;
+            setServiceRequests(prev => prev.filter(r => r.id !== requestId));
+            return true;
+        } catch (err) {
+            console.error("Error clearing service request:", err);
+            return false;
+        }
+    };
+
     return (
         <OrderContext.Provider value={{
             order,
@@ -533,7 +579,10 @@ export const OrderProvider = ({ children }) => {
             performCashClose,
             isLoading,
             salesHistory,
-            cashCloses
+            cashCloses,
+            serviceRequests,
+            requestService,
+            clearServiceRequest
         }}>
             {children}
         </OrderContext.Provider>

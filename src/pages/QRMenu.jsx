@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
+import { useOrder } from '../context/OrderContext';
+import { useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
     Search,
@@ -30,10 +32,24 @@ const ALLERGEN_ICONS = {
 const QRMenu = () => {
     const navigate = useNavigate();
     const { salesProducts, wines, restaurantInfo } = useInventory();
+    const { requestService } = useOrder();
+    const [searchParams] = useSearchParams();
+    const tableParam = searchParams.get('table');
+
     const [activeCategory, setActiveCategory] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
+    const [serviceFeedback, setServiceFeedback] = useState(null);
+
+    const handleServiceRequest = async (type) => {
+        if (!tableParam) return;
+        const success = await requestService(tableParam, `Mesa ${tableParam}`, type);
+        if (success) {
+            setServiceFeedback(type === 'waiter' ? 'Camarero avisado 🛎️' : 'Cuenta solicitada 🧾');
+            setTimeout(() => setServiceFeedback(null), 3000);
+        }
+    };
 
     const categories = [
         { id: 'all', name: 'Todo', icon: '🍽️' },
@@ -58,6 +74,86 @@ const QRMenu = () => {
         <div style={{ minHeight: '100vh', background: '#0f172a', color: 'white', fontFamily: 'Inter, sans-serif', paddingBottom: '80px' }}>
 
             {/* Immersive Header */}
+            {tableParam && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 100,
+                    display: 'flex',
+                    gap: '1rem',
+                    width: '90%',
+                    maxWidth: '400px'
+                }}>
+                    <button
+                        onClick={() => handleServiceRequest('waiter')}
+                        style={{
+                            flex: 1,
+                            padding: '1rem',
+                            background: '#fbbf24',
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: '16px',
+                            fontWeight: 'bold',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        🛎️ Llamar
+                    </button>
+                    <button
+                        onClick={() => handleServiceRequest('bill')}
+                        style={{
+                            flex: 1,
+                            padding: '1rem',
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '16px',
+                            fontWeight: 'bold',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        🧾 La Cuenta
+                    </button>
+                </div>
+            )}
+
+            <AnimatePresence>
+                {serviceFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        style={{
+                            position: 'fixed',
+                            top: '20px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: '#10b981',
+                            color: 'white',
+                            padding: '0.75rem 1.5rem',
+                            borderRadius: '50px',
+                            zIndex: 200,
+                            fontWeight: 'bold',
+                            boxShadow: '0 10px 30px rgba(16, 185, 129, 0.4)'
+                        }}
+                    >
+                        {serviceFeedback}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <header style={{
                 position: 'relative',
                 height: '250px',
