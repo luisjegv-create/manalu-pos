@@ -17,10 +17,10 @@ const Manual = () => {
             ]
         },
         {
-            title: "Tomar Comandas (Bar y Tapas)",
+            title: "Tomar Comandas (Bar y Raciones)",
             icon: <Utensils size={24} />,
             steps: [
-                "Selecciona una categoría arriba (Tapas, Bocatas, Bebidas...).",
+                "Selecciona una categoría arriba (Raciones, Bocatas, Bebidas...).",
                 "Pulsa en los productos para añadirlos a la lista de la derecha.",
                 "Usa los botones '+' y '-' para ajustar cantidades.",
                 "Pulsa 'Enviar' para mandar el pedido a cocina (KDS).",

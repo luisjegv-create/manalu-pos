@@ -10,7 +10,7 @@ const Dashboard = () => {
 
     const modules = [
         {
-            title: "Bar y Tapas",
+            title: "Bar y Raciones",
             icon: UtensilsCrossed,
             description: "Gestión rápida de comandas y mesas.",
             color: "blue",

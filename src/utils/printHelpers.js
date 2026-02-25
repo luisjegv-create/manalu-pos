@@ -118,7 +118,7 @@ export const printKitchenTicket = (tableName, items, note = '') => {
     printWindow.document.close();
 };
 
-export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
+export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null) => {
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -128,8 +128,13 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
 
     const date = new Date().toLocaleDateString();
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const iva = total * 0.10; // Assuming 10% IVA included
-    const subtotal = total - iva;
+    const discountAmount = (total * discountPercent) / 100;
+    const finalTotal = isInvitation ? 0 : Math.max(0, total - discountAmount);
+
+    // Tax Breakdown (Spain standard for hospitality: 10%)
+    const taxRate = 0.10;
+    const baseTotal = finalTotal / (1 + taxRate);
+    const taxAmount = finalTotal - baseTotal;
 
     const htmlContent = `
         <!DOCTYPE html>
@@ -185,6 +190,13 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
                     font-size: 0.9rem;
                     margin-bottom: 2px;
                 }
+                .discount-row {
+                    color: #d32f2f;
+                    font-style: italic;
+                    border-top: 1px dashed #ccc;
+                    padding-top: 5px;
+                    margin-bottom: 5px;
+                }
                 .grand-total {
                     font-size: 1.5rem;
                     font-weight: bold;
@@ -203,10 +215,25 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
         </head>
         <body>
             <div class="header">
-                <div class="company-name">${companyInfo.name || 'Manalu Eventos'}</div>
+                <div class="company-name">${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</div>
+                <div style="font-size: 0.7rem; color: #666; margin-bottom: 5px;">Razón Social</div>
+                <div class="meta">${companyInfo.businessName || 'BAR RACIONES Y BOCATAS / MANALU EVENTOS'}</div>
                 <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
                 <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
                 <div class="separator"></div>
+                <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">
+                    ${customerData ? 'FACTURA' : 'TICKET'} Nº: ${ticketNumber || 'BORRADOR'}
+                </div>
+                
+                ${customerData ? `
+                    <div style="text-align: left; background: #eee; padding: 5px; margin-bottom: 10px; font-size: 0.8rem; border: 1px solid #ccc;">
+                        <div style="font-weight: bold; text-decoration: underline; margin-bottom: 3px;">DATOS DEL CLIENTE:</div>
+                        <div>${customerData.name}</div>
+                        <div>NIF/CIF: ${customerData.nif}</div>
+                        <div>DOMICILIO: ${customerData.address}</div>
+                    </div>
+                ` : ''}
+
                 <div class="meta">
                     MESA: ${tableName} <br>
                     FECHA: ${date} - ${time}
@@ -234,16 +261,28 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
 
             <div class="totals">
                 <div class="total-row">
-                    <span>Subtotal:</span>
-                    <span>${subtotal.toFixed(2)}€</span>
+                    <span>Subtotal Orig:</span>
+                    <span>${total.toFixed(2)}€</span>
+                </div>
+                
+                ${(discountPercent > 0 || isInvitation) ? `
+                    <div class="total-row discount-row">
+                        <span>DESC ${isInvitation ? '(100%)' : '(' + discountPercent + '%)'}:</span>
+                        <span>-${(isInvitation ? total : discountAmount).toFixed(2)}€</span>
+                    </div>
+                ` : ''}
+
+                <div class="total-row">
+                    <span>Base Imp. (10%):</span>
+                    <span>${baseTotal.toFixed(2)}€</span>
                 </div>
                 <div class="total-row">
                     <span>IVA (10%):</span>
-                    <span>${iva.toFixed(2)}€</span>
+                    <span>${taxAmount.toFixed(2)}€</span>
                 </div>
                 <div class="total-row grand-total">
                     <span>TOTAL:</span>
-                    <span>${total.toFixed(2)}€</span>
+                    <span>${finalTotal.toFixed(2)}€</span>
                 </div>
             </div>
 

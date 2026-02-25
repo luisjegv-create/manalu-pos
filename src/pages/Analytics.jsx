@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
+import { printBillTicket } from '../utils/printHelpers';
 
 const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection }) => (
     <button
@@ -45,10 +46,13 @@ const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection })
 const Analytics = () => {
     const navigate = useNavigate();
     const { salesHistory, cashCloses, performCashClose, deleteSale } = useOrder();
-    const { salesProducts, getProductCost, expenses } = useInventory(); // Added expenses
+    const { salesProducts, getProductCost, expenses, restaurantInfo } = useInventory(); // Added restaurantInfo
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
     const [dateRange, setDateRange] = useState('today'); // today | week | month | all
+
+    // State for invoice generation
+    const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
 
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -126,16 +130,17 @@ const Analytics = () => {
     const dashboardStats = useMemo(() => {
         const getPeriodStats = (sales, exps) => {
             const revenue = sales.reduce((acc, s) => acc + (parseFloat(s.total || s.total_amount) || 0), 0);
+            const totalDiscounts = sales.reduce((acc, s) => acc + (parseFloat(s.discount_amount) || 0) + (s.is_invitation ? (parseFloat(s.original_total) || 0) : 0), 0); // Need original_total handled if invitation
+
             const productCost = sales.reduce((acc, s) => {
                 if (!s.items || !Array.isArray(s.items)) return acc;
                 return acc + s.items.reduce((itemAcc, item) => {
-                    // Correct cost calculation: check if it's a wine or use recipe cost
                     const cost = item.isWine ? (item.purchasePrice || 0) : getProductCost(item.id);
                     return itemAcc + (cost * (item.quantity || 1));
                 }, 0);
             }, 0);
             const generalExp = (exps || []).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
-            return { revenue, productCost, generalExp, net: revenue - productCost - generalExp };
+            return { revenue, productCost, generalExp, totalDiscounts, net: revenue - productCost - generalExp };
         };
 
         const getFilteredExpsInRange = (unit = 'today', offset = 0) => {
@@ -203,6 +208,7 @@ const Analytics = () => {
             ticketCount, ticketChange,
             avgTicket, avgChange,
             cashRaw, cardRaw,
+            totalDiscounts: currentStats.totalDiscounts,
             hours, maxHour
         };
     }, [filteredSales, comparisonSales, expenses, getProductCost, dateRange]);
@@ -541,8 +547,15 @@ const Analytics = () => {
                                 <div style={{ fontSize: isMobile ? '1.25rem' : '2rem', fontWeight: 'bold', color: dashboardStats.netProfit >= 0 ? '#10b981' : '#ef4444' }}>
                                     {dashboardStats.netProfit.toFixed(2)}€
                                 </div>
-                                <div style={{ fontSize: '0.7rem', color: dashboardStats.netChange >= 0 ? '#10b981' : '#ef4444', marginTop: '0.25rem' }}>
-                                    {dashboardStats.netChange >= 0 ? '+' : ''}{dashboardStats.netChange.toFixed(1)}%
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
+                                    <div style={{ fontSize: '0.7rem', color: dashboardStats.netChange >= 0 ? '#10b981' : '#ef4444' }}>
+                                        {dashboardStats.netChange >= 0 ? '+' : ''}{dashboardStats.netChange.toFixed(1)}%
+                                    </div>
+                                    {dashboardStats.totalDiscounts > 0 && (
+                                        <div style={{ fontSize: '0.7rem', color: '#ef4444', opacity: 0.8 }}>
+                                            Descuentos: {dashboardStats.totalDiscounts.toFixed(2)}€
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
@@ -641,7 +654,16 @@ const Analytics = () => {
                                         <div key={sale.id} className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(sale.date).toLocaleString()}</span>
-                                                <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>Desc: {sale.discount_percent ? `${sale.discount_percent}%` : `-${sale.discount_amount}€`}</div>}
+                                                    {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: '#fbbf24' }}>🎁 INVITACIÓN</div>}
+                                                    {sale.customer_data && (
+                                                        <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '2px' }}>
+                                                            📄 {JSON.parse(sale.customer_data).name} (${JSON.parse(sale.customer_data).nif})
+                                                        </div>
+                                                    )}
+                                                    <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                </div>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div style={{ fontSize: '0.9rem' }}>
@@ -656,6 +678,17 @@ const Analytics = () => {
                                                     }}>
                                                         {sale.paymentMethod}
                                                     </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
+                                                            setInvoiceModal({ isOpen: true, sale, customerData: custData });
+                                                        }}
+                                                        className="btn-icon"
+                                                        style={{ padding: '0.25rem', color: '#3b82f6' }}
+                                                        title="Generar Factura"
+                                                    >
+                                                        <FileText size={18} />
+                                                    </button>
                                                     <button
                                                         onClick={() => handleDeleteSale(sale.id)}
                                                         className="btn-icon"
@@ -704,15 +737,39 @@ const Analytics = () => {
                                                         {sale.paymentMethod || 'Desconocido'}
                                                     </span>
                                                 </td>
-                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold' }}>{parseFloat(sale.total || 0).toFixed(2)}€</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                        {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'normal' }}>Desc: {sale.discount_percent ? `${sale.discount_percent}%` : `-${sale.discount_amount.toFixed(2)}€`}</span>}
+                                                        {sale.is_invitation && <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: 'normal' }}>🎁 INVITACIÓN</span>}
+                                                        {sale.customer_data && (
+                                                            <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 'normal' }}>
+                                                                📄 {JSON.parse(sale.customer_data).name} (${JSON.parse(sale.customer_data).nif})
+                                                            </span>
+                                                        )}
+                                                        <span>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                    </div>
+                                                </td>
                                                 <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleDeleteSale(sale.id)}
-                                                        className="btn-icon"
-                                                        style={{ color: '#ef4444' }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
+                                                                setInvoiceModal({ isOpen: true, sale, customerData: custData });
+                                                            }}
+                                                            className="btn-icon"
+                                                            style={{ color: '#3b82f6' }}
+                                                            title="Generar Factura"
+                                                        >
+                                                            <FileText size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteSale(sale.id)}
+                                                            className="btn-icon"
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -888,9 +945,97 @@ const Analytics = () => {
                         </div>
                     </div>
                 )}
-
             </div>
-        </div >
+
+            {/* --- INVOICE DATA MODAL --- */}
+            <AnimatePresence>
+                {invoiceModal.isOpen && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
+                    }}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="glass-panel"
+                            style={{ width: '100%', maxWidth: '400px', padding: '2rem', position: 'relative' }}
+                        >
+                            <button
+                                onClick={() => setInvoiceModal({ ...invoiceModal, isOpen: false })}
+                                style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+                            >
+                                <CloseIcon size={24} />
+                            </button>
+
+                            <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <FileText color="var(--color-primary)" />
+                                Datos Fiscales Factura
+                            </h3>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Nombre / Razón Social</label>
+                                    <input
+                                        type="text"
+                                        value={invoiceModal.customerData.name}
+                                        onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, name: e.target.value } })}
+                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                                        placeholder="Ej: Empresa S.L."
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>NIF / CIF</label>
+                                    <input
+                                        type="text"
+                                        value={invoiceModal.customerData.nif}
+                                        onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, nif: e.target.value } })}
+                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                                        placeholder="Ej: B12345678"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Domicilio Fiscal</label>
+                                    <input
+                                        type="text"
+                                        value={invoiceModal.customerData.address}
+                                        onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, address: e.target.value } })}
+                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                                        placeholder="Ej: Calle Gran Vía 123, Madrid"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        const { sale, customerData } = invoiceModal;
+                                        printBillTicket(
+                                            sale.tableName || `Mesa ${sale.tableId?.toString().replace('table-', '') || '?'}`,
+                                            JSON.parse(sale.items || '[]'),
+                                            parseFloat(sale.original_total || sale.total),
+                                            restaurantInfo,
+                                            sale.discount_percent || 0,
+                                            sale.is_invitation || false,
+                                            sale.id,
+                                            customerData
+                                        );
+                                        setInvoiceModal({ ...invoiceModal, isOpen: false });
+                                    }}
+                                    disabled={!invoiceModal.customerData.name || !invoiceModal.customerData.nif}
+                                    style={{
+                                        width: '100%', padding: '1rem', marginTop: '1rem',
+                                        background: 'var(--color-primary)', border: 'none', borderRadius: '8px',
+                                        color: 'black', fontWeight: 'bold', cursor: 'pointer',
+                                        opacity: (!invoiceModal.customerData.name || !invoiceModal.customerData.nif) ? 0.5 : 1
+                                    }}
+                                >
+                                    🖨️ Generar e Imprimir Factura
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 

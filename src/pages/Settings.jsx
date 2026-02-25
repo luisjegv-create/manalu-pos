@@ -14,6 +14,10 @@ const Settings = () => {
     // Let's use local state for the form and save to context on handleSave.
     const [formData, setFormData] = useState(restaurantInfo);
 
+    useEffect(() => {
+        setFormData(restaurantInfo);
+    }, [restaurantInfo]);
+
     // Custom QR State (Keep independent if preferred, or move to context too?)
     // Let's keep QR independent for now as it's a big blob.
     const [customQR, setCustomQR] = useState(() => {
@@ -173,6 +177,41 @@ const Settings = () => {
 
                 {/* --- Right Column: System & Tools --- */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '2rem' }}>
+
+                    {/* Ticket Numbering */}
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                            <Database size={20} /> Numeración de Tickets
+                        </h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+                            Configura el número correlativo para los próximos tickets.
+                        </p>
+                        <div className="form-group">
+                            <label>Próximo Número de Ticket</label>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    value={formData.last_ticket_number}
+                                    onChange={e => setFormData({ ...formData, last_ticket_number: parseInt(e.target.value) || 0 })}
+                                    style={{ flex: 1 }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        if (confirm('¿Reiniciar numeración a 1?')) {
+                                            setFormData({ ...formData, last_ticket_number: 0 });
+                                        }
+                                    }}
+                                    className="btn-secondary"
+                                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+                                >
+                                    Reiniciar
+                                </button>
+                            </div>
+                            <p style={{ fontSize: '0.7rem', color: '#f59e0b', marginTop: '0.5rem' }}>
+                                💡 El siguiente ticket generado será: {(formData.last_ticket_number || 0) + 1}
+                            </p>
+                        </div>
+                    </div>
 
                     {/* Storage & System */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>

@@ -39,8 +39,8 @@ const iconMap = {
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo } = useInventory(); // Added restaurantInfo
-    const [searchParams] = useSearchParams(); // Added useSearchParams
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo } = useInventory();
+    const [searchParams] = useSearchParams();
     const {
         order,
         bill,
@@ -53,6 +53,7 @@ const BarTapas = () => {
         sendToKitchen,
         closeTable,
         payPartialTable,
+        calculateOrderTotal,
         removeProductFromBill,
         currentTable,
         tables, // Added tables from context
@@ -63,7 +64,7 @@ const BarTapas = () => {
         clearServiceRequest // Added clearServiceRequest
     } = useOrder();
     const { customers } = useCustomers();
-    const [activeCategory, setActiveCategory] = useState('tapas');
+    const [activeCategory, setActiveCategory] = useState('raciones');
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
     const [showTicket, setShowTicket] = useState(false);
@@ -109,6 +110,12 @@ const BarTapas = () => {
         itemsToPay: []
     });
 
+    // Discount and Invitation state
+    const [discountPercent, setDiscountPercent] = useState(0);
+    const [isInvitation, setIsInvitation] = useState(false);
+    const [isFullInvoice, setIsFullInvoice] = useState(false);
+    const [customerTaxData, setCustomerTaxData] = useState({ name: '', nif: '', address: '' });
+
     const handleProductClick = (product) => {
         if (product.modifiers && product.modifiers.length > 0) {
             // Open modal for modifiers
@@ -148,10 +155,31 @@ const BarTapas = () => {
 
 
     const handleConfirmPartialPayment = async (method) => {
-        const success = await payPartialTable(currentTable.id, partialPaymentModal.itemsToPay, method);
-        if (success) {
+        const saleData = await payPartialTable(
+            currentTable.id,
+            partialPaymentModal.itemsToPay,
+            method,
+            discountPercent,
+            isInvitation,
+            isFullInvoice ? customerTaxData : null
+        );
+        if (saleData) {
             alert('Pago parcial procesado correctamente.');
+            // Print final ticket
+            printBillTicket(
+                currentTable ? currentTable.name : 'Mesa',
+                partialPaymentModal.itemsToPay,
+                calculateOrderTotal(partialPaymentModal.itemsToPay),
+                restaurantInfo,
+                discountPercent,
+                isInvitation,
+                saleData.id,
+                isFullInvoice ? customerTaxData : null
+            );
             setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
+            setDiscountPercent(0);
+            setIsInvitation(false);
+            setIsFullInvoice(false);
             if (!bill || bill.length === 0) {
                 navigate('/tables');
             }
@@ -221,11 +249,32 @@ const BarTapas = () => {
         alert('¡Pedido enviado a cocina e impreso! 👨‍🍳');
     };
 
-    const handleCloseTable = (method = 'Efectivo') => {
+    const handleCloseTable = async (method = 'Efectivo') => {
         if (!currentTable) return;
-        closeTable(currentTable.id, method);
-        setShowTicket(false);
-        navigate('/tables');
+        const currentBill = [...bill]; // Snapshot for printing
+        const total = totalBill;
+
+        const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null);
+        if (saleData) {
+            // Print final ticket with ID
+            printBillTicket(
+                currentTable ? currentTable.name : 'Mesa',
+                currentBill,
+                total,
+                restaurantInfo,
+                discountPercent,
+                isInvitation,
+                saleData.id,
+                isFullInvoice ? customerTaxData : null
+            );
+            setShowTicket(false);
+            setDiscountPercent(0);
+            setIsInvitation(false);
+            setIsFullInvoice(false);
+            navigate('/bar-tapas');
+        } else {
+            alert('Error al cerrar la mesa.');
+        }
     };
 
     const totalBill = calculateBillTotal();
@@ -293,7 +342,7 @@ const BarTapas = () => {
                         </button>
                         <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
                         <div>
-                            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Bar y Tapas</h1>
+                            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Bar y Raciones</h1>
                             <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                 {currentTable ? currentTable.name : 'Mesa no asignada'}
                             </span>
@@ -844,12 +893,147 @@ const BarTapas = () => {
                                 <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Printer size={24} /> Tiket de Venta</h2>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <button
-                                        onClick={() => printBillTicket(currentTable ? currentTable.name : 'Mesa', bill, totalBill, restaurantInfo)}
+                                        onClick={() => printBillTicket(currentTable ? currentTable.name : 'Mesa', bill, totalBill, restaurantInfo, discountPercent, isInvitation, 'BORRADOR')}
                                         style={{ background: '#f59e0b', border: 'none', color: 'black', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
                                     >
-                                        🖨️ Imprimir
+                                        📄 Borrador (Proforma)
                                     </button>
-                                    <button onClick={() => setShowTicket(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X /></button>
+
+                                    {isFullInvoice && (
+                                        <button
+                                            onClick={() => printBillTicket(currentTable ? currentTable.name : 'Mesa', bill, totalBill, restaurantInfo, discountPercent, isInvitation, 'PROFORMA', customerTaxData)}
+                                            style={{ background: '#3b82f6', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+                                        >
+                                            📄 Imprimir Factura
+                                        </button>
+                                    )}
+                                    <button onClick={() => { setShowTicket(false); setDiscountPercent(0); setIsInvitation(false); }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X /></button>
+                                </div>
+                            </div>
+
+                            {/* Discount & Invitation Controls */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.5rem', display: 'block' }}>Descuento Directo (%)</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <input
+                                                type="number"
+                                                value={discountPercent || ''}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    setDiscountPercent(Math.min(100, Math.max(0, val)));
+                                                    if (val > 0) setIsInvitation(false);
+                                                }}
+                                                disabled={isInvitation}
+                                                placeholder="0"
+                                                style={{ width: '80px', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', textAlign: 'center' }}
+                                            />
+                                            <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>%</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        {[5, 10, 15, 20].map(p => (
+                                            <button
+                                                key={p}
+                                                onClick={() => { setDiscountPercent(p); setIsInvitation(false); }}
+                                                style={{
+                                                    padding: '0.5rem 0.75rem',
+                                                    borderRadius: '8px',
+                                                    border: '1px solid',
+                                                    borderColor: discountPercent === p ? 'var(--color-primary)' : 'var(--glass-border)',
+                                                    background: discountPercent === p ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                    color: discountPercent === p ? 'var(--color-primary)' : 'white',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {p}%
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setIsInvitation(!isInvitation);
+                                        if (!isInvitation) setDiscountPercent(0);
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.5rem',
+                                        borderRadius: '8px',
+                                        border: '1px solid',
+                                        borderColor: isInvitation ? '#10b981' : 'var(--glass-border)',
+                                        background: isInvitation ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                                        color: isInvitation ? '#10b981' : 'white',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    {isInvitation ? '🎁 Invitación Activa' : '🎁 Marcar como Invitación Total'}
+                                </button>
+
+                                <div style={{ marginTop: '0.5rem', borderTop: '1px solid var(--glass-border)', paddingTop: '1rem' }}>
+                                    <button
+                                        onClick={() => setIsFullInvoice(!isFullInvoice)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.5rem',
+                                            borderRadius: '8px',
+                                            border: '1px solid',
+                                            borderColor: isFullInvoice ? 'var(--color-primary)' : 'var(--glass-border)',
+                                            background: isFullInvoice ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            fontSize: '0.9rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.5rem',
+                                            marginBottom: isFullInvoice ? '1rem' : '0'
+                                        }}
+                                    >
+                                        <FileText size={18} /> {isFullInvoice ? '📄 Factura Solicitada' : '📄 Solicitar Factura Completa'}
+                                    </button>
+
+                                    {isFullInvoice && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                                        >
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre / Razón Social"
+                                                value={customerTaxData.name}
+                                                onChange={(e) => setCustomerTaxData({ ...customerTaxData, name: e.target.value })}
+                                                style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', fontSize: '0.8rem' }}
+                                            />
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="NIF / CIF"
+                                                    value={customerTaxData.nif}
+                                                    onChange={(e) => setCustomerTaxData({ ...customerTaxData, nif: e.target.value })}
+                                                    style={{ flex: 1, padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', fontSize: '0.8rem' }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Domicilio"
+                                                    value={customerTaxData.address}
+                                                    onChange={(e) => setCustomerTaxData({ ...customerTaxData, address: e.target.value })}
+                                                    style={{ flex: 2, padding: '0.5rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', fontSize: '0.8rem' }}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    )}
                                 </div>
                             </div>
 
@@ -913,9 +1097,17 @@ const BarTapas = () => {
                                         <span>IVA (10%):</span>
                                         <span>{iva.toFixed(2)}€</span>
                                     </div>
+
+                                    {(discountPercent > 0 || isInvitation) && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: '#ef4444', fontWeight: 'bold', borderTop: '1px dashed #ef4444', paddingTop: '0.5rem', marginBottom: '0.5rem' }}>
+                                            <span>DESC ({isInvitation ? '100%' : `${discountPercent}%`}):</span>
+                                            <span>-{isInvitation ? totalBill.toFixed(2) : ((totalBill * discountPercent) / 100).toFixed(2)}€</span>
+                                        </div>
+                                    )}
+
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.4rem', fontWeight: '900', borderTop: '2px solid black', paddingTop: '0.5rem' }}>
                                         <span>TOTAL:</span>
-                                        <span>{totalBill.toFixed(2)}€</span>
+                                        <span>{(isInvitation ? 0 : Math.max(0, totalBill - (totalBill * discountPercent / 100))).toFixed(2)}€</span>
                                     </div>
                                 </div>
 
@@ -1239,11 +1431,137 @@ const BarTapas = () => {
                             </div>
 
                             <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', marginTop: 'auto' }}>
+                                {/* Discount & Invitation Controls for Partial Payment */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--glass-border)', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem', display: 'block' }}>Descuento (%)</label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                <input
+                                                    type="number"
+                                                    value={discountPercent || ''}
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        setDiscountPercent(Math.min(100, Math.max(0, val)));
+                                                        if (val > 0) setIsInvitation(false);
+                                                    }}
+                                                    disabled={isInvitation}
+                                                    placeholder="0"
+                                                    style={{ width: '60px', padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', textAlign: 'center' }}
+                                                />
+                                                <span style={{ fontWeight: 'bold' }}>%</span>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                            {[10, 20, 50].map(p => (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => { setDiscountPercent(p); setIsInvitation(false); }}
+                                                    style={{
+                                                        padding: '0.4rem 0.6rem',
+                                                        borderRadius: '6px',
+                                                        border: '1px solid',
+                                                        borderColor: discountPercent === p ? 'var(--color-primary)' : 'var(--glass-border)',
+                                                        background: discountPercent === p ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                        color: discountPercent === p ? 'var(--color-primary)' : 'white',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.75rem'
+                                                    }}
+                                                >
+                                                    {p}%
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setIsInvitation(!isInvitation);
+                                                if (!isInvitation) setDiscountPercent(0);
+                                            }}
+                                            style={{
+                                                padding: '0.4rem 0.75rem',
+                                                borderRadius: '6px',
+                                                border: '1px solid',
+                                                borderColor: isInvitation ? '#10b981' : 'var(--glass-border)',
+                                                background: isInvitation ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                color: isInvitation ? '#10b981' : 'white',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                fontSize: '0.75rem'
+                                            }}
+                                        >
+                                            {isInvitation ? '🎁' : 'Regalo'}
+                                        </button>
+                                    </div>
+
+                                    {/* Full Invoice Toggle for Partial Payment */}
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+                                        <button
+                                            onClick={() => setIsFullInvoice(!isFullInvoice)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '0.4rem',
+                                                borderRadius: '6px',
+                                                border: '1px solid',
+                                                borderColor: isFullInvoice ? 'var(--color-primary)' : 'var(--glass-border)',
+                                                background: isFullInvoice ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                color: 'white',
+                                                fontSize: '0.8rem',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '0.4rem'
+                                            }}
+                                        >
+                                            <FileText size={14} /> {isFullInvoice ? 'Factura Solicitada' : 'Solicitar Factura'}
+                                        </button>
+
+                                        {isFullInvoice && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}
+                                            >
+                                                <input
+                                                    type="text"
+                                                    placeholder="Nombre / Razón Social"
+                                                    value={customerTaxData.name}
+                                                    onChange={(e) => setCustomerTaxData({ ...customerTaxData, name: e.target.value })}
+                                                    style={{ width: '100%', padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
+                                                />
+                                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="NIF"
+                                                        value={customerTaxData.nif}
+                                                        onChange={(e) => setCustomerTaxData({ ...customerTaxData, nif: e.target.value })}
+                                                        style={{ flex: 1, padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Dirección"
+                                                        value={customerTaxData.address}
+                                                        onChange={(e) => setCustomerTaxData({ ...customerTaxData, address: e.target.value })}
+                                                        style={{ flex: 2, padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
+                                                    />
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
                                     <span>Total a Cobrar:</span>
-                                    <span style={{ color: 'var(--color-primary)' }}>
-                                        {partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(2)}€
-                                    </span>
+                                    <div style={{ textAlign: 'right' }}>
+                                        {(discountPercent > 0 || isInvitation) && (
+                                            <div style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 'normal', textDecoration: 'line-through' }}>
+                                                {partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(2)}€
+                                            </div>
+                                        )}
+                                        <span style={{ color: 'var(--color-primary)' }}>
+                                            {(isInvitation ? 0 : Math.max(0, partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0) * (1 - discountPercent / 100))).toFixed(2)}€
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

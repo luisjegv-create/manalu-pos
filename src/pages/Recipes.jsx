@@ -50,7 +50,7 @@ const Recipes = () => {
     const [productForm, setProductForm] = useState({
         name: '',
         price: 0,
-        category: 'tapas',
+        category: 'raciones',
         image: '🍽️',
         description: '',
         allergens: [],
@@ -108,7 +108,7 @@ const Recipes = () => {
                 addProduct(productForm);
                 setIsAddingProduct(false);
             }
-            setProductForm({ name: '', price: 0, category: 'tapas', image: '🍽️', description: '', allergens: [], recommendedWine: '', isDigitalMenuVisible: true });
+            setProductForm({ name: '', price: 0, category: 'raciones', image: '🍽️', description: '', allergens: [], recommendedWine: '', isDigitalMenuVisible: true });
         } catch (error) {
             console.error("Error saving product:", error);
             alert("Error al guardar el producto. Puede que la imagen sea muy pesada o el almacenamiento esté lleno.");
@@ -275,7 +275,7 @@ const Recipes = () => {
                                             value={productForm.category}
                                             onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
                                         >
-                                            <option value="tapas" style={{ background: '#0f172a' }}>Tapas</option>
+                                            <option value="raciones" style={{ background: '#0f172a' }}>Raciones</option>
                                             <option value="bocatas" style={{ background: '#0f172a' }}>Bocatas</option>
                                             <option value="bebidas" style={{ background: '#0f172a' }}>Bebidas</option>
                                             <option value="postres" style={{ background: '#0f172a' }}>Postres</option>

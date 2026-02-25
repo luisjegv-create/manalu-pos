@@ -53,7 +53,7 @@ const QRMenu = () => {
 
     const categories = [
         { id: 'all', name: 'Todo', icon: '🍽️' },
-        { id: 'tapas', name: 'Tapas', icon: '🥘' },
+        { id: 'raciones', name: 'Raciones', icon: '🥘' },
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
         { id: 'vinos', name: 'Vinos', icon: '🍷' },
         { id: 'bebidas', name: 'Bebidas', icon: '🥤' },

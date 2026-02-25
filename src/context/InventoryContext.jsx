@@ -17,12 +17,13 @@ export const InventoryProvider = ({ children }) => {
     const [invoices, setInvoices] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [restaurantInfo, setRestaurantInfo] = useState({
-        name: 'Tapas y Bocatas y Manalu Eventos',
+        name: 'Luis Jesus García-Valcárcel López-Tofiño',
         address: 'Calle Principal, 123',
         phone: '600 000 000',
         nif: 'B12345678',
         email: 'info@manalu.com',
-        logo: '/logo-principal.png'
+        logo: '/logo-principal.png',
+        last_ticket_number: 0
     });
 
     // Helper for safe parsing
@@ -78,10 +79,13 @@ export const InventoryProvider = ({ children }) => {
                         isDigitalMenuVisible: p.is_digital_menu_visible !== false
                     })));
                 }
-                if (settingsData) setRestaurantInfo({
-                    ...settingsData,
-                    logo: settingsData.logo_url
-                });
+                if (settingsData) {
+                    setRestaurantInfo({
+                        ...settingsData,
+                        logo: settingsData.logo_url,
+                        last_ticket_number: settingsData.last_ticket_number || 0
+                    });
+                }
 
                 // Process recipes (Supabase returns array, we need object)
                 if (recData) {
@@ -534,9 +538,24 @@ export const InventoryProvider = ({ children }) => {
             phone: data.phone,
             nif: data.nif,
             email: data.email,
-            logo_url: data.logo
+            logo_url: data.logo,
+            last_ticket_number: data.last_ticket_number
         });
         if (!error) setRestaurantInfo(data);
+    };
+
+    const incrementTicketNumber = async () => {
+        const nextNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+        const { error } = await supabase
+            .from('restaurant_settings')
+            .update({ last_ticket_number: nextNumber })
+            .eq('id', 1);
+
+        if (!error) {
+            setRestaurantInfo(prev => ({ ...prev, last_ticket_number: nextNumber }));
+            return nextNumber;
+        }
+        return null;
     };
 
     // --- Supplier / Expense Actions (CLOUD) ---
@@ -658,7 +677,8 @@ export const InventoryProvider = ({ children }) => {
             addInvoice,
             deleteInvoice,
             addExpense,
-            deleteExpense
+            deleteExpense,
+            incrementTicketNumber
             // ... (rest of simple delete actions)
         }}>
             {children}
