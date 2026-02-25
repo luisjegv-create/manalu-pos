@@ -39,7 +39,7 @@ const iconMap = {
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost } = useInventory(); // Added ingredients, addProductWithRecipe, getProductCost
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo } = useInventory(); // Added restaurantInfo
     const [searchParams] = useSearchParams(); // Added useSearchParams
     const {
         order,
@@ -797,7 +797,7 @@ const BarTapas = () => {
                                 <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Printer size={24} /> Tiket de Venta</h2>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <button
-                                        onClick={() => printBillTicket(currentTable ? currentTable.name : 'Mesa', bill, totalBill)}
+                                        onClick={() => printBillTicket(currentTable ? currentTable.name : 'Mesa', bill, totalBill, restaurantInfo)}
                                         style={{ background: '#f59e0b', border: 'none', color: 'black', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
                                     >
                                         🖨️ Imprimir
@@ -809,10 +809,9 @@ const BarTapas = () => {
                             {/* Ticket Mockup Style */}
                             <div style={{ background: 'white', color: 'black', padding: '2rem', borderRadius: '4px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', fontFamily: "'Courier New', Courier, monospace" }}>
                                 <div style={{ textAlign: 'center', marginBottom: '1.5rem', borderBottom: '1px dashed #ccc', paddingBottom: '1rem' }}>
-                                    <h3 style={{ margin: '0 0 0.5rem 0' }}>TAPAS Y BOCATAS</h3>
-                                    <div style={{ fontSize: '0.8rem' }}>Manalu Eventos & Catering</div>
-                                    <div style={{ fontSize: '0.8rem' }}>C/ Principal 123, Madrid</div>
-                                    <div style={{ fontSize: '0.8rem' }}>CIF: B12345678</div>
+                                    <h3 style={{ margin: '0 0 0.5rem 0' }}>{restaurantInfo.name.toUpperCase()}</h3>
+                                    <div style={{ fontSize: '0.8rem' }}>{restaurantInfo.address}</div>
+                                    <div style={{ fontSize: '0.8rem' }}>NIF/CIF: {restaurantInfo.nif}</div>
                                 </div>
 
                                 <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>

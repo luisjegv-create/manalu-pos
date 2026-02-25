@@ -205,7 +205,7 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}) => {
             <div class="header">
                 <div class="company-name">${companyInfo.name || 'Manalu Eventos'}</div>
                 <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
-                <div class="meta">${companyInfo.cif || 'CIF: 12345678A'}</div>
+                <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
                 <div class="separator"></div>
                 <div class="meta">
                     MESA: ${tableName} <br>

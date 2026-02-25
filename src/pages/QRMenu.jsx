@@ -488,7 +488,7 @@ const QRMenu = () => {
             )}
 
             <footer style={{ marginTop: '4rem', padding: '2rem', textAlign: 'center', color: '#64748b', fontSize: '0.8rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                <p>Tapas y Bocatas Manalu</p>
+                <p>{restaurantInfo.name}</p>
                 <p style={{ marginTop: '0.5rem', opacity: 0.6 }}>Power by Qamarero Inspired System</p>
             </footer>
         </div>
