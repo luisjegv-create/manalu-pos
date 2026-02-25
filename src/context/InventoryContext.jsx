@@ -73,8 +73,16 @@ export const InventoryProvider = ({ children }) => {
                     setIngredients(ingData.map(i => ({ ...i, critical: i.min_stock })));
                 }
                 if (prodData) {
+                    // Update 'tapas' to 'raciones' in database if any exist
+                    const tapasProducts = prodData.filter(p => p.category === 'tapas');
+                    if (tapasProducts.length > 0) {
+                        console.log(`Migrating ${tapasProducts.length} products from tapas to raciones...`);
+                        await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
+                    }
+
                     setBaseProducts(prodData.map(p => ({
                         ...p,
+                        category: p.category === 'tapas' ? 'raciones' : p.category,
                         recommendedWine: p.recommended_wine,
                         isDigitalMenuVisible: p.is_digital_menu_visible !== false
                     })));
