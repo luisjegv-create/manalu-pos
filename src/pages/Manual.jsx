@@ -17,7 +17,7 @@ const Manual = () => {
             ]
         },
         {
-            title: "Tomar Comandas (Bar y Raciones)",
+            title: "Tomar Comandas (Gestión por mesas)",
             icon: <Utensils size={24} />,
             steps: [
                 "Selecciona una categoría arriba (Raciones, Bocatas, Bebidas...).",

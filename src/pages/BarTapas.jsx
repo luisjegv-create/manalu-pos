@@ -342,7 +342,7 @@ const BarTapas = () => {
                         </button>
                         <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
                         <div>
-                            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Bar y Raciones</h1>
+                            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Gestión por mesas</h1>
                             <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                 {currentTable ? currentTable.name : 'Mesa no asignada'}
                             </span>
