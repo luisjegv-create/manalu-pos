@@ -31,7 +31,7 @@ const ALLERGEN_ICONS = {
 
 const QRMenu = () => {
     const navigate = useNavigate();
-    const { salesProducts, wines, restaurantInfo } = useInventory();
+    const { salesProducts, wines, restaurantInfo, checkProductAvailability } = useInventory();
     const { requestService } = useOrder();
     const [searchParams] = useSearchParams();
     const tableParam = searchParams.get('table');
@@ -383,184 +383,210 @@ const QRMenu = () => {
 
                     {/* Product List */}
                     <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        {filteredProducts.map(product => (
-                            <div
-                                key={product.id}
-                                style={{
-                                    background: 'rgba(30, 41, 59, 0.5)',
-                                    borderRadius: '24px',
-                                    border: '1px solid rgba(255,255,255,0.05)',
-                                    overflow: 'hidden',
-                                    position: 'relative'
-                                }}
-                            >
-                                {/* Header / Trigger - LIST STYLE */}
+                        {filteredProducts.map(product => {
+                            const isAvailable = checkProductAvailability(product.id);
+                            return (
                                 <div
-                                    onClick={() => setSelectedProduct(selectedProduct === product.id ? null : product.id)}
+                                    key={product.id}
                                     style={{
-                                        cursor: 'pointer',
+                                        background: 'rgba(30, 41, 59, 0.5)',
+                                        borderRadius: '24px',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        overflow: 'hidden',
                                         position: 'relative',
-                                        display: 'flex',
-                                        gap: '1rem',
-                                        padding: '1rem',
-                                        background: selectedProduct === product.id ? 'rgba(30, 41, 59, 0.8)' : 'transparent'
+                                        opacity: isAvailable ? 1 : 0.6,
+                                        filter: isAvailable ? 'none' : 'grayscale(0.5)'
                                     }}
                                 >
-                                    {/* Square Image */}
-                                    <div style={{
-                                        width: '110px',
-                                        height: '110px',
-                                        borderRadius: '16px',
-                                        overflow: 'hidden',
-                                        flexShrink: 0,
-                                        position: 'relative',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.1)'
-                                    }}>
-                                        {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
-                                            ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>{product.image || '🍽️'}</div>
-                                        }
-                                    </div>
+                                    {/* Sold Out Badge */}
+                                    {!isAvailable && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '1rem',
+                                            right: '1rem',
+                                            background: '#ef4444',
+                                            color: 'white',
+                                            padding: '0.4rem 0.8rem',
+                                            borderRadius: '12px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 'bold',
+                                            zIndex: 10,
+                                            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em'
+                                        }}>
+                                            Agotado
+                                        </div>
+                                    )}
 
-                                    {/* Content Info */}
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', lineHeight: '1.2', color: '#fff', letterSpacing: '-0.02em' }}>{product.name}</h3>
+                                    {/* Header / Trigger - LIST STYLE */}
+                                    <div
+                                        onClick={() => isAvailable && setSelectedProduct(selectedProduct === product.id ? null : product.id)}
+                                        style={{
+                                            cursor: isAvailable ? 'pointer' : 'default',
+                                            position: 'relative',
+                                            display: 'flex',
+                                            gap: '1rem',
+                                            padding: '1rem',
+                                            background: selectedProduct === product.id ? 'rgba(30, 41, 59, 0.8)' : 'transparent'
+                                        }}
+                                    >
+                                        {/* Square Image */}
+                                        <div style={{
+                                            width: '110px',
+                                            height: '110px',
+                                            borderRadius: '16px',
+                                            overflow: 'hidden',
+                                            flexShrink: 0,
+                                            position: 'relative',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}>
+                                            {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
+                                                ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>{product.image || '🍽️'}</div>
+                                            }
                                         </div>
 
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                            <span style={{ color: '#fbbf24', fontSize: '1.3rem', fontWeight: '900' }}>{product.price.toFixed(2)}€</span>
-                                            {product.isRecommended && (
-                                                <span style={{ fontSize: '0.7rem', background: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '50px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOP</span>
-                                            )}
-                                        </div>
+                                        {/* Content Info */}
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', lineHeight: '1.2', color: '#fff', letterSpacing: '-0.02em' }}>{product.name}</h3>
+                                            </div>
 
-                                        {product.description && (
-                                            <p style={{
-                                                fontSize: '0.9rem',
-                                                color: '#94a3b8',
-                                                margin: '0 0 0.75rem 0',
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                lineHeight: '1.5',
-                                                fontWeight: '400'
-                                            }}>
-                                                {product.description}
-                                            </p>
-                                        )}
-
-                                        <div style={{ display: 'flex', gap: '0.6rem', marginTop: 'auto' }}>
-                                            {(product.allergens || []).map(a => {
-                                                const info = ALLERGEN_ICONS[a];
-                                                return info ? (
-                                                    <div key={a} style={{ background: 'rgba(255,255,255,0.08)', padding: '6px', borderRadius: '10px' }} title={info.label}>
-                                                        <info.icon size={14} color={info.color} />
-                                                    </div>
-                                                ) : null;
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Expansion Indicator */}
-                                    <div style={{ alignSelf: 'center', color: '#64748b' }}>
-                                        <ChevronRight
-                                            size={20}
-                                            style={{
-                                                transform: selectedProduct === product.id ? 'rotate(90deg)' : 'rotate(0deg)',
-                                                transition: 'transform 0.2s'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Expanded Content */}
-                                <AnimatePresence>
-                                    {selectedProduct === product.id && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div style={{ padding: '0 1.5rem 1.5rem', background: 'rgba(30, 41, 59, 0.8)' }}>
-                                                {product.description && (
-                                                    <div style={{
-                                                        marginBottom: '1.5rem',
-                                                        paddingTop: '1rem',
-                                                        borderTop: '1px solid rgba(255,255,255,0.05)'
-                                                    }}>
-                                                        <h4 style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Descripción</h4>
-                                                        <p style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>
-                                                            {product.description}
-                                                        </p>
-                                                    </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                <span style={{ color: '#fbbf24', fontSize: '1.3rem', fontWeight: '900' }}>{product.price.toFixed(2)}€</span>
+                                                {product.isRecommended && (
+                                                    <span style={{ fontSize: '0.7rem', background: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '50px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOP</span>
                                                 )}
+                                            </div>
 
-                                                {/* --- WINE PAIRING SECTION --- */}
-                                                {product.recommendedWine && getRecommendedWine(product.recommendedWine) && (
-                                                    <div style={{
-                                                        background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%)',
-                                                        borderRadius: '16px',
-                                                        padding: '1.25rem',
-                                                        border: '1px solid rgba(167, 139, 250, 0.2)',
-                                                        marginBottom: '1.5rem'
-                                                    }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#c084fc' }}>
-                                                            <Wine size={18} />
-                                                            <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>El Sumiller Recomienda</span>
+                                            {product.description && (
+                                                <p style={{
+                                                    fontSize: '0.9rem',
+                                                    color: '#94a3b8',
+                                                    margin: '0 0 0.75rem 0',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                    lineHeight: '1.5',
+                                                    fontWeight: '400'
+                                                }}>
+                                                    {product.description}
+                                                </p>
+                                            )}
+
+                                            <div style={{ display: 'flex', gap: '0.6rem', marginTop: 'auto' }}>
+                                                {(product.allergens || []).map(a => {
+                                                    const info = ALLERGEN_ICONS[a];
+                                                    return info ? (
+                                                        <div key={a} style={{ background: 'rgba(255,255,255,0.08)', padding: '6px', borderRadius: '10px' }} title={info.label}>
+                                                            <info.icon size={14} color={info.color} />
                                                         </div>
+                                                    ) : null;
+                                                })}
+                                            </div>
+                                        </div>
 
-                                                        <div style={{ display: 'flex', gap: '1rem' }}>
-                                                            <div style={{ fontSize: '2.5rem', background: 'rgba(0,0,0,0.2)', width: '60px', height: '60px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                {getRecommendedWine(product.recommendedWine).image || '🍷'}
+                                        {/* Expansion Indicator */}
+                                        <div style={{ alignSelf: 'center', color: '#64748b' }}>
+                                            <ChevronRight
+                                                size={20}
+                                                style={{
+                                                    transform: selectedProduct === product.id ? 'rotate(90deg)' : 'rotate(0deg)',
+                                                    transition: 'transform 0.2s'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Expanded Content */}
+                                    <AnimatePresence>
+                                        {selectedProduct === product.id && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <div style={{ padding: '0 1.5rem 1.5rem', background: 'rgba(30, 41, 59, 0.8)' }}>
+                                                    {product.description && (
+                                                        <div style={{
+                                                            marginBottom: '1.5rem',
+                                                            paddingTop: '1rem',
+                                                            borderTop: '1px solid rgba(255,255,255,0.05)'
+                                                        }}>
+                                                            <h4 style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Descripción</h4>
+                                                            <p style={{ color: '#e2e8f0', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>
+                                                                {product.description}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* --- WINE PAIRING SECTION --- */}
+                                                    {product.recommendedWine && getRecommendedWine(product.recommendedWine) && (
+                                                        <div style={{
+                                                            background: 'linear-gradient(135deg, rgba(88, 28, 135, 0.2) 0%, rgba(15, 23, 42, 0.4) 100%)',
+                                                            borderRadius: '16px',
+                                                            padding: '1.25rem',
+                                                            border: '1px solid rgba(167, 139, 250, 0.2)',
+                                                            marginBottom: '1.5rem'
+                                                        }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: '#c084fc' }}>
+                                                                <Wine size={18} />
+                                                                <span style={{ fontWeight: 'bold', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.05em' }}>El Sumiller Recomienda</span>
                                                             </div>
-                                                            <div style={{ flex: 1 }}>
-                                                                <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'white' }}>{getRecommendedWine(product.recommendedWine).name}</h4>
-                                                                <p style={{ margin: '0.25rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>{getRecommendedWine(product.recommendedWine).bodega}</p>
-                                                                <div style={{ marginTop: '0.5rem', fontSize: '1rem', color: '#fbbf24', fontWeight: 'bold' }}>
-                                                                    {getRecommendedWine(product.recommendedWine).price.toFixed(2)}€ <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b' }}>/ Botella</span>
+
+                                                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                                                <div style={{ fontSize: '2.5rem', background: 'rgba(0,0,0,0.2)', width: '60px', height: '60px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    {getRecommendedWine(product.recommendedWine).image || '🍷'}
+                                                                </div>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'white' }}>{getRecommendedWine(product.recommendedWine).name}</h4>
+                                                                    <p style={{ margin: '0.25rem 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>{getRecommendedWine(product.recommendedWine).bodega}</p>
+                                                                    <div style={{ marginTop: '0.5rem', fontSize: '1rem', color: '#fbbf24', fontWeight: 'bold' }}>
+                                                                        {getRecommendedWine(product.recommendedWine).price.toFixed(2)}€ <span style={{ fontSize: '0.7rem', fontWeight: 'normal', color: '#64748b' }}>/ Botella</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                {/* --------------------------- */}
+                                                    )}
+                                                    {/* --------------------------- */}
 
-                                                {product.allergens && product.allergens.length > 0 && (
-                                                    <div style={{
-                                                        background: 'rgba(255,255,255,0.03)',
-                                                        borderRadius: '16px',
-                                                        padding: '1rem',
-                                                        border: '1px solid rgba(255,255,255,0.05)'
-                                                    }}>
-                                                        <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                            <Info size={14} /> Información de Alérgenos
-                                                        </h4>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                                                            {product.allergens.map(a => {
-                                                                const info = ALLERGEN_ICONS[a];
-                                                                if (!info) return null;
-                                                                return (
-                                                                    <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#e2e8f0', fontSize: '0.9rem' }}>
-                                                                        <div style={{ padding: '0.4rem', background: `${info.color}20`, borderRadius: '8px', color: info.color }}>
-                                                                            <info.icon size={16} />
+                                                    {product.allergens && product.allergens.length > 0 && (
+                                                        <div style={{
+                                                            background: 'rgba(255,255,255,0.03)',
+                                                            borderRadius: '16px',
+                                                            padding: '1rem',
+                                                            border: '1px solid rgba(255,255,255,0.05)'
+                                                        }}>
+                                                            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                <Info size={14} /> Información de Alérgenos
+                                                            </h4>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                                                                {product.allergens.map(a => {
+                                                                    const info = ALLERGEN_ICONS[a];
+                                                                    if (!info) return null;
+                                                                    return (
+                                                                        <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#e2e8f0', fontSize: '0.9rem' }}>
+                                                                            <div style={{ padding: '0.4rem', background: `${info.color}20`, borderRadius: '8px', color: info.color }}>
+                                                                                <info.icon size={16} />
+                                                                            </div>
+                                                                            {info.label}
                                                                         </div>
-                                                                        {info.label}
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        ))}
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            );
+                        })}
                     </div>
                 </>
             )}
@@ -595,36 +621,58 @@ const QRMenu = () => {
                                         {section.icon} {section.label}
                                     </h3>
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
-                                        {sectionWines.map(wine => (
-                                            <div key={wine.id} style={{
-                                                background: 'rgba(255,255,255,0.03)',
-                                                borderRadius: '16px',
-                                                padding: '1rem',
-                                                border: '1px solid rgba(255,255,255,0.05)',
-                                                textAlign: 'center'
-                                            }}>
-                                                <div style={{
-                                                    height: '120px',
-                                                    marginBottom: '0.5rem',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    overflow: 'hidden',
-                                                    borderRadius: '12px',
-                                                    background: 'rgba(0,0,0,0.2)'
+                                        {sectionWines.map(wine => {
+                                            const isAvailable = checkProductAvailability(wine.id);
+                                            return (
+                                                <div key={wine.id} style={{
+                                                    background: 'rgba(255,255,255,0.03)',
+                                                    borderRadius: '16px',
+                                                    padding: '1rem',
+                                                    border: '1px solid rgba(255,255,255,0.05)',
+                                                    textAlign: 'center',
+                                                    position: 'relative',
+                                                    opacity: isAvailable ? 1 : 0.6,
+                                                    filter: isAvailable ? 'none' : 'grayscale(0.5)'
                                                 }}>
-                                                    {(String(wine.image || '').startsWith('data:image') || String(wine.image || '').startsWith('http') || String(wine.image || '').startsWith('/'))
-                                                        ? <img src={wine.image} alt={wine.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                                        : <span style={{ fontSize: '3rem' }}>{wine.image || '🍷'}</span>
-                                                    }
+                                                    {!isAvailable && (
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            top: '0.5rem',
+                                                            right: '0.5rem',
+                                                            background: '#ef4444',
+                                                            color: 'white',
+                                                            padding: '0.2rem 0.5rem',
+                                                            borderRadius: '8px',
+                                                            fontSize: '0.6rem',
+                                                            fontWeight: 'bold',
+                                                            zIndex: 10
+                                                        }}>
+                                                            AGOTADO
+                                                        </div>
+                                                    )}
+                                                    <div style={{
+                                                        height: '120px',
+                                                        marginBottom: '0.5rem',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        overflow: 'hidden',
+                                                        borderRadius: '12px',
+                                                        background: 'rgba(0,0,0,0.2)'
+                                                    }}>
+                                                        {(String(wine.image || '').startsWith('data:image') || String(wine.image || '').startsWith('http') || String(wine.image || '').startsWith('/'))
+                                                            ? <img src={wine.image} alt={wine.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                            : <span style={{ fontSize: '3rem' }}>{wine.image || '🍷'}</span>
+                                                        }
+                                                    </div>
+                                                    <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem' }}>{wine.name}</h4>
+                                                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{wine.bodega}</p>
+                                                    <div style={{ marginTop: '0.75rem', color: '#fbbf24', fontWeight: 'bold' }}>
+                                                        {wine.price.toFixed(2)}€
+                                                    </div>
                                                 </div>
-                                                <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1rem' }}>{wine.name}</h4>
-                                                <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>{wine.bodega}</p>
-                                                <div style={{ marginTop: '0.75rem', color: '#fbbf24', fontWeight: 'bold' }}>
-                                                    {wine.price.toFixed(2)}€
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );

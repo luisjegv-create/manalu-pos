@@ -37,7 +37,7 @@ import ProductEditorModal from '../components/TPV/ProductEditorModal';
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo } = useInventory();
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo, checkProductAvailability } = useInventory();
 
     // Safety fallback for restaurant info
     const restaurantInfo = contextRestaurantInfo || {
@@ -460,6 +460,7 @@ const BarTapas = () => {
                         products={filteredProducts}
                         onProductClick={handleProductClick}
                         getProductCost={getProductCost}
+                        checkProductAvailability={checkProductAvailability}
                     />
 
                     {/* Mobile Floating Button */}

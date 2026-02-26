@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ProductGrid = ({ products, onProductClick, getProductCost }) => {
+const ProductGrid = ({ products, onProductClick, getProductCost, checkProductAvailability }) => {
     return (
         <div style={{
             flex: 1,
@@ -37,23 +37,49 @@ const ProductGrid = ({ products, onProductClick, getProductCost }) => {
                         whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--color-primary)' }}
                         whileTap={{ scale: 0.95 }}
                     >
-                        {/* Stock Indicator */}
-                        {product.isWine && product.stock <= 5 && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '0.5rem',
-                                right: '0.5rem',
-                                background: product.stock === 0 ? '#ef4444' : '#f59e0b',
-                                color: 'white',
-                                fontSize: '0.7rem',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                fontWeight: 'bold',
-                                zIndex: 5
-                            }}>
-                                {product.stock === 0 ? 'AGOTADO' : `QUEDAN ${product.stock}`}
-                            </div>
-                        )}
+                        {/* Improved Stock Indicator */}
+                        {(() => {
+                            const isAvailable = checkProductAvailability ? checkProductAvailability(product.id) : true;
+                            if (!isAvailable) {
+                                return (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '0.5rem',
+                                        right: '0.5rem',
+                                        background: '#ef4444',
+                                        color: 'white',
+                                        fontSize: '0.7rem',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        fontWeight: 'bold',
+                                        zIndex: 5,
+                                        boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
+                                    }}>
+                                        AGOTADO
+                                    </div>
+                                );
+                            }
+                            // Legacy wine stock indicator (keep but refine)
+                            if (product.isWine && product.stock <= 5 && product.stock > 0) {
+                                return (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '0.5rem',
+                                        right: '0.5rem',
+                                        background: '#f59e0b',
+                                        color: 'white',
+                                        fontSize: '0.7rem',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        fontWeight: 'bold',
+                                        zIndex: 5
+                                    }}>
+                                        QUEDAN {product.stock}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                         <div style={{
                             width: '120px',
                             height: '110px',

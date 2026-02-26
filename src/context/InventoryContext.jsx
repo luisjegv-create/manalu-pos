@@ -586,6 +586,37 @@ export const InventoryProvider = ({ children }) => {
         if (!error) setRestaurantInfo(data);
     };
 
+    const checkProductAvailability = (productId) => {
+        // 1. Check if it's a wine
+        const wine = wines.find(w => w.id === productId || w.id === parseInt(productId));
+        if (wine) {
+            return (parseInt(wine.stock) || 0) > 0;
+        }
+
+        // 2. Check if it has a recipe
+        const recipe = recipes[productId];
+        if (!recipe || !Array.isArray(recipe) || recipe.length === 0) {
+            // No recipe means it's probably a basic product without ingredients tracking
+            // or isDigitalMenuVisible handles its visibility
+            return true;
+        }
+
+        // 3. Verify all ingredients in recipe
+        for (const item of recipe) {
+            const ingredient = ingredients.find(ing => ing.id === (item.ingredient_id || item.ingredientId));
+            if (!ingredient) continue; // If ingredient not found, we don't block (maybe legacy data)
+
+            const needed = item.quantity;
+            const available = ingredient.quantity || 0;
+
+            if (available < needed) {
+                return false; // Not enough of at least one ingredient
+            }
+        }
+
+        return true;
+    };
+
     const incrementTicketNumber = async () => {
         const nextNumber = (restaurantInfo.last_ticket_number || 0) + 1;
         const { error } = await supabase
@@ -720,7 +751,8 @@ export const InventoryProvider = ({ children }) => {
             deleteInvoice,
             addExpense,
             deleteExpense,
-            incrementTicketNumber
+            incrementTicketNumber,
+            checkProductAvailability
             // ... (rest of simple delete actions)
         }}>
             {children}
