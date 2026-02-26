@@ -22,6 +22,8 @@ export const InventoryProvider = ({ children }) => {
         phone: '600 000 000',
         nif: 'B12345678',
         email: 'info@manalu.com',
+        website: 'www.tapasybocatas.es',
+        website2: 'www.manalueventos.com',
         logo: '/logo-principal.png',
         last_ticket_number: 0
     });

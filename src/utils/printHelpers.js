@@ -217,7 +217,7 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
             <div class="header">
                 <div class="company-name">${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</div>
                 <div style="font-size: 0.7rem; color: #666; margin-bottom: 5px;">Razón Social</div>
-                <div class="meta">${companyInfo.businessName || 'BAR RACIONES Y BOCATAS / MANALU EVENTOS'}</div>
+                <div class="meta">${companyInfo.businessName || 'TAPAS Y BOCATAS / MANALU EVENTOS'}</div>
                 <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
                 <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
                 <div class="separator"></div>
@@ -288,7 +288,8 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
 
             <div class="footer">
                 ¡Gracias por su visita!<br>
-                www.manalu.es
+                www.tapasybocatas.es<br>
+                www.manalueventos.com
             </div>
 
             <script>
@@ -471,7 +472,7 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
         <body>
             <div class="header">
                 <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px;">
-                    ${companyInfo.name || 'BAR RACIONES Y BOCATAS'}
+                    ${companyInfo.name || 'TAPAS Y BOCATAS'}
                 </div>
                 <h1 class="title">CIERRE DE CAJA (Z)</h1>
                 <div class="meta">FECHA: ${date}</div>

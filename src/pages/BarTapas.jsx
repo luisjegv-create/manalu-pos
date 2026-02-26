@@ -977,7 +977,8 @@ const BarTapas = () => {
                                 </div>
 
                                 <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', color: '#888' }}>
-                                    ¡Gracias por su visita!
+                                    ¡Gracias por su visita!<br />
+                                    www.tapasybocatas.es | www.manalueventos.com
                                 </div>
                             </div>
 
