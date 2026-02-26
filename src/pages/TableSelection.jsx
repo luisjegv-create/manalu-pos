@@ -12,7 +12,7 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, serviceRequests } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTable, setEditingTable] = useState(null); // For modal
@@ -142,6 +142,22 @@ const TableSelection = () => {
                     );
                     const isReserved = table.isReserved || (reservation && reservation.status === 'confirmado');
 
+                    // Traffic Light Logic
+                    let activityColor = null;
+                    if (isOccupied && table.lastActionAt) {
+                        const minsSinceAction = (new Date() - new Date(table.lastActionAt)) / 60000;
+                        const hasBillRequest = serviceRequests?.some(r =>
+                            (r.table_id === table.id || r.table_id === table.id.toString()) &&
+                            (r.type === 'cuenta' || r.type === 'bill') &&
+                            r.status === 'pending'
+                        );
+
+                        if (hasBillRequest) activityColor = '#ef4444'; // Red for bill request
+                        else if (minsSinceAction > 30) activityColor = '#ef4444'; // Red for legacy
+                        else if (minsSinceAction > 20) activityColor = '#f59e0b'; // Yellow
+                        else activityColor = '#10b981'; // Green
+                    }
+
                     return (
                         <motion.button
                             key={table.id}
@@ -179,6 +195,26 @@ const TableSelection = () => {
                                 <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8rem', color: '#f59e0b' }}>
                                     ✏️
                                 </div>
+                            )}
+
+                            {/* Traffic Light Dot */}
+                            {activityColor && (
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        left: '12px',
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '50%',
+                                        backgroundColor: activityColor,
+                                        boxShadow: `0 0 10px ${activityColor}`,
+                                        zIndex: 2
+                                    }}
+                                    title="Indicador de actividad"
+                                />
                             )}
 
                             <div style={{

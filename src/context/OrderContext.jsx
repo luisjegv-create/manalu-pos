@@ -252,7 +252,11 @@ export const OrderProvider = ({ children }) => {
     };
 
     const updateTableStatus = (tableId, status) => {
-        setTables(prev => prev.map(t => t.id === tableId ? { ...t, status } : t));
+        setTables(prev => prev.map(t =>
+            t.id === tableId
+                ? { ...t, status, lastActionAt: status === 'occupied' ? new Date().toISOString() : t.lastActionAt }
+                : t
+        ));
     };
 
     const sendToKitchen = async () => {
@@ -302,6 +306,13 @@ export const OrderProvider = ({ children }) => {
 
         clearOrder();
         setSelectedCustomer(null);
+
+        // Update table activity
+        setTables(prev => prev.map(t =>
+            t.id === currentTable.id
+                ? { ...t, lastActionAt: new Date().toISOString() }
+                : t
+        ));
     };
 
     const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
@@ -345,7 +356,11 @@ export const OrderProvider = ({ children }) => {
                     delete next[tableId];
                     return next;
                 });
-                updateTableStatus(tableId, 'free');
+                setTables(prev => prev.map(t =>
+                    t.id === tableId
+                        ? { ...t, status: 'free', lastActionAt: null }
+                        : t
+                ));
                 if (currentTable && currentTable.id === tableId) {
                     setCurrentTable(null);
                 }
