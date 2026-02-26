@@ -463,45 +463,77 @@ export const InventoryProvider = ({ children }) => {
 
     // --- Stock Logic ---
     const deductStockForOrder = async (orderItems) => {
-        orderItems.forEach(async item => {
-            if (item.isWine) {
-                const currentStock = wines.find(w => w.id === item.id)?.stock || 0;
-                updateWine(item.id, { stock: Math.max(0, currentStock - item.quantity) });
-            }
+        const wineChanges = {};
+        const ingChanges = {};
 
+        orderItems.forEach(item => {
+            if (item.isWine) {
+                wineChanges[item.id] = (wineChanges[item.id] || 0) + item.quantity;
+            }
             const productRecipe = recipes[item.id];
             if (productRecipe) {
-                productRecipe.forEach(async recipeItem => {
+                productRecipe.forEach(recipeItem => {
                     const amount = recipeItem.quantity * item.quantity;
-                    const ing = ingredients.find(i => i.id === (recipeItem.ingredient_id || recipeItem.ingredientId));
-                    if (ing) {
-                        const newQty = Math.max(0, ing.quantity - amount);
-                        updateIngredient(ing.id, { ...ing, quantity: newQty });
-                    }
+                    const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
+                    ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
                 });
             }
         });
+
+        // Apply Wine Stock Deductions
+        for (const [id, deduction] of Object.entries(wineChanges)) {
+            const wine = wines.find(w => w.id === id || w.id === parseInt(id));
+            if (wine) {
+                const currentStock = parseInt(wine.stock) || 0;
+                await updateWine(wine.id, { ...wine, stock: Math.max(0, currentStock - deduction) });
+            }
+        }
+
+        // Apply Ingredient Stock Deductions
+        for (const [id, deduction] of Object.entries(ingChanges)) {
+            const ing = ingredients.find(i => i.id === id || i.id === parseInt(id));
+            if (ing) {
+                const currentQty = ing.quantity || 0;
+                await updateIngredient(ing.id, { ...ing, quantity: Math.max(0, currentQty - deduction) });
+            }
+        }
     };
 
     const returnStockForItems = async (items) => {
-        items.forEach(async item => {
-            if (item.isWine) {
-                const currentStock = wines.find(w => w.id === item.id)?.stock || 0;
-                await updateWine(item.id, { stock: currentStock + item.quantity });
-            }
+        const wineChanges = {};
+        const ingChanges = {};
 
+        items.forEach(item => {
+            if (item.isWine) {
+                wineChanges[item.id] = (wineChanges[item.id] || 0) + item.quantity;
+            }
             const productRecipe = recipes[item.id];
             if (productRecipe) {
-                productRecipe.forEach(async recipeItem => {
+                productRecipe.forEach(recipeItem => {
                     const amount = recipeItem.quantity * item.quantity;
-                    const ing = ingredients.find(i => i.id === (recipeItem.ingredient_id || recipeItem.ingredientId));
-                    if (ing) {
-                        const newQty = ing.quantity + amount;
-                        await updateIngredient(ing.id, { ...ing, quantity: newQty });
-                    }
+                    const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
+                    ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
                 });
             }
         });
+
+        // Apply Wine Stock Returns
+        for (const [id, returnQty] of Object.entries(wineChanges)) {
+            const wine = wines.find(w => w.id === id || w.id === parseInt(id));
+            if (wine) {
+                const currentStock = parseInt(wine.stock) || 0;
+                await updateWine(wine.id, { ...wine, stock: currentStock + returnQty });
+            }
+        }
+
+        // Apply Ingredient Stock Returns
+        for (const [id, returnQty] of Object.entries(ingChanges)) {
+            const ing = ingredients.find(i => i.id === id || i.id === parseInt(id));
+            if (ing) {
+                const currentQty = ing.quantity || 0;
+                await updateIngredient(ing.id, { ...ing, quantity: currentQty + returnQty });
+            }
+        }
     };
 
     const addProductWithRecipe = async (product, recipeItems) => {

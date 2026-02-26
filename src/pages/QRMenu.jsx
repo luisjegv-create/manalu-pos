@@ -41,13 +41,20 @@ const QRMenu = () => {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
     const [serviceFeedback, setServiceFeedback] = useState(null);
+    const [isRequesting, setIsRequesting] = useState(false);
 
     const handleServiceRequest = async (type) => {
-        if (!tableParam) return;
+        if (!tableParam || isRequesting) return;
+        setIsRequesting(true);
         const success = await requestService(tableParam, `Mesa ${tableParam}`, type);
+        setIsRequesting(false);
         if (success) {
-            setServiceFeedback(type === 'waiter' ? 'Camarero avisado 🛎️' : 'Cuenta solicitada 🧾');
-            setTimeout(() => setServiceFeedback(null), 3000);
+            setServiceFeedback({
+                type,
+                message: type === 'waiter' ? 'Camarero avisado 🛎️' : 'Cuenta solicitada 🧾',
+                id: Date.now()
+            });
+            setTimeout(() => setServiceFeedback(null), 5000);
         }
     };
 
@@ -71,85 +78,138 @@ const QRMenu = () => {
     const getRecommendedWine = (wineId) => wines.find(w => w.id === wineId);
 
     return (
-        <div style={{ minHeight: '100vh', background: '#0f172a', color: 'white', fontFamily: 'Inter, sans-serif', paddingBottom: '80px' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+            color: 'white',
+            fontFamily: "'Outfit', sans-serif",
+            paddingBottom: '100px'
+        }}>
 
-            {/* Immersive Header */}
+            <style>
+                {`
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+                
+                .premium-glass {
+                    background: rgba(255, 255, 255, 0.03);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                }
+                
+                .category-scroll::-webkit-scrollbar {
+                    display: none;
+                }
+                
+                .pulse-yellow {
+                    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+                    animation: pulse-yellow 2s infinite;
+                }
+                
+                @keyframes pulse-yellow {
+                    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+                    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+                    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+                }
+                `}
+            </style>
+
+            {/* Float Actions */}
             {tableParam && (
                 <div style={{
                     position: 'fixed',
-                    bottom: '20px',
+                    bottom: '25px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 100,
                     display: 'flex',
                     gap: '1rem',
-                    width: '90%',
-                    maxWidth: '400px'
+                    width: '92%',
+                    maxWidth: '450px'
                 }}>
-                    <button
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleServiceRequest('waiter')}
+                        className={isRequesting ? "" : "pulse-yellow"}
                         style={{
                             flex: 1,
-                            padding: '1rem',
-                            background: '#fbbf24',
+                            padding: '1.2rem',
+                            background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                             color: '#000',
                             border: 'none',
-                            borderRadius: '16px',
-                            fontWeight: 'bold',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            borderRadius: '20px',
+                            fontWeight: '800',
+                            boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.5rem',
-                            fontSize: '0.9rem'
+                            gap: '0.6rem',
+                            fontSize: '1rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            opacity: isRequesting ? 0.7 : 1
                         }}
                     >
-                        🛎️ Llamar
-                    </button>
-                    <button
+                        {isRequesting ? '...' : <><Menu size={20} /> Llamar</>}
+                    </motion.button>
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleServiceRequest('bill')}
                         style={{
                             flex: 1,
-                            padding: '1rem',
-                            background: '#10b981',
+                            padding: '1.2rem',
+                            background: 'rgba(30, 41, 59, 0.7)',
+                            backdropFilter: 'blur(10px)',
                             color: 'white',
-                            border: 'none',
-                            borderRadius: '16px',
-                            fontWeight: 'bold',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '20px',
+                            fontWeight: '800',
+                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.5rem',
-                            fontSize: '0.9rem'
+                            gap: '0.6rem',
+                            fontSize: '1rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            opacity: isRequesting ? 0.7 : 1
                         }}
                     >
-                        🧾 La Cuenta
-                    </button>
+                        {isRequesting ? '...' : <><Wine size={20} /> La Cuenta</>}
+                    </motion.button>
                 </div>
             )}
 
             <AnimatePresence>
                 {serviceFeedback && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
+                        key={serviceFeedback.id}
+                        initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: -20 }}
                         style={{
                             position: 'fixed',
-                            top: '20px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            background: '#10b981',
+                            top: '30px',
+                            left: '5%',
+                            right: '5%',
+                            background: 'rgba(16, 185, 129, 0.95)',
+                            backdropFilter: 'blur(10px)',
                             color: 'white',
-                            padding: '0.75rem 1.5rem',
-                            borderRadius: '50px',
+                            padding: '1.2rem',
+                            borderRadius: '20px',
                             zIndex: 200,
-                            fontWeight: 'bold',
-                            boxShadow: '0 10px 30px rgba(16, 185, 129, 0.4)'
+                            fontWeight: '700',
+                            boxShadow: '0 15px 35px rgba(16, 185, 129, 0.4)',
+                            textAlign: 'center',
+                            border: '1px solid rgba(255,255,255,0.2)'
                         }}
                     >
-                        {serviceFeedback}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+                            <div style={{ background: 'white', color: '#10b981', borderRadius: '50%', padding: '4px' }}>
+                                <Info size={20} />
+                            </div>
+                            {serviceFeedback.message}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -365,52 +425,42 @@ const QRMenu = () => {
 
                                     {/* Content Info */}
                                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700', lineHeight: '1.3' }}>{product.name}</h3>
-                                            <div style={{
-                                                background: '#fbbf24',
-                                                color: '#000',
-                                                padding: '0.25rem 0.6rem',
-                                                borderRadius: '8px',
-                                                fontWeight: '700',
-                                                fontSize: '1.2rem',
-                                                whiteSpace: 'nowrap',
-                                                marginLeft: '0.5rem',
-                                                boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
-                                            }}>
-                                                {product.price.toFixed(2)}€
-                                            </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                                            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '800', lineHeight: '1.2', color: '#fff', letterSpacing: '-0.02em' }}>{product.name}</h3>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                            <span style={{ color: '#fbbf24', fontSize: '1.3rem', fontWeight: '900' }}>{product.price.toFixed(2)}€</span>
+                                            {product.isRecommended && (
+                                                <span style={{ fontSize: '0.7rem', background: 'rgba(251, 191, 36, 0.2)', color: '#fbbf24', padding: '2px 8px', borderRadius: '50px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOP</span>
+                                            )}
                                         </div>
 
                                         {product.description && (
                                             <p style={{
-                                                fontSize: '0.85rem',
+                                                fontSize: '0.9rem',
                                                 color: '#94a3b8',
-                                                margin: '0 0 0.5rem 0',
+                                                margin: '0 0 0.75rem 0',
                                                 display: '-webkit-box',
                                                 WebkitLineClamp: 2,
                                                 WebkitBoxOrient: 'vertical',
                                                 overflow: 'hidden',
-                                                lineHeight: '1.4'
+                                                lineHeight: '1.5',
+                                                fontWeight: '400'
                                             }}>
                                                 {product.description}
                                             </p>
                                         )}
 
-                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                                            {(product.allergens || []).slice(0, 4).map(a => {
+                                        <div style={{ display: 'flex', gap: '0.6rem', marginTop: 'auto' }}>
+                                            {(product.allergens || []).map(a => {
                                                 const info = ALLERGEN_ICONS[a];
                                                 return info ? (
-                                                    <div key={a} style={{ background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '6px' }} title={info.label}>
-                                                        <info.icon size={12} color={info.color} />
+                                                    <div key={a} style={{ background: 'rgba(255,255,255,0.08)', padding: '6px', borderRadius: '10px' }} title={info.label}>
+                                                        <info.icon size={14} color={info.color} />
                                                     </div>
                                                 ) : null;
                                             })}
-                                            {(product.allergens || []).length > 4 && (
-                                                <div style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 5px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                                                    +{product.allergens.length - 4}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
 

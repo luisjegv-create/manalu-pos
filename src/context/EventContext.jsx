@@ -62,15 +62,18 @@ export const EventProvider = ({ children }) => {
                     }));
                 }
 
-                // Note: reservations table not yet created in sql script, using local for now or assume it exists
-                const savedRes = localStorage.getItem('manalu_reservations');
-                let parsedRes = [];
-                try {
-                    parsedRes = savedRes ? JSON.parse(savedRes) : [];
-                } catch (e) {
-                    console.error("Error parsing reservations:", e);
+                // Note: reservations table cloud sync
+                const { data: resData, error: resError } = await supabase.from('reservations').select('*').order('date', { ascending: true });
+                if (resError) console.error("Reservations Fetch Error:", resError);
+                if (resData) {
+                    setReservations(resData.map(r => ({
+                        ...r,
+                        customerName: r.customer_name,
+                        tableId: r.table_id,
+                        createdAt: r.created_at,
+                        tags: typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || [])
+                    })));
                 }
-                setReservations(parsedRes);
 
             } catch (err) {
                 console.error("Event Sync Error:", err);
@@ -79,6 +82,18 @@ export const EventProvider = ({ children }) => {
             }
         };
         syncEvents();
+
+        // Real-time subscription for reservations
+        const resSubscription = supabase
+            .channel('reservations-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
+                syncEvents();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(resSubscription);
+        };
     }, []);
 
     const addEvent = async (event) => {
@@ -108,34 +123,70 @@ export const EventProvider = ({ children }) => {
         }
     };
 
-    const addReservation = (res) => {
-        setReservations(prev => {
-            const next = [...prev, {
-                ...res,
-                id: Date.now().toString(),
+    const addReservation = async (res) => {
+        try {
+            const { data, error } = await supabase.from('reservations').insert([{
+                customer_name: res.customerName,
+                phone: res.phone,
+                people: res.people,
+                date: res.date,
+                time: res.time,
+                table_id: res.tableId,
+                notes: res.notes,
                 status: res.status || 'confirmado',
-                tags: res.tags || [],
-                createdAt: new Date().toISOString()
-            }];
-            localStorage.setItem('manalu_reservations', JSON.stringify(next));
-            return next;
-        });
+                tags: res.tags || []
+            }]).select();
+
+            if (error) throw error;
+            if (data && data[0]) {
+                const newRes = {
+                    ...data[0],
+                    customerName: data[0].customer_name,
+                    tableId: data[0].table_id,
+                    createdAt: data[0].created_at,
+                    tags: data[0].tags || []
+                };
+                setReservations(prev => [...prev, newRes]);
+            }
+        } catch (err) {
+            console.error("Error adding reservation:", err);
+            alert("Error al añadir reserva: " + (err.message || "Error desconocido"));
+        }
     };
 
-    const updateReservation = (resId, updates) => {
-        setReservations(prev => {
-            const next = prev.map(r => r.id === resId ? { ...r, ...updates } : r);
-            localStorage.setItem('manalu_reservations', JSON.stringify(next));
-            return next;
-        });
+    const updateReservation = async (resId, updates) => {
+        try {
+            // Map camelCase to snake_case for Supabase
+            const dbUpdates = {};
+            if (updates.customerName !== undefined) dbUpdates.customer_name = updates.customerName;
+            if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+            if (updates.people !== undefined) dbUpdates.people = updates.people;
+            if (updates.date !== undefined) dbUpdates.date = updates.date;
+            if (updates.time !== undefined) dbUpdates.time = updates.time;
+            if (updates.tableId !== undefined) dbUpdates.table_id = updates.tableId;
+            if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+
+            const { error } = await supabase.from('reservations').update(dbUpdates).eq('id', resId);
+            if (error) throw error;
+
+            setReservations(prev => prev.map(r => r.id === resId ? { ...r, ...updates } : r));
+        } catch (err) {
+            console.error("Error updating reservation:", err);
+            alert("Error al actualizar reserva: " + (err.message || "Error desconocido"));
+        }
     };
 
-    const deleteReservation = (resId) => {
-        setReservations(prev => {
-            const next = prev.filter(r => r.id !== resId);
-            localStorage.setItem('manalu_reservations', JSON.stringify(next));
-            return next;
-        });
+    const deleteReservation = async (resId) => {
+        try {
+            const { error } = await supabase.from('reservations').delete().eq('id', resId);
+            if (error) throw error;
+            setReservations(prev => prev.filter(r => r.id !== resId));
+        } catch (err) {
+            console.error("Error deleting reservation:", err);
+            alert("Error al borrar reserva: " + (err.message || "Error desconocido"));
+        }
     };
 
     const updateEventStatus = async (eventId, newStatus) => {

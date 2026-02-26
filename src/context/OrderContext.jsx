@@ -3,6 +3,7 @@ import { supabase } from '../utils/supabaseClient';
 import { useInventory } from './InventoryContext';
 import { useCustomers } from './CustomerContext';
 import { tables as initialTables } from '../data/tables';
+import { useEvents } from './EventContext';
 
 const OrderContext = createContext();
 
@@ -12,6 +13,7 @@ export const useOrder = () => useContext(OrderContext);
 export const OrderProvider = ({ children }) => {
     const { deductStockForOrder, incrementTicketNumber } = useInventory();
     const { recordSale } = useCustomers();
+    const { reservations } = useEvents();
 
     // Helper for safe parsing
     const safeParse = (key, fallback) => {
@@ -524,7 +526,11 @@ export const OrderProvider = ({ children }) => {
             if (!error && data) {
                 const newClose = {
                     ...data[0],
-                    date: new Date(data[0].created_at)
+                    date: new Date(data[0].created_at),
+                    efectivo: data[0].total_efectivo,
+                    tarjeta: data[0].total_tarjeta,
+                    total: data[0].total_ventas,
+                    salesCount: data[0].sales_count
                 };
                 setCashCloses(prev => [newClose, ...prev]);
                 return newClose;
@@ -618,7 +624,8 @@ export const OrderProvider = ({ children }) => {
             cashCloses,
             serviceRequests,
             requestService,
-            clearServiceRequest
+            clearServiceRequest,
+            reservations // Also expose reservations here for convenience
         }}>
             {children}
         </OrderContext.Provider>

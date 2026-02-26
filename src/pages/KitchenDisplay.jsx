@@ -4,6 +4,29 @@ import { ArrowLeft, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const ElapsedTime = ({ timestamp }) => {
+    const [elapsed, setElapsed] = React.useState(0);
+
+    React.useEffect(() => {
+        const calculate = () => {
+            const diff = Math.floor((new Date() - new Date(timestamp)) / 60000);
+            setElapsed(diff);
+        };
+        calculate();
+        const interval = setInterval(calculate, 30000); // Update every 30s
+        return () => clearInterval(interval);
+    }, [timestamp]);
+
+    const color = elapsed > 15 ? '#ef4444' : elapsed > 8 ? '#fbbf24' : '#10b981';
+
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color, fontWeight: 'bold' }}>
+            <Clock size={16} />
+            <span>{elapsed} min</span>
+        </div>
+    );
+};
+
 const KitchenDisplay = () => {
     const { kitchenOrders, markOrderReady, removeOrder } = useOrder();
     const navigate = useNavigate();
@@ -24,6 +47,15 @@ const KitchenDisplay = () => {
         }
         lastOrderCount.current = kitchenOrders.length;
     }, [kitchenOrders, soundEnabled]);
+
+    const groupItemsByCategory = (items) => {
+        return items.reduce((acc, item) => {
+            const cat = item.category || 'Otros';
+            if (!acc[cat]) acc[cat] = [];
+            acc[cat].push(item);
+            return acc;
+        }, {});
+    };
 
     return (
         <div style={{ padding: '2rem' }}>
@@ -53,93 +85,115 @@ const KitchenDisplay = () => {
                 </button>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
                 <AnimatePresence>
-                    {[...pendingOrders, ...readyOrders].map(order => (
-                        <motion.div
-                            key={order.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="glass-panel"
-                            style={{
-                                padding: '1.5rem',
-                                borderLeft: `5px solid ${order.status === 'pending' ? '#ef4444' : '#10b981'}`,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1rem'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Mesa {order.table}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
-                                    <Clock size={16} />
-                                    <span>{order.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                </div>
-                            </div>
-
-                            <div style={{ flex: 1 }}>
-                                {order.items.map((item, idx) => (
-                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <div style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '1.2rem',
-                                                background: 'rgba(255,255,255,0.05)',
-                                                borderRadius: '6px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                {(String(item.image || '').startsWith('data:image') || String(item.image || '').startsWith('http') || String(item.image || '').startsWith('/'))
-                                                    ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : item.image || '🍽️'}
-                                            </div>
-                                            <span style={{ fontSize: '1.1rem', fontWeight: '500' }}>{item.quantity}x {item.name}</span>
-                                        </div>
-                                        {item.notes && (
-                                            <div style={{ fontSize: '1rem', color: '#000', background: '#fbbf24', padding: '2px 8px', borderRadius: '4px', margin: '4px 0 4px 3rem', fontWeight: '900', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                                                ⚠️ {item.notes.toUpperCase()}
-                                            </div>
-                                        )}
-                                        {item.selectedModifiers && (
-                                            <div style={{ fontSize: '0.8rem', color: '#10b981' }}>
-                                                {Object.values(item.selectedModifiers).join(', ')}
-                                            </div>
-                                        )}
+                    {[...pendingOrders, ...readyOrders].map(order => {
+                        const grouped = groupItemsByCategory(order.items);
+                        return (
+                            <motion.div
+                                key={order.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="glass-panel"
+                                style={{
+                                    padding: '1.5rem',
+                                    borderLeft: `8px solid ${order.status === 'pending' ? '#ef4444' : '#10b981'}`,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '1rem',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                    background: 'rgba(22, 28, 45, 0.8)'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                                    <div>
+                                        <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--color-primary)' }}>MESA {order.table}</div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{order.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
-                                ))}
-                            </div>
+                                    <ElapsedTime timestamp={order.timestamp} />
+                                </div>
 
-                            {order.status === 'pending' ? (
-                                <button
-                                    className="btn-primary"
-                                    style={{ background: '#ef4444', width: '100%', marginTop: 'auto' }}
-                                    onClick={() => markOrderReady(order.id)}
-                                >
-                                    Marcar Listo
-                                </button>
-                            ) : (
-                                <button
-                                    className="btn-primary"
-                                    style={{ background: '#10b981', width: '100%', marginTop: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-                                    onClick={() => removeOrder(order.id)}
-                                >
-                                    <CheckCircle size={18} />
-                                    Archivar
-                                </button>
-                            )}
-                        </motion.div>
-                    ))}
+                                <div style={{ flex: 1 }}>
+                                    {Object.entries(grouped).map(([category, items]) => (
+                                        <div key={category} style={{ marginBottom: '1.5rem' }}>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'uppercase',
+                                                color: '#94a3b8',
+                                                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                                                paddingBottom: '0.25rem',
+                                                marginBottom: '0.5rem',
+                                                display: 'flex',
+                                                justifyContent: 'space-between'
+                                            }}>
+                                                <span>{category}</span>
+                                                <span>{items.length} items</span>
+                                            </div>
+                                            {items.map((item, idx) => (
+                                                <div key={idx} style={{ marginBottom: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <span style={{
+                                                                fontSize: '1.3rem',
+                                                                fontWeight: '800',
+                                                                minWidth: '1.5rem',
+                                                                color: order.status === 'pending' ? '#fff' : '#10b981'
+                                                            }}>{item.quantity}x</span>
+                                                            <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{item.name}</span>
+                                                        </div>
+                                                    </div>
+                                                    {item.notes && (
+                                                        <div style={{
+                                                            fontSize: '1rem',
+                                                            color: '#000',
+                                                            background: '#fbbf24',
+                                                            padding: '4px 10px',
+                                                            borderRadius: '4px',
+                                                            marginTop: '0.5rem',
+                                                            fontWeight: '900',
+                                                            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
+                                                            display: 'inline-block'
+                                                        }}>
+                                                            ⚠️ {item.notes.toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {order.status === 'pending' ? (
+                                    <button
+                                        className="btn-primary"
+                                        style={{ background: '#ef4444', width: '100%', marginTop: 'auto', padding: '1rem', fontWeight: 'bold' }}
+                                        onClick={() => markOrderReady(order.id)}
+                                    >
+                                        MARCAR COMO LISTO
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn-primary"
+                                        style={{ background: '#10b981', width: '100%', marginTop: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem', fontWeight: 'bold' }}
+                                        onClick={() => removeOrder(order.id)}
+                                    >
+                                        <CheckCircle size={20} />
+                                        ARCHIVAR PEDIDO
+                                    </button>
+                                )}
+                            </motion.div>
+                        );
+                    })}
                 </AnimatePresence>
 
                 {kitchenOrders.length === 0 && (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--color-text-muted)', padding: '4rem' }}>
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--color-text-muted)', padding: '6rem 0' }}>
+                        <CheckCircle size={64} style={{ opacity: 0.1, marginBottom: '1rem' }} />
                         <h2>No hay pedidos pendientes</h2>
-                        <p>¡Todo tranquilo en la cocina!</p>
+                        <p>¡Todo bajo control!</p>
                     </div>
                 )}
             </div>

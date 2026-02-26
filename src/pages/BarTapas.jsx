@@ -5,37 +5,35 @@ import { useOrder } from '../context/OrderContext';
 import { useCustomers } from '../context/CustomerContext';
 import { categories } from '../data/products';
 import {
-    Utensils,
-    Sandwich,
-    Beer,
-    Cake,
     ArrowLeft,
     Trash2,
-    Send,
+    Search,
+    X,
+    Wine,
     Plus,
     Minus,
     User,
     Star,
-    Search,
+    Utensils,
+    Send,
     Printer,
     CreditCard,
-    Banknote,
-    X,
     FileText,
-    Wine,
     MessageSquare,
+    Banknote,
     Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printKitchenTicket, printBillTicket } from '../utils/printHelpers';
 
-const iconMap = {
-    Utensils,
-    Sandwich,
-    Beer,
-    Cake,
-    Wine
-};
+// Modular Components
+import CategoryTabs from '../components/TPV/CategoryTabs';
+import ProductGrid from '../components/TPV/ProductGrid';
+import OrderSummary from '../components/TPV/OrderSummary';
+import PaymentModal from '../components/TPV/PaymentModal';
+import PartialPaymentModal from '../components/TPV/PartialPaymentModal';
+import ModifierModal from '../components/TPV/ModifierModal';
+import ProductEditorModal from '../components/TPV/ProductEditorModal';
 
 const BarTapas = () => {
     const navigate = useNavigate();
@@ -61,7 +59,8 @@ const BarTapas = () => {
         selectedCustomer,
         selectCustomer,
         serviceRequests, // Added serviceRequests
-        clearServiceRequest // Added clearServiceRequest
+        clearServiceRequest, // Added clearServiceRequest
+        reservations
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
@@ -343,9 +342,35 @@ const BarTapas = () => {
                         <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
                         <div>
                             <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Gestión por mesas</h1>
-                            <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                {currentTable ? currentTable.name : 'Mesa no asignada'}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                    {currentTable ? currentTable.name : 'Mesa no asignada'}
+                                </span>
+                                {currentTable && (() => {
+                                    const todayStr = new Date().toISOString().split('T')[0];
+                                    const reservation = reservations.find(r =>
+                                        (r.tableId === currentTable.id.toString() || r.tableId === currentTable.id) &&
+                                        r.date === todayStr &&
+                                        (r.status === 'confirmado' || r.status === 'sentado')
+                                    );
+                                    if (reservation) {
+                                        return (
+                                            <span style={{
+                                                fontSize: '0.8rem',
+                                                background: 'rgba(245, 158, 11, 0.15)',
+                                                color: '#f59e0b',
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                RESERVA: {reservation.customerName} ({reservation.time})
+                                            </span>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                            </div>
                         </div>
                     </div>
 
@@ -372,198 +397,38 @@ const BarTapas = () => {
                     </div>
                 </header>
 
-                {/* Categories Tabs */}
-                <div style={{ display: 'flex', gap: '1rem', padding: '1rem', overflowX: 'auto' }}>
-                    {categories.map(cat => {
-                        const Icon = iconMap[cat.icon];
-                        const isActive = activeCategory === cat.id;
-                        return (
-                            <button
-                                key={cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                                className={isActive ? 'glass-panel' : ''}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.5rem',
-                                    padding: '0.75rem 1.5rem',
-                                    borderRadius: '12px',
-                                    border: isActive ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                    background: isActive ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                                    cursor: 'pointer',
-                                    fontSize: '1rem',
-                                    fontWeight: '600',
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                <Icon size={18} />
-                                {cat.name}
-                            </button>
-                        );
-                    })}
+                {/* LEFT SECTION: Categories & Products */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+                    <CategoryTabs
+                        categories={categories}
+                        activeCategory={activeCategory}
+                        setActiveCategory={setActiveCategory}
+                        isMobile={isMobile}
+                    />
+
+                    <ProductGrid
+                        products={filteredProducts}
+                        onProductClick={handleProductClick}
+                        getProductCost={getProductCost}
+                    />
+
+                    {/* Mobile Floating Button */}
+                    {isMobile && !showOrderMobile && order.length > 0 && (
+                        <button
+                            onClick={() => setShowOrderMobile(true)}
+                            style={{
+                                position: 'fixed', bottom: '2rem', right: '2rem', padding: '1rem 2rem',
+                                borderRadius: '50px', background: 'var(--color-primary)', color: 'white',
+                                border: 'none', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
+                                display: 'flex', alignItems: 'center', gap: '0.75rem', zIndex: 40,
+                                fontWeight: 'bold', fontSize: '1.1rem'
+                            }}
+                        >
+                            <Wine size={20} />
+                            Ver Pedido ({calculateTotal().toFixed(2)}€)
+                        </button>
+                    )}
                 </div>
-
-                {/* Product Grid */}
-                <div style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: '1rem',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                    gap: '1.5rem',
-                    alignContent: 'start'
-                }}>
-                    <AnimatePresence mode='popLayout'>
-                        {filteredProducts.map(product => (
-                            <motion.div
-                                key={product.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                onClick={() => handleProductClick(product)}
-                                className="glass-panel"
-                                style={{
-                                    padding: '1.25rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    textAlign: 'center',
-                                    gap: '0.75rem',
-                                    transition: 'background 0.2s',
-                                    border: '1px solid var(--glass-border)'
-                                }}
-                                whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--color-primary)' }}
-                                whileTap={{ scale: 0.95 }}
-                            >
-                                {/* Stock Indicator */}
-                                {product.isWine && product.stock <= 5 && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '0.5rem',
-                                        right: '0.5rem',
-                                        background: product.stock === 0 ? '#ef4444' : '#f59e0b',
-                                        color: 'white',
-                                        fontSize: '0.7rem',
-                                        padding: '2px 6px',
-                                        borderRadius: '4px',
-                                        fontWeight: 'bold',
-                                        zIndex: 5
-                                    }}>
-                                        {product.stock === 0 ? 'AGOTADO' : `QUEDAN ${product.stock}`}
-                                    </div>
-                                )}
-                                <div style={{
-                                    width: '120px',
-                                    height: '110px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '3rem',
-                                    overflow: 'hidden',
-                                    borderRadius: '12px',
-                                    background: 'rgba(0,0,0,0.2)'
-                                }}>
-                                    {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
-                                        ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        : product.image}
-                                </div>
-                                <div style={{ fontWeight: '600' }}>{product.name}</div>
-
-
-                                {/* Discrete Price Component */}
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation(); // Prevent product add when checking price
-                                        // Mobile friendly: toggle visibility or just use hover on desktop
-                                    }}
-                                    className="discrete-price-folder"
-                                    style={{
-                                        marginTop: '0.25rem',
-                                        padding: '0.25rem 0.5rem',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        borderRadius: '6px',
-                                        cursor: 'help',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '0.5rem',
-                                        position: 'relative',
-                                        group: 'price-group'
-                                    }}
-                                >
-                                    <span style={{ fontSize: '1.2rem' }}>📁</span>
-
-                                    {/* Hover Content */}
-                                    <div
-                                        className="price-reveal"
-                                        style={{
-                                            position: 'absolute',
-                                            bottom: '100%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            background: 'rgba(0,0,0,0.9)',
-                                            border: '1px solid var(--color-primary)',
-                                            padding: '0.5rem',
-                                            borderRadius: '8px',
-                                            marginBottom: '0.5rem',
-                                            display: 'none',
-                                            width: 'max-content',
-                                            zIndex: 10
-                                        }}
-                                    >
-                                        <div style={{ color: '#10b981', fontWeight: 'bold' }}>PVP: {product.price.toFixed(2)}€</div>
-                                        {product.isWine ? (
-                                            <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Compra: {product.purchasePrice?.toFixed(2)}€</div>
-                                        ) : (
-                                            <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Coste Receta: {getProductCost(product.id).toFixed(2)}€</div>
-                                        )}
-                                    </div>
-
-                                    {/* Inline Hover Logic via style block in render is tricky. 
-                                        Let's just use React state for the *active* viewed price? 
-                                        No, that's too much state for a grid.
-                                        Let's stick to a CSS-in-JS approach where we modify the opacity on hover.
-                                     */}
-                                    <style>{`
-                                        .discrete-price-folder:hover .price-reveal {
-                                            display: block !important;
-                                        }
-                                     `}</style>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
-
-                {/* Mobile Floating Button */}
-                {isMobile && !showOrderMobile && order.length > 0 && (
-                    <button
-                        onClick={() => setShowOrderMobile(true)}
-                        style={{
-                            position: 'fixed',
-                            bottom: '2rem',
-                            right: '2rem',
-                            padding: '1rem 2rem',
-                            borderRadius: '50px',
-                            background: 'var(--color-primary)',
-                            color: 'white',
-                            border: 'none',
-                            boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            zIndex: 40,
-                            fontWeight: 'bold',
-                            fontSize: '1.1rem'
-                        }}
-                    >
-                        <Wine size={20} />
-                        Ver Pedido ({calculateTotal().toFixed(2)}€)
-                    </button>
-                )}
             </div>
 
             {/* RIGHT SECTION: Order Summary */}
@@ -1136,6 +1001,7 @@ const BarTapas = () => {
                     </div>
                 )}
             </AnimatePresence>
+
             {/* Quick Product Creator Modal */}
             <AnimatePresence>
                 {isAddingProduct && (
@@ -1664,8 +1530,7 @@ const BarTapas = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div >
-
+        </div>
     );
 };
 

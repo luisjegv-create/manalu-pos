@@ -397,3 +397,131 @@ export const printRestockList = (items) => {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
+
+export const printCashCloseTicket = (closeData, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=400,height=600');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const date = new Date(closeData.date || new Date()).toLocaleDateString();
+    const time = new Date(closeData.date || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>CIERRE Z - ${date}</title>
+            <style>
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    width: 300px;
+                    margin: 0 auto;
+                    padding: 10px;
+                    color: black;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid black;
+                    padding-bottom: 10px;
+                    margin-bottom: 15px;
+                }
+                .title {
+                    font-size: 1.4rem;
+                    font-weight: bold;
+                    margin: 0;
+                }
+                .meta {
+                    font-size: 0.9rem;
+                    margin-top: 5px;
+                }
+                .section {
+                    margin-bottom: 15px;
+                    border-bottom: 1px dashed #666;
+                    padding-bottom: 10px;
+                }
+                .row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 5px;
+                    font-size: 1rem;
+                }
+                .label { font-weight: normal; }
+                .value { font-weight: bold; }
+                .total-row {
+                    border-top: 2px solid black;
+                    margin-top: 5px;
+                    padding-top: 5px;
+                    font-size: 1.2rem;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 20px;
+                    font-size: 0.8rem;
+                    font-style: italic;
+                }
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { margin: 10px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px;">
+                    ${companyInfo.name || 'BAR RACIONES Y BOCATAS'}
+                </div>
+                <h1 class="title">CIERRE DE CAJA (Z)</h1>
+                <div class="meta">FECHA: ${date}</div>
+                <div class="meta">HORA: ${time}</div>
+            </div>
+
+            <div class="section">
+                <div class="row">
+                    <span class="label">Tickets Emitidos:</span>
+                    <span class="value">${closeData.salesCount || 0}</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="row">
+                    <span class="label">Total Tarjeta:</span>
+                    <span class="value">${(closeData.tarjeta || 0).toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span class="label">Total Efectivo:</span>
+                    <span class="value">${(closeData.efectivo || 0).toFixed(2)}€</span>
+                </div>
+                <div class="row total-row">
+                    <span class="label">TOTAL VENTAS:</span>
+                    <span class="value">${(closeData.total || 0).toFixed(2)}€</span>
+                </div>
+            </div>
+
+            ${closeData.notes ? `
+                <div class="section">
+                    <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 5px;">OBSERVACIONES:</div>
+                    <div style="font-size: 0.8rem;">${closeData.notes}</div>
+                </div>
+            ` : ''}
+
+            <div class="footer">
+                Reporte generado por Manalu TPV<br>
+                ${new Date().toLocaleString()}
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};

@@ -12,7 +12,7 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTable, setEditingTable] = useState(null); // For modal
@@ -132,7 +132,15 @@ const TableSelection = () => {
                 {filteredTables.map(table => {
                     const hasActiveOrder = tableOrders[table.id] && tableOrders[table.id].length > 0;
                     const isOccupied = table.status === 'occupied' || hasActiveOrder;
-                    const isReserved = table.isReserved;
+
+                    // Check for today's reservations
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const reservation = reservations.find(r =>
+                        (r.tableId === table.id.toString() || r.tableId === table.id) &&
+                        r.date === todayStr &&
+                        (r.status === 'confirmado' || r.status === 'sentado')
+                    );
+                    const isReserved = table.isReserved || (reservation && reservation.status === 'confirmado');
 
                     return (
                         <motion.button
@@ -199,6 +207,11 @@ const TableSelection = () => {
                                 }}>
                                     {isReserved ? 'RESERVADA' : hasActiveOrder ? 'En preparación' : isOccupied ? 'Ocupada' : 'Libre'}
                                 </span>
+                                {reservation && !hasActiveOrder && (
+                                    <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#f59e0b', fontWeight: 'bold' }}>
+                                        {reservation.time} - {reservation.customerName}
+                                    </div>
+                                )}
                                 {hasActiveOrder && (
                                     <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8 }}>
                                         {tableOrders[table.id].length} productos

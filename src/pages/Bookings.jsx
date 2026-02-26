@@ -27,7 +27,7 @@ import DailyReservationTimeline from '../components/DailyReservationTimeline';
 
 const Bookings = () => {
     const navigate = useNavigate();
-    const { reservations, addReservation, updateReservation, deleteReservation } = useEvents();
+    const { reservations, addReservation, updateReservation, deleteReservation, loading } = useEvents();
     const [searchTerm, setSearchTerm] = useState('');
     const [isAdding, setIsAdding] = useState(false);
     const [activeView, setActiveView] = useState('list'); // 'list', 'calendar', 'map'
@@ -135,121 +135,130 @@ const Bookings = () => {
                 </div>
             </header>
 
-            {activeView === 'list' && (
+            {loading ? (
+                <div style={{ textAlign: 'center', padding: '4rem' }}>
+                    <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+                    <p style={{ color: 'var(--color-text-muted)' }}>Cargando reservas desde la nube...</p>
+                </div>
+            ) : (
                 <>
-                    <div style={{ marginBottom: '2rem', position: 'relative' }}>
-                        <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} size={18} />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nombre o teléfono..."
-                            className="glass-panel"
-                            style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', color: 'white' }}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+                    {activeView === 'list' && (
+                        <>
+                            <div style={{ marginBottom: '2rem', position: 'relative' }}>
+                                <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por nombre o teléfono..."
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', color: 'white' }}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
-                        {filteredReservations.map(res => (
-                            <motion.div
-                                layout
-                                key={res.id}
-                                className="glass-panel"
-                                style={{
-                                    padding: '1.5rem',
-                                    borderLeft: `4px solid ${res.status === 'sentado' ? '#10b981' : '#fbbf24'}`
-                                }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                    <div style={{ fontWeight: '800', fontSize: '1.2rem' }}>{res.customerName}</div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        {res.status === 'confirmado' && (
-                                            <button onClick={() => handleUpdateStatus(res.id, 'sentado')} className="btn-icon" style={{ color: '#10b981' }}><CheckCircle2 size={18} /></button>
-                                        )}
-                                        <button
-                                            onClick={() => deleteReservation(res.id)}
-                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <CalendarIcon size={16} /> {new Date(res.date).toLocaleDateString()}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Clock size={16} /> {res.time}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Users size={16} /> {res.people} personas
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Layout size={16} color="#fbbf24" /> {res.tableId ? `Mesa ${res.tableId}` : 'Mesa pendiente'}
-                                    </div>
-                                </div>
-
-                                {res.tags && res.tags.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '1rem' }}>
-                                        {res.tags.map(tag => (
-                                            <span key={tag} style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24' }}>
-                                        <Phone size={14} /> {res.phone}
-                                    </div>
-                                    {res.notes && (
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.85rem' }}>
-                                            <MessageSquare size={14} style={{ marginTop: '3px' }} /> {res.notes}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+                                {filteredReservations.map(res => (
+                                    <motion.div
+                                        layout
+                                        key={res.id}
+                                        className="glass-panel"
+                                        style={{
+                                            padding: '1.5rem',
+                                            borderLeft: `4px solid ${res.status === 'sentado' ? '#10b981' : '#fbbf24'}`
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                            <div style={{ fontWeight: '800', fontSize: '1.2rem' }}>{res.customerName}</div>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                {res.status === 'confirmado' && (
+                                                    <button onClick={() => handleUpdateStatus(res.id, 'sentado')} className="btn-icon" style={{ color: '#10b981' }}><CheckCircle2 size={18} /></button>
+                                                )}
+                                                <button
+                                                    onClick={() => deleteReservation(res.id)}
+                                                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <CalendarIcon size={16} /> {new Date(res.date).toLocaleDateString()}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Clock size={16} /> {res.time}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Users size={16} /> {res.people} personas
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Layout size={16} color="#fbbf24" /> {res.tableId ? `Mesa ${res.tableId}` : 'Mesa pendiente'}
+                                            </div>
+                                        </div>
+
+                                        {res.tags && res.tags.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '1rem' }}>
+                                                {res.tags.map(tag => (
+                                                    <span key={tag} style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24' }}>
+                                                <Phone size={14} /> {res.phone}
+                                            </div>
+                                            {res.notes && (
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                                    <MessageSquare size={14} style={{ marginTop: '3px' }} /> {res.notes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+
+                    {activeView !== 'list' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                                {activeView === 'calendar' ? (
+                                    <ReservationCalendar
+                                        reservations={reservations}
+                                        selectedDate={selectedDate}
+                                        onDateSelect={setSelectedDate}
+                                    />
+                                ) : (
+                                    <ReservationTableMap
+                                        reservations={reservations}
+                                        selectedDate={selectedDate}
+                                        onTableSelect={(id) => setForm(f => ({ ...f, tableId: id }))}
+                                        selectedTableId={form.tableId}
+                                    />
+                                )}
+                            </div>
+                            <div>
+                                <DailyReservationTimeline
+                                    reservations={reservations}
+                                    selectedDate={selectedDate}
+                                    onUpdateStatus={handleUpdateStatus}
+                                    onDelete={deleteReservation}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {filteredReservations.length === 0 && activeView === 'list' && (
+                        <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
+                            <CalendarIcon size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
+                            <p>No hay reservas próximas.</p>
+                        </div>
+                    )}
                 </>
-            )}
-
-            {activeView !== 'list' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        {activeView === 'calendar' ? (
-                            <ReservationCalendar
-                                reservations={reservations}
-                                selectedDate={selectedDate}
-                                onDateSelect={setSelectedDate}
-                            />
-                        ) : (
-                            <ReservationTableMap
-                                reservations={reservations}
-                                selectedDate={selectedDate}
-                                onTableSelect={(id) => setForm(f => ({ ...f, tableId: id }))}
-                                selectedTableId={form.tableId}
-                            />
-                        )}
-                    </div>
-                    <div>
-                        <DailyReservationTimeline
-                            reservations={reservations}
-                            selectedDate={selectedDate}
-                            onUpdateStatus={handleUpdateStatus}
-                            onDelete={deleteReservation}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {filteredReservations.length === 0 && activeView === 'list' && (
-                <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-                    <CalendarIcon size={48} style={{ marginBottom: '1rem', opacity: 0.2 }} />
-                    <p>No hay reservas próximas.</p>
-                </div>
             )}
 
             {/* Modal de Nueva Reserva */}

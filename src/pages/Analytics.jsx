@@ -18,11 +18,12 @@ import {
     Info,
     Menu,
     Trash2,
+    Printer,
     X as CloseIcon
 } from 'lucide-react';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
-import { printBillTicket } from '../utils/printHelpers';
+import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
 
 const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection }) => (
     <button
@@ -356,9 +357,14 @@ const Analytics = () => {
                                                 notes: closeNotes,
                                                 salesCount: dashboardStats.ticketCount
                                             };
-                                            await performCashClose(finalClose);
-                                            setIsCloseModalOpen(false);
-                                            alert("✅ Cierre Z guardado correctamente");
+                                            const result = await performCashClose(finalClose);
+                                            if (result) {
+                                                printCashCloseTicket(result, restaurantInfo);
+                                                setIsCloseModalOpen(false);
+                                                alert("✅ Cierre Z guardado e impreso correctamente");
+                                            } else {
+                                                alert("❌ Error al guardar el cierre");
+                                            }
                                         }}
                                         className="btn-primary"
                                         style={{ flex: 2, padding: '1rem', background: '#10b981' }}
@@ -935,10 +941,32 @@ const Analytics = () => {
                             <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem' }}>
                                 {cashCloses.length === 0 && <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No hay cierres anteriores.</p>}
                                 {cashCloses.map(close => (
-                                    <div key={close.id} className="glass-panel" style={{ minWidth: isMobile ? '160px' : '200px', padding: '1rem' }}>
-                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(close.date).toLocaleDateString()}</div>
-                                        <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.5rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
-                                        <div style={{ fontSize: '0.75rem' }}>{close.salesCount} Tickets</div>
+                                    <div
+                                        key={close.id}
+                                        className="glass-panel"
+                                        style={{
+                                            minWidth: isMobile ? '180px' : '220px',
+                                            padding: '1.25rem',
+                                            cursor: 'pointer',
+                                            transition: 'transform 0.2s',
+                                            border: '1px solid rgba(255,255,255,0.1)'
+                                        }}
+                                        onClick={() => {
+                                            if (confirm(`¿Deseas reimprimir el Cierre Z del día ${new Date(close.date).toLocaleDateString()}?`)) {
+                                                printCashCloseTicket(close, restaurantInfo);
+                                            }
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(close.date).toLocaleDateString()}</div>
+                                            <Printer size={14} color="#64748b" />
+                                        </div>
+                                        <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.25rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#10b981' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Tj: {parseFloat(close.tarjeta || 0).toFixed(2)}€</div>
+                                        <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.8 }}>{close.salesCount} Tickets</div>
                                     </div>
                                 ))}
                             </div>
