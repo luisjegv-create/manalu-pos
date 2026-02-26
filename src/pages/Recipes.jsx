@@ -20,6 +20,7 @@ import {
     Camera
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { categories as categoriesData } from '../data/products';
 
 const Recipes = () => {
     const navigate = useNavigate();
@@ -55,7 +56,8 @@ const Recipes = () => {
         description: '',
         allergens: [],
         recommendedWine: '',
-        isDigitalMenuVisible: true
+        isDigitalMenuVisible: true,
+        subcategory: null
     });
 
     const selectedProduct = salesProducts.find(p => p.id === selectedProductId);
@@ -125,7 +127,8 @@ const Recipes = () => {
             description: selectedProduct.description || '',
             allergens: Array.isArray(selectedProduct.allergens) ? selectedProduct.allergens : [],
             recommendedWine: selectedProduct.recommendedWine || '',
-            isDigitalMenuVisible: selectedProduct.isDigitalMenuVisible !== false
+            isDigitalMenuVisible: selectedProduct.isDigitalMenuVisible !== false,
+            subcategory: selectedProduct.subcategory || null
         });
         setIsEditingProduct(true);
     };
@@ -271,16 +274,34 @@ const Recipes = () => {
                                         <label>Categoría</label>
                                         <select
                                             className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
+                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', background: '#1e293b' }}
                                             value={productForm.category}
-                                            onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                                            onChange={(e) => setProductForm({ ...productForm, category: e.target.value, subcategory: null })}
                                         >
-                                            <option value="raciones" style={{ background: '#0f172a' }}>Raciones</option>
-                                            <option value="bocatas" style={{ background: '#0f172a' }}>Bocatas</option>
-                                            <option value="bebidas" style={{ background: '#0f172a' }}>Bebidas</option>
-                                            <option value="postres" style={{ background: '#0f172a' }}>Postres</option>
+                                            <option value="raciones">Raciones</option>
+                                            <option value="bocatas">Bocatas</option>
+                                            <option value="bebidas">Bebidas</option>
+                                            <option value="vinos">Vinos</option>
+                                            <option value="postres">Postres</option>
+                                            <option value="otros">Otros</option>
                                         </select>
                                     </div>
+                                    {categoriesData.find(c => c.id === productForm.category)?.subcategories && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <label>Subcategoría</label>
+                                            <select
+                                                className="glass-panel"
+                                                style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', background: '#1e293b' }}
+                                                value={productForm.subcategory || ''}
+                                                onChange={(e) => setProductForm({ ...productForm, subcategory: e.target.value })}
+                                            >
+                                                <option value="">Sin subcategoría</option>
+                                                {categoriesData.find(c => c.id === productForm.category).subcategories.map(sub => (
+                                                    <option key={sub} value={sub}>{sub.charAt(0).toUpperCase() + sub.slice(1)}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', gridColumn: isMobile ? 'auto' : 'span 2' }}>
                                         <label>Imagen / Foto del Producto</label>
                                         <div style={{
@@ -406,7 +427,27 @@ const Recipes = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem', width: isMobile ? '100%' : 'auto' }}>
-                                    <button onClick={startEditProduct} className="glass-panel" style={{ flex: 1, padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                    <button
+                                        onClick={startEditProduct}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.5rem',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            background: 'rgba(59, 130, 246, 0.2)',
+                                            border: '1px solid var(--color-primary)',
+                                            color: 'var(--color-primary)',
+                                            borderRadius: '12px',
+                                            fontWeight: 'bold',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)'}
+                                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'}
+                                    >
                                         <Edit3 size={16} /> Modificar
                                     </button>
                                     <button

@@ -75,13 +75,29 @@ const ProductEditorModal = ({
                             <label>Categoría</label>
                             <select
                                 value={newProductForm.category}
-                                onChange={(e) => setNewProductForm({ ...newProductForm, category: e.target.value })}
+                                onChange={(e) => setNewProductForm({ ...newProductForm, category: e.target.value, subcategory: null })}
                                 className="glass-panel"
                                 style={{ width: '100%', padding: '0.75rem', background: '#1e293b', color: 'white' }}
                             >
-                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
+                                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name || cat.label}</option>)}
                             </select>
                         </div>
+                        {categories.find(c => c.id === newProductForm.category)?.subcategories && (
+                            <div>
+                                <label>Subcategoría</label>
+                                <select
+                                    value={newProductForm.subcategory || ''}
+                                    onChange={(e) => setNewProductForm({ ...newProductForm, subcategory: e.target.value })}
+                                    className="glass-panel"
+                                    style={{ width: '100%', padding: '0.75rem', background: '#1e293b', color: 'white', marginTop: '0.5rem' }}
+                                >
+                                    <option value="">Sin subcategoría</option>
+                                    {categories.find(c => c.id === newProductForm.category).subcategories.map(sub => (
+                                        <option key={sub} value={sub}>{sub.charAt(0).toUpperCase() + sub.slice(1)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right: Recipe Builder */}

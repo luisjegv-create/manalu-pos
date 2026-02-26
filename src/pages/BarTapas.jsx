@@ -74,6 +74,8 @@ const BarTapas = () => {
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
+    const [activeSubcategory, setActiveSubcategory] = useState(null);
+
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
     const [showTicket, setShowTicket] = useState(false);
@@ -286,7 +288,21 @@ const BarTapas = () => {
         setActiveCategory(newProductForm.category);
     };
 
-    const filteredProducts = salesProducts.filter(p => p.category === activeCategory);
+    const activeCategoryData = categories.find(cat => cat.id === activeCategory);
+    const availableSubcategories = activeCategoryData?.subcategories || [];
+
+    const filteredProducts = salesProducts.filter(p => {
+        const matchesCategory = p.category === activeCategory;
+        const matchesSubcategory = !activeSubcategory || p.subcategory === activeSubcategory;
+        return matchesCategory && matchesSubcategory;
+    });
+
+    // Replace uses of setActiveCategory(cat.id) with a wrapper that also resets subcategory
+    const handleCategoryChange = (catId) => {
+        setActiveCategory(catId);
+        setActiveSubcategory(null);
+    };
+
 
     const handleSendOrder = () => {
         if (order.length === 0) return;
@@ -452,16 +468,67 @@ const BarTapas = () => {
                     <CategoryTabs
                         categories={categories}
                         activeCategory={activeCategory}
-                        setActiveCategory={setActiveCategory}
+                        setActiveCategory={handleCategoryChange}
                         isMobile={isMobile}
                     />
 
-                    <ProductGrid
-                        products={filteredProducts}
-                        onProductClick={handleProductClick}
-                        getProductCost={getProductCost}
-                        checkProductAvailability={checkProductAvailability}
-                    />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {availableSubcategories.length > 0 && (
+                            <div style={{
+                                display: 'flex',
+                                gap: '0.5rem',
+                                padding: '1rem',
+                                background: 'rgba(255,255,255,0.02)',
+                                borderBottom: '1px solid var(--glass-border)',
+                                overflowX: 'auto',
+                                whiteSpace: 'nowrap',
+                                scrollbarWidth: 'none'
+                            }}>
+                                <button
+                                    onClick={() => setActiveSubcategory(null)}
+                                    style={{
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '20px',
+                                        border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'var(--glass-border)'),
+                                        background: !activeSubcategory ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                        color: !activeSubcategory ? 'var(--color-primary)' : '#94a3b8',
+                                        cursor: 'pointer',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Todos
+                                </button>
+                                {availableSubcategories.map(sub => (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setActiveSubcategory(sub)}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '20px',
+                                            border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)'),
+                                            background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                            color: activeSubcategory === sub ? 'var(--color-primary)' : '#94a3b8',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 'bold',
+                                            textTransform: 'capitalize',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        {sub}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <ProductGrid
+                            products={filteredProducts}
+                            onProductClick={handleProductClick}
+                            getProductCost={getProductCost}
+                            checkProductAvailability={checkProductAvailability}
+                        />
+                    </div>
 
                     {/* Mobile Floating Button */}
                     {isMobile && !showOrderMobile && order.length > 0 && (

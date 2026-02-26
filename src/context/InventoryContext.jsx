@@ -86,7 +86,8 @@ export const InventoryProvider = ({ children }) => {
                         ...p,
                         category: p.category === 'tapas' ? 'raciones' : p.category,
                         recommendedWine: p.recommended_wine,
-                        isDigitalMenuVisible: p.is_digital_menu_visible !== false
+                        isDigitalMenuVisible: p.is_digital_menu_visible !== false,
+                        subcategory: p.subcategory || null
                     })));
                 }
                 if (settingsData) {
@@ -307,7 +308,8 @@ export const InventoryProvider = ({ children }) => {
                 description: product.description,
                 allergens: product.allergens,
                 recommended_wine: product.recommendedWine,
-                is_digital_menu_visible: product.isDigitalMenuVisible !== false
+                is_digital_menu_visible: product.isDigitalMenuVisible !== false,
+                subcategory: product.subcategory
             }]).select();
 
             if (error) throw error;
@@ -339,7 +341,8 @@ export const InventoryProvider = ({ children }) => {
                     description: updatedData.description,
                     allergens: updatedData.allergens,
                     recommended_wine: updatedData.recommendedWine,
-                    is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false
+                    is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false,
+                    subcategory: updatedData.subcategory
                 }).eq('id', id);
 
                 if (error) throw error;
@@ -550,7 +553,8 @@ export const InventoryProvider = ({ children }) => {
                 name: product.name,
                 price: product.price,
                 category: product.category,
-                image: imageUrl
+                image: imageUrl,
+                subcategory: product.subcategory
             }]).select();
 
             if (error) throw error;
