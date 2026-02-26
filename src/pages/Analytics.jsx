@@ -731,7 +731,7 @@ const Analytics = () => {
                                         filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale, index) => (
                                             <tr key={sale.id || `fallback-${index}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                 <td style={{ padding: '1rem' }}>{new Date(sale.date || 0).toLocaleString()}</td>
-                                                <td style={{ padding: '1rem', fontFamily: 'monospace' }}>{(sale.id || '???').toString().slice(-8)}</td>
+                                                <td style={{ padding: '1rem', fontFamily: 'monospace' }}>{sale.ticket_number || (sale.id || '???').toString().slice(-8)}</td>
                                                 <td style={{ padding: '1rem' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
                                                 <td style={{ padding: '1rem' }}>
                                                     <span style={{

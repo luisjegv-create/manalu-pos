@@ -37,7 +37,16 @@ import ProductEditorModal from '../components/TPV/ProductEditorModal';
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo } = useInventory();
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo } = useInventory();
+
+    // Safety fallback for restaurant info
+    const restaurantInfo = contextRestaurantInfo || {
+        name: 'Luis Jesus García-Valcárcel López-Tofiño',
+        businessName: 'TAPAS Y BOCATAS / MANALU EVENTOS',
+        address: 'Calle Principal, 123',
+        nif: 'B12345678',
+        logo: '/logo-principal.png'
+    };
     const [searchParams] = useSearchParams();
     const {
         order,
@@ -51,6 +60,7 @@ const BarTapas = () => {
         sendToKitchen,
         closeTable,
         payPartialTable,
+        payValuePartialTable,
         calculateOrderTotal,
         removeProductFromBill,
         currentTable,
@@ -153,37 +163,77 @@ const BarTapas = () => {
     };
 
 
-    const handleConfirmPartialPayment = async (method) => {
-        const saleData = await payPartialTable(
-            currentTable.id,
-            partialPaymentModal.itemsToPay,
-            method,
-            discountPercent,
-            isInvitation,
-            isFullInvoice ? customerTaxData : null
-        );
-        if (saleData) {
-            alert('Pago parcial procesado correctamente.');
-            // Print final ticket
-            printBillTicket(
-                currentTable ? currentTable.name : 'Mesa',
-                partialPaymentModal.itemsToPay,
-                calculateOrderTotal(partialPaymentModal.itemsToPay),
-                restaurantInfo,
-                discountPercent,
-                isInvitation,
-                saleData.id,
-                isFullInvoice ? customerTaxData : null
-            );
-            setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
-            setDiscountPercent(0);
-            setIsInvitation(false);
-            setIsFullInvoice(false);
-            if (!bill || bill.length === 0) {
-                navigate('/tables');
+    const handleConfirmPartialPayment = async (method, mode = 'products', customAmountVal = 0) => {
+        let saleData = null;
+        let itemsForTicket = [];
+        let totalVal = 0;
+
+        try {
+            if (mode === 'products') {
+                itemsForTicket = partialPaymentModal.itemsToPay;
+                totalVal = calculateOrderTotal(itemsForTicket);
+                saleData = await payPartialTable(
+                    currentTable.id,
+                    itemsForTicket,
+                    method,
+                    discountPercent,
+                    isInvitation,
+                    isFullInvoice ? customerTaxData : null
+                );
+            } else {
+                totalVal = customAmountVal;
+                itemsForTicket = [{
+                    id: 'partial-payment',
+                    uniqueId: `partial-${Date.now()}`,
+                    name: 'PAGO PARCIAL (A CUENTA)',
+                    price: totalVal,
+                    quantity: 1
+                }];
+                saleData = await payValuePartialTable(
+                    currentTable.id,
+                    totalVal,
+                    method,
+                    discountPercent,
+                    isInvitation,
+                    isFullInvoice ? customerTaxData : null
+                );
             }
-        } else {
-            alert('Error al procesar el pago parcial.');
+
+            if (saleData) {
+                // IMPORTANT: Print AFTER any potential navigation or complex state updates
+                // to avoid the print window being closed or blocked by browser logic.
+                // Also uses a small timeout to let the UI settle.
+                setTimeout(() => {
+                    printBillTicket(
+                        currentTable ? currentTable.name : 'Mesa',
+                        itemsForTicket,
+                        totalVal,
+                        restaurantInfo,
+                        discountPercent,
+                        isInvitation,
+                        saleData.ticket_number || saleData.id.slice(-8),
+                        isFullInvoice ? customerTaxData : null
+                    );
+                }, 100);
+
+                setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
+                setDiscountPercent(0);
+                setIsInvitation(false);
+                setIsFullInvoice(false);
+
+                // If this was the last part of the bill, the context will eventually reflect it.
+                // We keep the user on the page for a moment to see the success.
+
+                // Check if table is still active or closed
+                if (!bill || bill.length === 0) {
+                    navigate('/tables');
+                }
+            } else {
+                alert('No se pudo procesar el pago parcial. Por favor, revisa los datos.');
+            }
+        } catch (err) {
+            console.error("DEBUG - handleConfirmPartialPayment Failure:", err);
+            alert(`⚠️ Error al procesar el pago:\n${err.message || 'Error desconocido'}\n\nPor favor, contacta con soporte o revisa la consola.`);
         }
     };
 
@@ -263,7 +313,7 @@ const BarTapas = () => {
                 restaurantInfo,
                 discountPercent,
                 isInvitation,
-                saleData.id,
+                saleData.ticket_number || saleData.id.slice(-8),
                 isFullInvoice ? customerTaxData : null
             );
             setShowTicket(false);
@@ -1198,262 +1248,24 @@ const BarTapas = () => {
 
 
             {/* PARTIAL PAYMENT MODAL */}
-            <AnimatePresence>
-                {partialPaymentModal.isOpen && (
-                    <div style={{
-                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(5px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200
-                    }}>
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
-                            className="glass-panel"
-                            style={{
-                                padding: '2rem',
-                                width: '90%',
-                                maxWidth: '600px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '1.5rem',
-                                border: '1px solid var(--color-primary)'
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
-                                <h2 style={{ margin: 0 }}>Cobrar por Partes</h2>
-                                <button
-                                    onClick={() => setPartialPaymentModal({ isOpen: false, itemsToPay: [] })}
-                                    style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
-                                >
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '50vh', overflowY: 'auto', padding: '0.5rem' }}>
-                                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Indica cuánto se va a pagar de cada producto:</p>
-                                {bill.map(item => {
-                                    const selectedItem = partialPaymentModal.itemsToPay.find(i => i.uniqueId === item.uniqueId);
-                                    const currentQty = selectedItem ? selectedItem.quantity : 0;
-
-                                    return (
-                                        <div
-                                            key={item.uniqueId}
-                                            style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                padding: '1rem',
-                                                background: currentQty > 0 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.03)',
-                                                borderRadius: '12px',
-                                                border: currentQty > 0 ? '1px solid var(--color-primary)' : '1px solid var(--glass-border)',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '500' }}>{item.name}</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                                    Pendiente: {item.quantity} ud. a {item.price.toFixed(2)}€
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '25px', padding: '4px' }}>
-                                                    <button
-                                                        onClick={() => updatePartialQuantity(item, -1)}
-                                                        disabled={currentQty === 0}
-                                                        style={{
-                                                            width: '32px', height: '32px', borderRadius: '50%', border: 'none',
-                                                            background: currentQty > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                            color: currentQty > 0 ? '#ef4444' : '#64748b',
-                                                            cursor: currentQty > 0 ? 'pointer' : 'default',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <Minus size={16} />
-                                                    </button>
-                                                    <span style={{ minWidth: '30px', textAlign: 'center', fontWeight: 'bold', fontSize: '1.1rem' }}>
-                                                        {currentQty}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => updatePartialQuantity(item, 1)}
-                                                        disabled={currentQty >= item.quantity}
-                                                        style={{
-                                                            width: '32px', height: '32px', borderRadius: '50%', border: 'none',
-                                                            background: currentQty < item.quantity ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                            color: currentQty < item.quantity ? '#10b981' : '#64748b',
-                                                            cursor: currentQty < item.quantity ? 'pointer' : 'default',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                                        }}
-                                                    >
-                                                        <Plus size={16} />
-                                                    </button>
-                                                </div>
-                                                <div style={{ width: '80px', textAlign: 'right', fontWeight: 'bold', color: currentQty > 0 ? 'var(--color-primary)' : 'white' }}>
-                                                    {(item.price * currentQty).toFixed(2)}€
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem', marginTop: 'auto' }}>
-                                {/* Discount & Invitation Controls for Partial Payment */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--glass-border)', marginBottom: '1rem' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem', display: 'block' }}>Descuento (%)</label>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                <input
-                                                    type="number"
-                                                    value={discountPercent || ''}
-                                                    onChange={(e) => {
-                                                        const val = parseFloat(e.target.value) || 0;
-                                                        setDiscountPercent(Math.min(100, Math.max(0, val)));
-                                                        if (val > 0) setIsInvitation(false);
-                                                    }}
-                                                    disabled={isInvitation}
-                                                    placeholder="0"
-                                                    style={{ width: '60px', padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', textAlign: 'center' }}
-                                                />
-                                                <span style={{ fontWeight: 'bold' }}>%</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                            {[10, 20, 50].map(p => (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => { setDiscountPercent(p); setIsInvitation(false); }}
-                                                    style={{
-                                                        padding: '0.4rem 0.6rem',
-                                                        borderRadius: '6px',
-                                                        border: '1px solid',
-                                                        borderColor: discountPercent === p ? 'var(--color-primary)' : 'var(--glass-border)',
-                                                        background: discountPercent === p ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                        color: discountPercent === p ? 'var(--color-primary)' : 'white',
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.75rem'
-                                                    }}
-                                                >
-                                                    {p}%
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setIsInvitation(!isInvitation);
-                                                if (!isInvitation) setDiscountPercent(0);
-                                            }}
-                                            style={{
-                                                padding: '0.4rem 0.75rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid',
-                                                borderColor: isInvitation ? '#10b981' : 'var(--glass-border)',
-                                                background: isInvitation ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                color: isInvitation ? '#10b981' : 'white',
-                                                fontWeight: 'bold',
-                                                cursor: 'pointer',
-                                                fontSize: '0.75rem'
-                                            }}
-                                        >
-                                            {isInvitation ? '🎁' : 'Regalo'}
-                                        </button>
-                                    </div>
-
-                                    {/* Full Invoice Toggle for Partial Payment */}
-                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                                        <button
-                                            onClick={() => setIsFullInvoice(!isFullInvoice)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.4rem',
-                                                borderRadius: '6px',
-                                                border: '1px solid',
-                                                borderColor: isFullInvoice ? 'var(--color-primary)' : 'var(--glass-border)',
-                                                background: isFullInvoice ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                color: 'white',
-                                                fontSize: '0.8rem',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: '0.4rem'
-                                            }}
-                                        >
-                                            <FileText size={14} /> {isFullInvoice ? 'Factura Solicitada' : 'Solicitar Factura'}
-                                        </button>
-
-                                        {isFullInvoice && (
-                                            <motion.div
-                                                initial={{ opacity: 0, height: 0 }}
-                                                animate={{ opacity: 1, height: 'auto' }}
-                                                style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}
-                                            >
-                                                <input
-                                                    type="text"
-                                                    placeholder="Nombre / Razón Social"
-                                                    value={customerTaxData.name}
-                                                    onChange={(e) => setCustomerTaxData({ ...customerTaxData, name: e.target.value })}
-                                                    style={{ width: '100%', padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
-                                                />
-                                                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="NIF"
-                                                        value={customerTaxData.nif}
-                                                        onChange={(e) => setCustomerTaxData({ ...customerTaxData, nif: e.target.value })}
-                                                        style={{ flex: 1, padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Dirección"
-                                                        value={customerTaxData.address}
-                                                        onChange={(e) => setCustomerTaxData({ ...customerTaxData, address: e.target.value })}
-                                                        style={{ flex: 2, padding: '0.4rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px', fontSize: '0.75rem' }}
-                                                    />
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
-                                    <span>Total a Cobrar:</span>
-                                    <div style={{ textAlign: 'right' }}>
-                                        {(discountPercent > 0 || isInvitation) && (
-                                            <div style={{ fontSize: '0.9rem', color: '#ef4444', fontWeight: 'normal', textDecoration: 'line-through' }}>
-                                                {partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(2)}€
-                                            </div>
-                                        )}
-                                        <span style={{ color: 'var(--color-primary)' }}>
-                                            {(isInvitation ? 0 : Math.max(0, partialPaymentModal.itemsToPay.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0) * (1 - discountPercent / 100))).toFixed(2)}€
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <button
-                                        disabled={partialPaymentModal.itemsToPay.length === 0}
-                                        className="btn-primary"
-                                        style={{ background: '#10b981', opacity: partialPaymentModal.itemsToPay.length === 0 ? 0.5 : 1 }}
-                                        onClick={() => handleConfirmPartialPayment('Efectivo')}
-                                    >
-                                        <Banknote size={20} /> Efectivo
-                                    </button>
-                                    <button
-                                        disabled={partialPaymentModal.itemsToPay.length === 0}
-                                        className="btn-primary"
-                                        style={{ background: '#3b82f6', opacity: partialPaymentModal.itemsToPay.length === 0 ? 0.5 : 1 }}
-                                        onClick={() => handleConfirmPartialPayment('Tarjeta')}
-                                    >
-                                        <CreditCard size={20} /> Tarjeta
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            <PartialPaymentModal
+                isOpen={partialPaymentModal.isOpen}
+                onClose={() => setPartialPaymentModal({ isOpen: false, itemsToPay: [] })}
+                bill={bill}
+                itemsToPay={partialPaymentModal.itemsToPay}
+                updatePartialQuantity={updatePartialQuantity}
+                discountPercent={discountPercent}
+                setDiscountPercent={setDiscountPercent}
+                isInvitation={isInvitation}
+                setIsInvitation={setIsInvitation}
+                isFullInvoice={isFullInvoice}
+                setIsFullInvoice={setIsFullInvoice}
+                customerTaxData={customerTaxData}
+                setCustomerTaxData={setCustomerTaxData}
+                handleConfirmPartialPayment={handleConfirmPartialPayment}
+                payValuePartialTable={payValuePartialTable}
+                currentTable={currentTable}
+            />
             <AnimatePresence>
                 {modifierModal.isOpen && modifierModal.product && (
                     <div style={{

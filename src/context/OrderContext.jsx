@@ -304,7 +304,7 @@ export const OrderProvider = ({ children }) => {
         setSelectedCustomer(null);
     };
 
-    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
+    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
         const finalBill = tableBills[tableId];
         if (finalBill && finalBill.length > 0) {
             const billTotal = calculateOrderTotal(finalBill);
@@ -319,13 +319,7 @@ export const OrderProvider = ({ children }) => {
                 total,
                 payment_method: paymentMethod,
                 items: JSON.stringify(finalBill),
-                table_id: tableId,
-                discount_amount: discountAmount,
-                discount_percent: discountPercent,
-                is_invitation: isInvitation,
-                original_total: billTotal,
-                customer_data: customerData ? JSON.stringify(customerData) : null,
-                ticket_number: ticketNumber
+                table_id: tableId
             }]).select();
 
             if (!error && data) {
@@ -335,7 +329,8 @@ export const OrderProvider = ({ children }) => {
                     total: parseFloat(data[0].total),
                     items: JSON.parse(data[0].items),
                     paymentMethod: data[0].payment_method,
-                    tableId: data[0].table_id
+                    tableId: data[0].table_id,
+                    ticket_number: ticketNumber
                 };
                 setSalesHistory(prev => [newSale, ...prev]);
 
@@ -366,7 +361,7 @@ export const OrderProvider = ({ children }) => {
         return null; // Return null if no sale was recorded or an error occurred
     };
 
-    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
+    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
         if (!itemsToPay || itemsToPay.length === 0) return null;
 
         const billTotal = calculateOrderTotal(itemsToPay);
@@ -381,18 +376,12 @@ export const OrderProvider = ({ children }) => {
             total,
             payment_method: paymentMethod,
             items: JSON.stringify(itemsToPay),
-            table_id: tableId,
-            discount_amount: discountAmount,
-            discount_percent: discountPercent,
-            is_invitation: isInvitation,
-            original_total: billTotal,
-            customer_data: customerData ? JSON.stringify(customerData) : null,
-            ticket_number: ticketNumber
+            table_id: tableId
         }]).select();
 
         if (error) {
-            console.error("Error saving partial sale:", error);
-            return null;
+            console.error("DEBUG - payPartialTable Supabase Error:", error);
+            throw new Error(`Error en DB (Cobro Parcial): ${error.message || JSON.stringify(error)}`);
         }
 
         if (data && data.length > 0) {
@@ -402,7 +391,8 @@ export const OrderProvider = ({ children }) => {
                 total: parseFloat(data[0].total),
                 items: JSON.parse(data[0].items),
                 paymentMethod: data[0].payment_method,
-                tableId: data[0].table_id
+                tableId: data[0].table_id,
+                ticket_number: ticketNumber
             };
             setSalesHistory(prev => [newSale, ...prev]);
 
@@ -426,9 +416,79 @@ export const OrderProvider = ({ children }) => {
                 }
                 return { ...prev, [tableId]: nextBill };
             });
-            return true;
+            return newSale;
         }
-        return false;
+        return null;
+    };
+
+    const payValuePartialTable = async (tableId, amount, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
+        if (amount <= 0) return null;
+
+        const ticketNumber = await incrementTicketNumber();
+        const itemsToPay = [{
+            id: 'partial-payment',
+            uniqueId: `partial-${Date.now()}`,
+            name: 'PAGO PARCIAL (A CUENTA)',
+            price: amount,
+            quantity: 1
+        }];
+
+        const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
+        const finalToPay = Math.max(0, amount - discountAmount);
+
+        const { data, error } = await supabase.from('sales').insert([{
+            total: finalToPay,
+            payment_method: paymentMethod,
+            items: JSON.stringify(itemsToPay),
+            table_id: tableId
+        }]).select();
+
+        if (error) {
+            console.error("DEBUG - payValuePartialTable Supabase Error:", error);
+            throw new Error(`Error en DB (Pago Valor): ${error.message || JSON.stringify(error)}`);
+        }
+
+        if (data && data.length > 0) {
+            const newSale = {
+                ...data[0],
+                date: new Date(data[0].created_at),
+                total: parseFloat(data[0].total),
+                items: JSON.parse(data[0].items),
+                paymentMethod: data[0].payment_method,
+                tableId: data[0].table_id,
+                ticket_number: ticketNumber
+            };
+            setSalesHistory(prev => [newSale, ...prev]);
+
+            // Update bill: represent this as a negative item to reduce the total
+            setTableBills(prev => {
+                const currentBill = prev[tableId] || [];
+                const creditItem = {
+                    id: 'payment-credit',
+                    uniqueId: `credit-${Date.now()}`,
+                    name: `ABONO PAGO ${paymentMethod}`,
+                    price: -amount,
+                    quantity: 1,
+                    category: 'Pagos'
+                };
+
+                const nextBill = [...currentBill, creditItem];
+
+                // If total reaches 0 or less, close the table
+                const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+                if (totalRemaining <= 0.01) {
+                    updateTableStatus(tableId, 'free');
+                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                    const next = { ...prev };
+                    delete next[tableId];
+                    return next;
+                }
+
+                return { ...prev, [tableId]: nextBill };
+            });
+            return newSale;
+        }
+        return null;
     };
 
     const { returnStockForItems } = useInventory(); // Ensure it's available
@@ -610,6 +670,8 @@ export const OrderProvider = ({ children }) => {
             sendToKitchen,
             closeTable,
             payPartialTable,
+            payValuePartialTable,
+            calculateOrderTotal,
             removeProductFromBill,
             markOrderReady,
             removeOrder,
