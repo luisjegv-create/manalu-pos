@@ -173,6 +173,14 @@ export const InventoryProvider = ({ children }) => {
                     setExpenses(expData);
                 }
 
+                // 4. Clear localStorage on success to prevent re-migration
+                console.log("Limpieza de datos locales tras migración exitosa...");
+                localStorage.removeItem('manalu_ingredients');
+                localStorage.removeItem('manalu_wines');
+                localStorage.removeItem('manalu_suppliers');
+                localStorage.removeItem('manalu_invoices');
+                localStorage.removeItem('manalu_expenses');
+
             } catch (error) {
                 console.error("Error al inicializar datos:", error);
             } finally {
@@ -183,20 +191,25 @@ export const InventoryProvider = ({ children }) => {
         initializeData();
     }, []);
 
-    // Drive all sellable products
+    // Drive all sellable products with prefixed IDs to avoid collisions
     const salesProducts = React.useMemo(() => {
         const safeWines = Array.isArray(wines) ? wines : [];
         const wineProducts = safeWines.map(w => ({
-            id: w.id,
-            name: w.name,
+            ...w,
+            id: `wine_${w.id}`,
+            dbId: w.id, // Keep reference to real DB ID
             price: w.price,
             purchasePrice: w.purchasePrice || 0,
             category: 'vinos',
-            image: w.image,
             isWine: true
         }));
         const safeBaseProducts = Array.isArray(baseProducts) ? baseProducts : [];
-        return [...safeBaseProducts, ...wineProducts];
+        const baseProductsMapped = safeBaseProducts.map(p => ({
+            ...p,
+            id: `prod_${p.id}`,
+            dbId: p.id
+        }));
+        return [...baseProductsMapped, ...wineProducts];
     }, [baseProducts, wines]);
 
 
@@ -274,15 +287,20 @@ export const InventoryProvider = ({ children }) => {
                 if (insError) throw insError;
             }
 
+            // 3. Update local state ONLY if DB update succeeded
             setRecipes(prev => ({ ...prev, [productId]: newIngredientsList }));
+            return true;
         } catch (error) {
             console.error("Error al actualizar receta:", error);
             alert("Error al guardar la receta: " + (error.message || "Error desconocido"));
+            return false;
         }
     };
 
     const getProductCost = (productId) => {
-        const recipe = recipes[productId];
+        // Handle both raw IDs and prefixed IDs
+        const dbId = String(productId).startsWith('prod_') ? productId.replace('prod_', '') : productId;
+        const recipe = recipes[dbId];
         if (!recipe || !Array.isArray(recipe)) return 0;
         return recipe.reduce((total, item) => {
             const ingredient = ingredients.find(ing => ing.id === (item.ingredient_id || item.ingredientId));
@@ -472,10 +490,14 @@ export const InventoryProvider = ({ children }) => {
         const ingChanges = {};
 
         orderItems.forEach(item => {
-            if (item.isWine) {
-                wineChanges[item.id] = (wineChanges[item.id] || 0) + item.quantity;
+            const isWinePrefixed = String(item.id).startsWith('wine_');
+            const isProdPrefixed = String(item.id).startsWith('prod_');
+            const dbId = (isWinePrefixed || isProdPrefixed) ? item.id.split('_')[1] : item.id;
+
+            if (item.isWine || isWinePrefixed) {
+                wineChanges[dbId] = (wineChanges[dbId] || 0) + item.quantity;
             }
-            const productRecipe = recipes[item.id];
+            const productRecipe = recipes[dbId];
             if (productRecipe) {
                 productRecipe.forEach(recipeItem => {
                     const amount = recipeItem.quantity * item.quantity;
@@ -509,10 +531,14 @@ export const InventoryProvider = ({ children }) => {
         const ingChanges = {};
 
         items.forEach(item => {
-            if (item.isWine) {
-                wineChanges[item.id] = (wineChanges[item.id] || 0) + item.quantity;
+            const isWinePrefixed = String(item.id).startsWith('wine_');
+            const isProdPrefixed = String(item.id).startsWith('prod_');
+            const dbId = (isWinePrefixed || isProdPrefixed) ? item.id.split('_')[1] : item.id;
+
+            if (item.isWine || isWinePrefixed) {
+                wineChanges[dbId] = (wineChanges[dbId] || 0) + item.quantity;
             }
-            const productRecipe = recipes[item.id];
+            const productRecipe = recipes[dbId];
             if (productRecipe) {
                 productRecipe.forEach(recipeItem => {
                     const amount = recipeItem.quantity * item.quantity;
@@ -591,30 +617,33 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const checkProductAvailability = (productId) => {
+        // Resolve prefixed IDs
+        const isWinePrefixed = String(productId).startsWith('wine_');
+        const isProdPrefixed = String(productId).startsWith('prod_');
+        const dbId = (isWinePrefixed || isProdPrefixed) ? productId.split('_')[1] : productId;
+
         // 1. Check if it's a wine
-        const wine = wines.find(w => w.id === productId || w.id === parseInt(productId));
+        const wine = wines.find(w => w.id == dbId && (isWinePrefixed || !isProdPrefixed));
         if (wine) {
             return (parseInt(wine.stock) || 0) > 0;
         }
 
         // 2. Check if it has a recipe
-        const recipe = recipes[productId];
+        const recipe = recipes[dbId];
         if (!recipe || !Array.isArray(recipe) || recipe.length === 0) {
-            // No recipe means it's probably a basic product without ingredients tracking
-            // or isDigitalMenuVisible handles its visibility
             return true;
         }
 
         // 3. Verify all ingredients in recipe
         for (const item of recipe) {
             const ingredient = ingredients.find(ing => ing.id === (item.ingredient_id || item.ingredientId));
-            if (!ingredient) continue; // If ingredient not found, we don't block (maybe legacy data)
+            if (!ingredient) continue;
 
             const needed = item.quantity;
             const available = ingredient.quantity || 0;
 
             if (available < needed) {
-                return false; // Not enough of at least one ingredient
+                return false;
             }
         }
 

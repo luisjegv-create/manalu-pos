@@ -61,7 +61,8 @@ const Recipes = () => {
     });
 
     const selectedProduct = salesProducts.find(p => p.id === selectedProductId);
-    const currentRecipe = (selectedProductId && Array.isArray(recipes[selectedProductId])) ? recipes[selectedProductId] : [];
+    const dbId = selectedProductId ? (String(selectedProductId).startsWith('prod_') ? selectedProductId.replace('prod_', '') : selectedProductId.replace('wine_', '')) : null;
+    const currentRecipe = (dbId && Array.isArray(recipes[dbId])) ? recipes[dbId] : [];
 
     // Helper to get ingredient details
     const getIng = (id) => ingredients.find(i => i.id === id);
@@ -71,18 +72,18 @@ const Recipes = () => {
         if (!firstIngredient) return;
 
         const newRecipe = [...currentRecipe, { ingredientId: firstIngredient.id, quantity: 1 }];
-        updateRecipe(selectedProductId, newRecipe);
+        updateRecipe(dbId, newRecipe);
     };
 
     const handleUpdateIngredient = (index, field, value) => {
         const newRecipe = [...currentRecipe];
         newRecipe[index] = { ...newRecipe[index], [field]: value };
-        updateRecipe(selectedProductId, newRecipe);
+        updateRecipe(dbId, newRecipe);
     };
 
     const handleRemoveIngredient = (index) => {
         const newRecipe = currentRecipe.filter((_, i) => i !== index);
-        updateRecipe(selectedProductId, newRecipe);
+        updateRecipe(dbId, newRecipe);
     };
 
     const handleImageUpload = (e) => {
@@ -104,7 +105,7 @@ const Recipes = () => {
     const handleSaveProduct = () => {
         try {
             if (isEditingProduct && selectedProductId) {
-                updateProduct(selectedProductId, productForm);
+                updateProduct(dbId, productForm);
                 setIsEditingProduct(false);
             } else {
                 addProduct(productForm);
@@ -133,7 +134,7 @@ const Recipes = () => {
         setIsEditingProduct(true);
     };
 
-    const cost = selectedProductId ? getProductCost(selectedProductId) : 0;
+    const cost = dbId ? getProductCost(dbId) : 0;
     const price = selectedProduct?.price || 0;
     const margin = price > 0 ? ((price - cost) / price * 100).toFixed(1) : 0;
 
@@ -451,7 +452,7 @@ const Recipes = () => {
                                         <Edit3 size={16} /> Modificar
                                     </button>
                                     <button
-                                        onClick={() => { if (confirm('¿Borrar producto y su receta?')) deleteProduct(selectedProductId); }}
+                                        onClick={() => { if (confirm('¿Borrar producto y su receta?')) deleteProduct(dbId); }}
                                         style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
                                         <Trash2 size={16} />

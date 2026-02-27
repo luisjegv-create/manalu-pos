@@ -294,7 +294,7 @@ export const OrderProvider = ({ children }) => {
             const currentBill = prev[currentTable.id] || [];
             const newBill = [...currentBill];
             order.forEach(newItem => {
-                const existingInBill = newBill.find(b => b.id === newItem.id);
+                const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
                 if (existingInBill) {
                     existingInBill.quantity += newItem.quantity;
                 } else {
