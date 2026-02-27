@@ -66,6 +66,7 @@ export const InventoryProvider = ({ children }) => {
                             cost: ing.cost || 0,
                             min_stock: ing.minStock || ing.critical || 5, // Prioritize minStock, then critical, then default to 5
                             category: ing.category || 'alimentos',
+                            subcategory: ing.subcategory || null,
                             provider: ing.provider || 'Sin asignar'
                         }]);
                     }
@@ -225,6 +226,7 @@ export const InventoryProvider = ({ children }) => {
                 cost: ingredient.cost || 0,
                 min_stock: ingredient.critical || ingredient.minStock || 0,
                 category: ingredient.category,
+                subcategory: ingredient.subcategory || null,
                 provider: ingredient.provider || 'Sin asignar'
             }]).select();
 
@@ -252,6 +254,7 @@ export const InventoryProvider = ({ children }) => {
                 cost: updatedData.cost,
                 min_stock: updatedData.critical || updatedData.minStock || updatedData.min_stock,
                 category: updatedData.category,
+                subcategory: updatedData.subcategory || null,
                 provider: updatedData.provider
             }).eq('id', id);
 

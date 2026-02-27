@@ -39,6 +39,8 @@ const Recipes = () => {
     const [selectedProductId, setSelectedProductId] = useState(null);
     const [isEditingProduct, setIsEditingProduct] = useState(false);
     const [isAddingProduct, setIsAddingProduct] = useState(false);
+    const [activeCategory, setActiveCategory] = useState('raciones');
+    const [activeSubcategory, setActiveSubcategory] = useState(null);
 
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -171,56 +173,133 @@ const Recipes = () => {
                 gap: isMobile ? '1rem' : '2rem'
             }}>
 
-                {/* Product Sidebar */}
                 <div className="glass-panel" style={{
-                    height: isMobile ? '300px' : 'calc(100vh - 200px)',
+                    height: isMobile ? '400px' : 'calc(100vh - 200px)',
                     overflowY: 'auto',
-                    padding: '1rem'
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
                 }}>
-                    <h3 style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Carta de Productos</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        {salesProducts.map(product => (
-                            <button
-                                key={product.id}
-                                onClick={() => setSelectedProductId(product.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '0.75rem',
-                                    borderRadius: '12px',
-                                    border: selectedProductId === product.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                    background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.03)',
-                                    color: 'white',
-                                    cursor: 'pointer',
-                                    textAlign: 'left',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{
-                                        width: '32px',
-                                        height: '32px',
+                        <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Categorías</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                            {categoriesData.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => { setActiveCategory(cat.id); setActiveSubcategory(null); }}
+                                    style={{
+                                        padding: '0.5rem',
+                                        background: activeCategory === cat.id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {cat.id === 'raciones' && <Utensils size={14} />}
+                                    {cat.id === 'bocatas' && <Sandwich size={14} />}
+                                    {cat.id === 'bebidas' && <Beer size={14} />}
+                                    {cat.id === 'vinos' && <Beer size={14} />} {/* Using Beer for lack of Wine icon in current view but verified Wine is imported */}
+                                    {cat.id === 'postres' && <Cake size={14} />}
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {categoriesData.find(c => c.id === activeCategory)?.subcategories && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                <button
+                                    onClick={() => setActiveSubcategory(null)}
+                                    style={{
+                                        padding: '0.4rem 0.8rem',
+                                        background: activeSubcategory === null ? 'rgba(255,255,255,0.15)' : 'transparent',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '20px',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '0.7rem',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                >
+                                    Todos
+                                </button>
+                                {categoriesData.find(c => c.id === activeCategory).subcategories.map(sub => (
+                                    <button
+                                        key={sub}
+                                        onClick={() => setActiveSubcategory(sub)}
+                                        style={{
+                                            padding: '0.4rem 0.8rem',
+                                            background: activeSubcategory === sub ? 'rgba(255,255,255,0.15)' : 'transparent',
+                                            border: '1px solid var(--glass-border)',
+                                            borderRadius: '20px',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '0.7rem',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        {sub.charAt(0).toUpperCase() + sub.slice(1)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Productos</h3>
+                        {salesProducts
+                            .filter(p => p.category === activeCategory && (!activeSubcategory || p.subcategory === activeSubcategory))
+                            .map(product => (
+                                <button
+                                    key={product.id}
+                                    onClick={() => setSelectedProductId(product.id)}
+                                    style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '1rem',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        borderRadius: '6px',
-                                        overflow: 'hidden'
-                                    }}>
-                                        {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
-                                            ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            : product.image || '🍽️'}
+                                        justifyContent: 'space-between',
+                                        padding: '0.75rem',
+                                        borderRadius: '12px',
+                                        border: selectedProductId === product.id ? '1px solid var(--color-primary)' : '1px solid transparent',
+                                        background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.03)',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '1rem',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            borderRadius: '6px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
+                                                ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : product.image || '🍽️'}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{product.price.toFixed(2)}€</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{product.price.toFixed(2)}€</div>
-                                    </div>
-                                </div>
-                                <ChevronRight size={14} />
-                            </button>
-                        ))}
+                                    <ChevronRight size={14} />
+                                </button>
+                            ))}
                     </div>
                 </div>
 

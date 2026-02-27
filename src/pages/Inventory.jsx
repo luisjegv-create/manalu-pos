@@ -28,6 +28,7 @@ const Inventory = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('alimentos');
+    const [activeSubcategory, setActiveSubcategory] = useState(null);
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
@@ -47,7 +48,8 @@ const Inventory = () => {
         unit: 'uds',
         cost: 0,
         provider: 'Sin asignar',
-        category: 'alimentos'
+        category: 'alimentos',
+        subcategory: null
     });
 
     // Supplier Mode State
@@ -62,18 +64,24 @@ const Inventory = () => {
 
 
     const categories = [
-        { id: 'alimentos', label: 'Alimentos', icon: '🥕' },
-        { id: 'bebidas', label: 'Bebidas', icon: '🥤' },
-        { id: 'menaje', label: 'Menaje', icon: '🍽️' },
-        { id: 'limpieza', label: 'Limpieza', icon: '🧹' },
+        { id: 'alimentos', label: 'Alimentos', icon: '🥕', subcategories: ['Carne', 'Pescado', 'Verdura', 'Congelados', 'Secos', 'Lácteos'] },
+        { id: 'bebidas', label: 'Bebidas', icon: '🥤', subcategories: ['Refrescos', 'Alcohol', 'Cerveza', 'Agua', 'Zumos'] },
+        { id: 'menaje', label: 'Menaje', icon: '🍽️', subcategories: ['Vajilla', 'Cristalería', 'Cubiertos', 'Servilletas/Consumibles'] },
+        { id: 'limpieza', label: 'Limpieza', icon: '🧹', subcategories: ['Desinfectantes', 'Utensilios', 'Detergentes', 'Aseos'] },
         { id: 'distribuidores', label: 'Distribuidores', icon: '🚛' },
         { id: 'gastos', label: 'Gastos', icon: '📉' }
     ];
 
+    const getSubcategories = (catId) => {
+        const cat = categories.find(c => c.id === catId);
+        return cat?.subcategories || null;
+    };
+
     const filteredIngredients = ingredients.filter(ing => {
         const matchesSearch = ing.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = (ing.category || 'alimentos') === activeTab;
-        return matchesSearch && matchesCategory;
+        const matchesSubcategory = !activeSubcategory || ing.subcategory === activeSubcategory;
+        return matchesSearch && matchesCategory && matchesSubcategory;
     });
 
     const handleEdit = (ing) => {
@@ -102,7 +110,7 @@ const Inventory = () => {
             addIngredient(formData);
             setIsAdding(false);
         }
-        setFormData({ name: '', quantity: 0, critical: 5, unit: 'uds', cost: 0, provider: 'Sin asignar', category: activeTab });
+        setFormData({ name: '', quantity: 0, critical: 5, unit: 'uds', cost: 0, provider: 'Sin asignar', category: activeTab, subcategory: activeSubcategory });
     };
 
     // --- Supplier Handlers ---
@@ -220,6 +228,47 @@ const Inventory = () => {
                     </button>
                 ))}
             </div>
+
+            {/* Subcategory Tabs (if applicable) */}
+            {activeTab !== 'distribuidores' && activeTab !== 'gastos' && getSubcategories(activeTab) && (
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                    <button
+                        onClick={() => setActiveSubcategory(null)}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            background: activeSubcategory === null ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                            border: '1px solid',
+                            borderColor: activeSubcategory === null ? 'var(--color-primary)' : 'var(--glass-border)',
+                            borderRadius: '20px',
+                            color: 'white',
+                            cursor: 'pointer',
+                            fontSize: '0.8rem',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Todos los {categories.find(c => c.id === activeTab).label}
+                    </button>
+                    {getSubcategories(activeTab).map(sub => (
+                        <button
+                            key={sub}
+                            onClick={() => setActiveSubcategory(sub)}
+                            style={{
+                                padding: '0.5rem 1rem',
+                                background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                border: '1px solid',
+                                borderColor: activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)',
+                                borderRadius: '20px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {sub}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* SUPPLIER MANAGEMENT MODE */}
             {activeTab === 'distribuidores' ? (
@@ -593,6 +642,20 @@ const Inventory = () => {
                                         </select>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <label>Subcategoría</label>
+                                        <select
+                                            className="glass-panel"
+                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', background: '#1e293b' }}
+                                            value={formData.subcategory || ''}
+                                            onChange={(e) => setFormData({ ...formData, subcategory: e.target.value || null })}
+                                        >
+                                            <option value="">Sin subcategoría</option>
+                                            {getSubcategories(formData.category || activeTab)?.map(sub => (
+                                                <option key={sub} value={sub}>{sub}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         <label>Cantidad Actual</label>
                                         <input
                                             type="number"
@@ -675,7 +738,10 @@ const Inventory = () => {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                                                     <div>
                                                         <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ing.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{categories.find(c => c.id === (ing.category || 'alimentos'))?.label}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                                                            {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
+                                                            {ing.subcategory && ` • ${ing.subcategory}`}
+                                                        </div>
                                                     </div>
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                         <button onClick={() => handleEdit(ing)} style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}><Edit2 size={16} /></button>
@@ -729,6 +795,7 @@ const Inventory = () => {
                                                     <td style={{ padding: '1rem 1.5rem' }}>
                                                         <span style={{ fontSize: '0.9rem', padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
                                                             {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
+                                                            {ing.subcategory && <span style={{ opacity: 0.5 }}> / {ing.subcategory}</span>}
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: '1rem 1.5rem' }}>
