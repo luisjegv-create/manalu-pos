@@ -25,7 +25,8 @@ export const InventoryProvider = ({ children }) => {
         website: 'www.tapasybocatas.es',
         website2: 'www.manalueventos.com',
         logo: '/logo-principal.png',
-        last_ticket_number: 0
+        last_ticket_number: 0,
+        gemUrl: 'https://gemini.google.com/gem/a75e2ed2d82d'
     });
 
     // Helper for safe parsing
@@ -94,7 +95,8 @@ export const InventoryProvider = ({ children }) => {
                     setRestaurantInfo({
                         ...settingsData,
                         logo: settingsData.logo_url,
-                        last_ticket_number: settingsData.last_ticket_number || 0
+                        last_ticket_number: settingsData.last_ticket_number || 0,
+                        gemUrl: settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d'
                     });
                 }
 
@@ -611,7 +613,8 @@ export const InventoryProvider = ({ children }) => {
             nif: data.nif,
             email: data.email,
             logo_url: data.logo,
-            last_ticket_number: data.last_ticket_number
+            last_ticket_number: data.last_ticket_number,
+            gem_url: data.gemUrl
         });
         if (!error) setRestaurantInfo(data);
     };

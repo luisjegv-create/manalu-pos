@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom'; // Added useNavigate
-import { UtensilsCrossed, Calendar, ChefHat, TrendingUp, Settings as SettingsIcon, Box, Calculator, Wine, BookOpen, Users, QrCode } from 'lucide-react';
+import { UtensilsCrossed, Calendar, ChefHat, TrendingUp, Settings as SettingsIcon, Box, Calculator, Wine, BookOpen, Users, QrCode, Sparkles } from 'lucide-react';
 import Card from '../components/Card';
 import { useInventory } from '../context/InventoryContext';
 
@@ -106,6 +106,20 @@ const Dashboard = () => {
             description: "Base de datos y fidelización.",
             color: "cyan",
             path: "/customers"
+        },
+        {
+            title: "Asistente de Negocio (IA)",
+            icon: Sparkles,
+            description: "Consulta tus dudas con tu asistente entrenado.",
+            color: "yellow",
+            onClick: () => {
+                if (restaurantInfo.gemUrl) {
+                    window.open(restaurantInfo.gemUrl, '_blank');
+                } else {
+                    alert("Aún no has configurado la URL de tu Gem en Configuración.");
+                    navigate('/settings');
+                }
+            }
         }
     ];
 
@@ -142,7 +156,7 @@ const Dashboard = () => {
                     <Card
                         key={index}
                         {...module}
-                        onClick={() => module.path ? navigate(module.path) : console.log(`Clicked ${module.title}`)}
+                        onClick={module.onClick ? module.onClick : () => module.path ? navigate(module.path) : console.log(`Clicked ${module.title}`)}
                     />
                 ))}
             </div>

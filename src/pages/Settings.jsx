@@ -152,6 +152,17 @@ const Settings = () => {
                                     <input value={formData.nif} onChange={e => setFormData({ ...formData, nif: e.target.value })} />
                                 </div>
                             </div>
+                            <div className="form-group">
+                                <label>Enlace a Asistente IA (Gem)</label>
+                                <input
+                                    placeholder="https://gemini.google.com/gems/..."
+                                    value={formData.gemUrl || ''}
+                                    onChange={e => setFormData({ ...formData, gemUrl: e.target.value })}
+                                />
+                                <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                                    Pega aquí el enlace directo a tu Gem personalizado para acceso rápido.
+                                </p>
+                            </div>
                             <button className="btn-primary" onClick={handleSave} style={{ marginTop: '1rem', justifyContent: 'center', background: saved ? '#10b981' : 'var(--color-primary)' }}>
                                 {saved ? '¡Guardado!' : <><Save size={18} /> Guardar Cambios</>}
                             </button>
