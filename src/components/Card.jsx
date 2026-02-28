@@ -29,10 +29,11 @@ const Card = ({ title, icon: Icon, description, onClick, color = "blue" }) => {
                 height: '100%',
                 position: 'relative',
                 overflow: 'hidden',
-                background: 'var(--color-surface)',
+                background: 'var(--glass-bg)',
+                backdropFilter: 'blur(12px)',
                 borderRadius: '16px',
                 border: '1px solid var(--glass-border)',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                boxShadow: 'var(--shadow-premium)',
                 color: 'white'
             }}
             onClick={onClick}

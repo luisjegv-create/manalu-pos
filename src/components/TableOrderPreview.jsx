@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 
-const ProductTimer = ({ startTime, isReady }) => {
+const ProductTimer = ({ startTime, isReady, dark = false }) => {
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
@@ -20,14 +20,17 @@ const ProductTimer = ({ startTime, isReady }) => {
 
     if (isReady) return null;
 
+    const color = elapsed > 20 ? '#ef4444' : elapsed > 10 ? '#f59e0b' : (dark ? '#1e293b' : '#10b981');
+
     return (
         <span style={{
             fontSize: '0.7rem',
-            opacity: 0.8,
+            opacity: 0.9,
             display: 'flex',
             alignItems: 'center',
             gap: '2px',
-            color: elapsed > 20 ? '#ef4444' : elapsed > 10 ? '#fbbf24' : '#10b981'
+            color,
+            fontWeight: 'bold'
         }}>
             <Clock size={10} />
             {elapsed}'
@@ -35,51 +38,64 @@ const ProductTimer = ({ startTime, isReady }) => {
     );
 };
 
-const TableOrderPreview = ({ tableBills = [], kitchenOrders = [] }) => {
-    // Collect all items from current orders and bills to show a complete status
-    // 1. Items currently being drafted (not yet sent to kitchen)
-    // 2. Items sent to kitchen (pending or ready)
-    // 3. Drinks (usually only in bills)
+const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [] }) => {
+    // Defense: ensure we have arrays
+    const safeTableOrders = Array.isArray(tableOrders) ? tableOrders : [];
+    const safeKitchenOrders = Array.isArray(kitchenOrders) ? kitchenOrders : [];
 
-    // Find kitchen orders for this table
-    // Note: kitchenOrders arrive with 'table_name' which matches table.name
+    // Collect all items to show:
+    // 1. Items in draft (not yet sent to kitchen)
+    const draftItems = safeTableOrders.map(item => ({ ...item, itemStatus: 'draft' }));
 
-    // We'll focus on the items in kitchenOrders first as they have the status
-    const kitchenItems = kitchenOrders.flatMap(o => o.items || []);
+    // 2. Items sent to kitchen
+    const kitchenItems = safeKitchenOrders.flatMap(o => o?.items || []);
 
-    // Merge items: we want to show unique products and their status
-    // If an item is in kitchenOrders, it's either 'pending' (green) or 'ready' (red)
-    // If it's in tableBills but NOT in kitchenOrders, it might be a drink or already served food.
+    const allItems = [...draftItems, ...kitchenItems];
 
-    if (kitchenItems.length === 0 && tableBills.length === 0) return null;
+    if (allItems.length === 0) return null;
 
     return (
         <div style={{
-            marginTop: '0.5rem',
+            marginTop: '0.8rem',
             width: '100%',
-            fontSize: '0.8rem',
-            maxHeight: '120px',
+            fontSize: '0.75rem',
+            maxHeight: '140px',
             overflowY: 'auto',
             textAlign: 'left',
-            padding: '4px',
-            background: 'rgba(0,0,0,0.1)',
-            borderRadius: '6px'
+            padding: '8px',
+            background: 'rgba(0, 0, 0, 0.25)', // Glassy dark background
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(4px)'
         }}>
-            {kitchenItems.map((item, idx) => {
+            {allItems.map((item, idx) => {
+                if (!item) return null;
                 const isReady = item.itemStatus === 'ready';
+                const isDraft = item.itemStatus === 'draft';
                 return (
                     <div key={`${item.uniqueId}-${idx}`} style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        color: isReady ? '#ef4444' : '#10b981', // Delivered is Red, Pending is Green
-                        padding: '2px 0',
-                        fontWeight: '600'
+                        color: 'rgba(255, 255, 255, 0.9)', // White text for dark cards
+                        padding: '4px 0',
+                        fontWeight: '600',
+                        borderBottom: idx === allItems.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)'
                     }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                            {item.quantity}x {item.name}
-                        </span>
-                        <ProductTimer startTime={item.startTime} isReady={isReady} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
+                            <div style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                flexShrink: 0,
+                                backgroundColor: isReady ? '#ef4444' : isDraft ? '#f59e0b' : '#10b981',
+                                boxShadow: `0 0 4px ${isReady ? '#ef4444' : isDraft ? '#f59e0b' : '#10b981'}80`
+                            }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.quantity}x {item.name}
+                            </span>
+                        </div>
+                        {item.startTime && <ProductTimer startTime={item.startTime} isReady={isReady} dark={false} />}
                     </div>
                 );
             })}

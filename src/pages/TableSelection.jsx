@@ -84,7 +84,15 @@ const TableSelection = () => {
 
     return (
         <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
-            <header className="header-card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="header-card" style={{
+                padding: '1rem 2rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--color-surface)',
+                borderBottom: '1px solid var(--border-strong)'
+            }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button
                         onClick={() => navigate('/')}
@@ -92,26 +100,24 @@ const TableSelection = () => {
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <h1 style={{ margin: 0 }}>Selección de Mesa</h1>
+                    <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Selección de Mesa</h1>
                 </div>
 
                 <button
                     onClick={() => setIsEditMode(!isEditMode)}
+                    className="btn"
                     style={{
-                        padding: '0.5rem 1rem',
-                        background: isEditMode ? '#f59e0b' : 'rgba(255,255,255,0.1)',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: '8px',
+                        background: isEditMode ? 'var(--color-warning)' : 'var(--color-primary)',
                         color: isEditMode ? 'black' : 'white',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
+                        boxShadow: 'var(--shadow-md)',
+                        fontSize: '0.9rem'
                     }}
                 >
                     {isEditMode ? 'Terminar Edición' : 'Editar Mesas'}
                 </button>
             </header>
 
-            <div style={{ padding: '0 2rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
+            <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
                     {zones.map(zone => {
@@ -164,7 +170,7 @@ const TableSelection = () => {
                 {/* Grid */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                     gap: '2rem'
                 }}>
                     {filteredTables.map(table => {
