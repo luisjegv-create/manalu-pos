@@ -39,7 +39,7 @@ const OrderSummary = ({
             right: 0,
             zIndex: 50,
             backgroundColor: 'var(--color-surface)',
-            color: '#f8fafc',
+            color: 'var(--color-text)',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
@@ -168,7 +168,7 @@ const OrderSummary = ({
                 alignItems: 'center',
                 flexShrink: 0
             }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#ffffff', fontWeight: '800' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text)', fontWeight: '800' }}>
                     Comanda {currentTable ? `Mesa: ${currentTable.name}` : ''}
                 </h2>
                 <div style={{
@@ -186,7 +186,7 @@ const OrderSummary = ({
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <AnimatePresence mode='popLayout'>
                     {order.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.2)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', opacity: 0.3 }}>
                             <Utensils size={48} />
                             <p style={{ marginTop: '1rem', fontWeight: '500' }}>Selecciona productos</p>
                         </div>
@@ -228,14 +228,14 @@ const OrderSummary = ({
                                                 : item.image || '🍽️'}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: '700', color: '#ffffff', fontSize: '1.1rem', lineHeight: '1.2' }}>{item.name}</div>
+                                            <div style={{ fontWeight: '700', color: 'var(--color-text)', fontSize: '1.1rem', lineHeight: '1.2' }}>{item.name}</div>
                                             <div style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 'bold', marginTop: '4px' }}>{item.price.toFixed(2)}€</div>
                                         </div>
                                     </div>
 
                                     {/* Action Column for item */}
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                        <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#ffffff' }}>{(item.price * item.quantity).toFixed(2)}€</div>
+                                        <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text)' }}>{(item.price * item.quantity).toFixed(2)}€</div>
                                         <div style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -297,7 +297,7 @@ const OrderSummary = ({
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
                                     <button
                                         onClick={() => { setEditingNoteId(editingNoteId === item.uniqueId ? null : item.uniqueId); setNoteDraft(item.notes || ''); }}
-                                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                        style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
                                     >
                                         <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} /> Personalizar
                                     </button>
@@ -333,8 +333,8 @@ const OrderSummary = ({
                 gap: '1.25rem'
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#94a3b8' }}>TOTAL COMANDA</span>
-                    <span style={{ fontSize: '2.5rem', fontWeight: '900', color: '#ffffff', lineHeight: '1' }}>{calculateTotal().toFixed(2)}€</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-text-muted)' }}>TOTAL COMANDA</span>
+                    <span style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--color-text)', lineHeight: '1' }}>{calculateTotal().toFixed(2)}€</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>

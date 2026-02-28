@@ -42,7 +42,7 @@ const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile 
                             background: isActive
                                 ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))'
                                 : 'transparent',
-                            color: isActive ? 'var(--color-primary)' : 'rgba(255,255,255,0.5)',
+                            color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                             display: 'flex',
                             flexDirection: isMobile ? 'row' : 'column',
                             alignItems: 'center',

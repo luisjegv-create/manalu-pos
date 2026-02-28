@@ -88,8 +88,8 @@ const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [] }) => {
                                 height: '6px',
                                 borderRadius: '50%',
                                 flexShrink: 0,
-                                backgroundColor: isReady ? '#ef4444' : isDraft ? '#f59e0b' : '#10b981',
-                                boxShadow: `0 0 4px ${isReady ? '#ef4444' : isDraft ? '#f59e0b' : '#10b981'}80`
+                                backgroundColor: isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444',
+                                boxShadow: `0 0 4px ${isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444'}80`
                             }} />
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {item.quantity}x {item.name}
