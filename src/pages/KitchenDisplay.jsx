@@ -17,18 +17,30 @@ const ElapsedTime = ({ timestamp }) => {
         return () => clearInterval(interval);
     }, [timestamp]);
 
-    const color = elapsed > 15 ? '#ef4444' : elapsed > 8 ? '#fbbf24' : '#10b981';
+    // Enhanced color thresholds: Green < 10, Yellow 10-20, Red > 20
+    const color = elapsed > 20 ? '#ef4444' : elapsed > 10 ? '#fbbf24' : '#10b981';
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color, fontWeight: 'bold' }}>
-            <Clock size={16} />
-            <span>{elapsed} min</span>
+        <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            color,
+            fontWeight: '900',
+            fontSize: '1.2rem',
+            background: `${color}15`,
+            padding: '4px 12px',
+            borderRadius: '12px',
+            border: `1px solid ${color}30`
+        }}>
+            <Clock size={20} />
+            <span>{elapsed}'</span>
         </div>
     );
 };
 
 const KitchenDisplay = () => {
-    const { kitchenOrders, markOrderReady, removeOrder } = useOrder();
+    const { kitchenOrders, markOrderReady, removeOrder, updateKitchenItemStatus } = useOrder();
     const navigate = useNavigate();
     const [soundEnabled, setSoundEnabled] = React.useState(false);
     const lastOrderCount = React.useRef(kitchenOrders.length);
@@ -132,36 +144,78 @@ const KitchenDisplay = () => {
                                                 <span>{category}</span>
                                                 <span>{items.length} items</span>
                                             </div>
-                                            {items.map((item, idx) => (
-                                                <div key={idx} style={{ marginBottom: '0.75rem' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                            <span style={{
-                                                                fontSize: '1.3rem',
-                                                                fontWeight: '800',
-                                                                minWidth: '1.5rem',
-                                                                color: order.status === 'pending' ? '#fff' : '#10b981'
-                                                            }}>{item.quantity}x</span>
-                                                            <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{item.name}</span>
+                                            {items.map((item, idx) => {
+                                                const isItemReady = item.itemStatus === 'ready';
+                                                return (
+                                                    <div
+                                                        key={`${item.uniqueId}-${idx}`}
+                                                        style={{
+                                                            marginBottom: '1rem',
+                                                            opacity: isItemReady ? 0.4 : 1,
+                                                            transition: 'opacity 0.3s'
+                                                        }}
+                                                    >
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                                            <div
+                                                                onClick={() => updateKitchenItemStatus(order.id, item.uniqueId, isItemReady ? 'pending' : 'ready')}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.75rem',
+                                                                    flex: 1,
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <span style={{
+                                                                    fontSize: '1.5rem',
+                                                                    fontWeight: '900',
+                                                                    minWidth: '2rem',
+                                                                    color: isItemReady ? '#10b981' : '#fff',
+                                                                    textDecoration: isItemReady ? 'line-through' : 'none'
+                                                                }}>{item.quantity}x</span>
+                                                                <span style={{
+                                                                    fontSize: '1.2rem',
+                                                                    fontWeight: '700',
+                                                                    textDecoration: isItemReady ? 'line-through' : 'none'
+                                                                }}>{item.name}</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => updateKitchenItemStatus(order.id, item.uniqueId, isItemReady ? 'pending' : 'ready')}
+                                                                style={{
+                                                                    background: isItemReady ? '#10b981' : 'rgba(255,255,255,0.05)',
+                                                                    border: `2px solid ${isItemReady ? '#10b981' : 'rgba(255,255,255,0.1)'}`,
+                                                                    width: '32px',
+                                                                    height: '32px',
+                                                                    borderRadius: '8px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    color: 'white',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                {isItemReady && <CheckCircle size={20} />}
+                                                            </button>
                                                         </div>
+                                                        {item.notes && (
+                                                            <div style={{
+                                                                fontSize: '1.1rem',
+                                                                color: '#000',
+                                                                background: '#fbbf24',
+                                                                padding: '6px 12px',
+                                                                borderRadius: '6px',
+                                                                marginTop: '0.75rem',
+                                                                fontWeight: '950',
+                                                                boxShadow: '0 4px 12px rgba(251, 191, 36, 0.4)',
+                                                                display: 'inline-block',
+                                                                marginLeft: '2.75rem'
+                                                            }}>
+                                                                🔔 {item.notes.toUpperCase()}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {item.notes && (
-                                                        <div style={{
-                                                            fontSize: '1rem',
-                                                            color: '#000',
-                                                            background: '#fbbf24',
-                                                            padding: '4px 10px',
-                                                            borderRadius: '4px',
-                                                            marginTop: '0.5rem',
-                                                            fontWeight: '900',
-                                                            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
-                                                            display: 'inline-block'
-                                                        }}>
-                                                            ⚠️ {item.notes.toUpperCase()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     ))}
                                 </div>

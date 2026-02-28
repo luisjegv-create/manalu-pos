@@ -262,34 +262,47 @@ export const OrderProvider = ({ children }) => {
     const sendToKitchen = async () => {
         if (!currentTable || order.length === 0) return;
 
+        // Ensure stock is deducted and sale is optionally recorded
         deductStockForOrder(order);
         if (selectedCustomer) {
             recordSale(selectedCustomer.id, calculateOrderTotal(order), order);
         }
 
-        // Save to Supabase (KDS)
-        try {
-            const { data, error } = await supabase.from('kitchen_orders').insert([{
-                table_name: currentTable.name,
-                items: JSON.stringify(order),
-                customer_info: JSON.stringify(selectedCustomer),
-                status: 'pending'
-            }]).select();
+        // Filter items for kitchen: exclude drinks and wines
+        const kitchenItems = order
+            .filter(item => item.category !== 'bebidas' && item.category !== 'vinos')
+            .map(item => ({
+                ...item,
+                itemStatus: 'pending', // Individual item tracking
+                startTime: new Date().toISOString()
+            }));
 
-            if (!error && data) {
-                const newKo = {
-                    ...data[0],
-                    items: order,
-                    timestamp: new Date(data[0].created_at),
-                    table: data[0].table_name,
-                    customer: selectedCustomer
-                };
-                setKitchenOrders(prev => [...prev, newKo]);
+        if (kitchenItems.length > 0) {
+            // Save to Supabase (KDS)
+            try {
+                const { data, error } = await supabase.from('kitchen_orders').insert([{
+                    table_name: currentTable.name,
+                    items: JSON.stringify(kitchenItems),
+                    customer_info: JSON.stringify(selectedCustomer),
+                    status: 'pending'
+                }]).select();
+
+                if (!error && data) {
+                    const newKo = {
+                        ...data[0],
+                        items: kitchenItems,
+                        timestamp: new Date(data[0].created_at),
+                        table: data[0].table_name,
+                        customer: selectedCustomer
+                    };
+                    setKitchenOrders(prev => [...prev, newKo]);
+                }
+            } catch (err) {
+                console.error("Error sending to kitchen:", err);
             }
-        } catch (err) {
-            console.error("Error sending to kitchen:", err);
         }
 
+        // Always update bill and clear order (even if only drinks/wines)
         setTableBills(prev => {
             const currentBill = prev[currentTable.id] || [];
             const newBill = [...currentBill];
@@ -303,7 +316,6 @@ export const OrderProvider = ({ children }) => {
             });
             return { ...prev, [currentTable.id]: newBill };
         });
-
         clearOrder();
         setSelectedCustomer(null);
 
@@ -542,10 +554,37 @@ export const OrderProvider = ({ children }) => {
         try {
             await supabase.from('kitchen_orders').update({ status: 'ready' }).eq('id', orderId);
             setKitchenOrders(prev => prev.map(o =>
-                o.id === orderId ? { ...o, status: 'ready' } : o
+                o.id === orderId ? { ...o, status: 'ready', items: (o.items || []).map(i => ({ ...i, itemStatus: 'ready' })) } : o
             ));
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const updateKitchenItemStatus = async (orderId, itemUniqueId, newStatus) => {
+        try {
+            const orderIndex = kitchenOrders.findIndex(o => o.id === orderId);
+            if (orderIndex === -1) return;
+
+            const targetOrder = kitchenOrders[orderIndex];
+            const updatedItems = targetOrder.items.map(item =>
+                item.uniqueId === itemUniqueId ? { ...item, itemStatus: newStatus } : item
+            );
+
+            // Check if all items are ready
+            const allItemsReady = updatedItems.every(item => item.itemStatus === 'ready');
+            const newOrderStatus = allItemsReady ? 'ready' : targetOrder.status;
+
+            await supabase.from('kitchen_orders').update({
+                items: JSON.stringify(updatedItems),
+                status: newOrderStatus
+            }).eq('id', orderId);
+
+            setKitchenOrders(prev => prev.map(o =>
+                o.id === orderId ? { ...o, items: updatedItems, status: newOrderStatus } : o
+            ));
+        } catch (err) {
+            console.error("Error updating kitchen item status:", err);
         }
     };
 
@@ -683,12 +722,13 @@ export const OrderProvider = ({ children }) => {
             calculateTotal: () => calculateOrderTotal(order),
             calculateBillTotal: () => calculateOrderTotal(bill),
             sendToKitchen,
+            updateKitchenItemStatus,
+            markOrderReady,
             closeTable,
             payPartialTable,
             payValuePartialTable,
             calculateOrderTotal,
             removeProductFromBill,
-            markOrderReady,
             removeOrder,
             addTable,
             deleteTable,
