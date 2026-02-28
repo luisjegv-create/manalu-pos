@@ -1,9 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
 import { zones } from '../data/tables';
-import { Utensils, Wine, ArrowLeft, Armchair } from 'lucide-react';
+import { Utensils, Wine, ArrowLeft, Armchair, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import TableOrderPreview from '../components/TableOrderPreview';
+
+const TableTimer = ({ startTime }) => {
+    const [elapsed, setElapsed] = useState(0);
+
+    useEffect(() => {
+        const calculate = () => {
+            const start = new Date(startTime).getTime();
+            const now = new Date().getTime();
+            setElapsed(Math.floor((now - start) / 60000));
+        };
+        calculate();
+        const interval = setInterval(calculate, 30000);
+        return () => clearInterval(interval);
+    }, [startTime]);
+
+    return (
+        <div style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            background: elapsed > 30 ? '#ef4444' : elapsed > 20 ? '#fbbf24' : 'rgba(255,255,255,0.1)',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: elapsed > 20 ? 'white' : 'inherit',
+            border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+            <Clock size={12} />
+            {elapsed}'
+        </div>
+    );
+};
 
 const iconMap = {
     Utensils,
@@ -12,7 +49,7 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, serviceRequests } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, serviceRequests, kitchenOrders, tableBills } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTable, setEditingTable] = useState(null); // For modal
@@ -74,7 +111,7 @@ const TableSelection = () => {
                 </button>
             </header>
 
-            <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ padding: '0 2rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
                     {zones.map(zone => {
@@ -127,11 +164,15 @@ const TableSelection = () => {
                 {/* Grid */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                     gap: '2rem'
                 }}>
                     {filteredTables.map(table => {
-                        const hasActiveOrder = tableOrders[table.id] && tableOrders[table.id].length > 0;
+                        const tableOrderItems = tableOrders[table.id] || [];
+                        const tableBillItems = tableBills[table.id] || [];
+                        const tableKitchenOrders = kitchenOrders.filter(o => o.table === table.name);
+
+                        const hasActiveOrder = tableOrderItems.length > 0 || tableKitchenOrders.length > 0 || tableBillItems.length > 0;
                         const isOccupied = table.status === 'occupied' || hasActiveOrder;
 
                         // Check for today's reservations
@@ -143,21 +184,16 @@ const TableSelection = () => {
                         );
                         const isReserved = table.isReserved || (reservation && reservation.status === 'confirmado');
 
-                        // Traffic Light Logic
-                        let activityColor = null;
-                        if (isOccupied && table.lastActionAt) {
-                            const minsSinceAction = (new Date() - new Date(table.lastActionAt)) / 60000;
-                            const hasBillRequest = serviceRequests?.some(r =>
-                                (r.table_id === table.id || r.table_id === table.id.toString()) &&
-                                (r.type === 'cuenta' || r.type === 'bill') &&
-                                r.status === 'pending'
-                            );
+                        // Minimum wait time logic (oldest item)
+                        let minStartTime = null;
+                        tableKitchenOrders.forEach(o => {
+                            if (o.status === 'pending') {
+                                if (!minStartTime || new Date(o.created_at) < new Date(minStartTime)) {
+                                    minStartTime = o.created_at;
+                                }
+                            }
+                        });
 
-                            if (hasBillRequest) activityColor = '#ef4444'; // Red for bill request
-                            else if (minsSinceAction > 30) activityColor = '#ef4444'; // Red for legacy
-                            else if (minsSinceAction > 20) activityColor = '#f59e0b'; // Yellow
-                            else activityColor = '#10b981'; // Green
-                        }
 
                         return (
                             <motion.button
@@ -167,15 +203,15 @@ const TableSelection = () => {
                                 onClick={() => handleTableSelect(table)}
                                 className="glass-panel"
                                 style={{
-                                    padding: '2rem',
+                                    padding: '1.5rem',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    gap: '1rem',
+                                    gap: '0.8rem',
                                     cursor: 'pointer',
                                     border: isEditMode ? '2px dashed #f59e0b' : '1px solid var(--border-strong)',
                                     backgroundColor: isReserved
-                                        ? 'rgba(245, 158, 11, 0.15)' // Orange/Yellow for reserved
+                                        ? 'rgba(245, 158, 11, 0.15)'
                                         : hasActiveOrder
                                             ? 'rgba(59, 130, 246, 0.15)'
                                             : isOccupied
@@ -190,69 +226,59 @@ const TableSelection = () => {
                                                 : 'var(--border-strong)',
                                     color: 'var(--color-text)',
                                     position: 'relative',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    minHeight: '200px'
                                 }}
                             >
+                                {isOccupied && minStartTime && !isEditMode && <TableTimer startTime={minStartTime} />}
+
                                 {isEditMode && (
                                     <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8rem', color: '#f59e0b' }}>
                                         ✏️
                                     </div>
                                 )}
 
-                                {/* Traffic Light Dot */}
-                                {activityColor && (
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        style={{
-                                            position: 'absolute',
-                                            top: '12px',
-                                            left: '12px',
-                                            width: '12px',
-                                            height: '12px',
-                                            borderRadius: '50%',
-                                            backgroundColor: activityColor,
-                                            boxShadow: `0 0 10px ${activityColor}`,
-                                            zIndex: 2
-                                        }}
-                                        title="Indicador de actividad"
-                                    />
-                                )}
-
                                 <div style={{
-                                    padding: '1rem',
+                                    padding: '0.8rem',
                                     borderRadius: '50%',
                                     background: isReserved
                                         ? '#f59e0b'
                                         : hasActiveOrder
                                             ? 'var(--color-primary)'
                                             : isOccupied ? '#ef4444' : '#10b981',
-                                    color: 'white'
+                                    color: 'white',
+                                    marginBottom: '0.5rem'
                                 }}>
-                                    {table.zone === 'salon' ? <Utensils /> : <Armchair />}
+                                    {table.zone === 'salon' ? <Utensils size={20} /> : <Armchair size={20} />}
                                 </div>
 
-                                <div style={{ textAlign: 'center' }}>
+                                <div style={{ textAlign: 'center', width: '100%' }}>
                                     <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{table.name}</h3>
                                     <span style={{
-                                        fontSize: '0.9rem',
+                                        fontSize: '0.8rem',
                                         color: isReserved
                                             ? '#f59e0b'
                                             : hasActiveOrder
                                                 ? 'var(--color-primary)'
                                                 : isOccupied ? '#ef4444' : '#10b981',
-                                        fontWeight: 'bold'
+                                        fontWeight: 'bold',
+                                        display: 'block',
+                                        marginBottom: '0.5rem'
                                     }}>
-                                        {isReserved ? 'RESERVADA' : hasActiveOrder ? 'En preparación' : isOccupied ? 'Ocupada' : 'Libre'}
+                                        {isReserved ? 'RESERVADA' : hasActiveOrder ? 'EN SERVICIO' : isOccupied ? 'Ocupada' : 'Libre'}
                                     </span>
+
+                                    {isOccupied && (
+                                        <TableOrderPreview
+                                            tableOrders={tableOrderItems}
+                                            tableBills={tableBillItems}
+                                            kitchenOrders={tableKitchenOrders}
+                                        />
+                                    )}
+
                                     {reservation && !hasActiveOrder && (
                                         <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#f59e0b', fontWeight: 'bold' }}>
                                             {reservation.time} - {reservation.customerName}
-                                        </div>
-                                    )}
-                                    {hasActiveOrder && (
-                                        <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8 }}>
-                                            {tableOrders[table.id].length} productos
                                         </div>
                                     )}
                                 </div>
