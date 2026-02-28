@@ -1,848 +1,349 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
 import {
-    ArrowLeft,
     Plus,
     Search,
-    Edit2,
     Trash2,
+    Edit3,
+    ArrowLeft,
     AlertTriangle,
-    Box,
+    Check,
+    History,
+    TrendingUp,
+    TrendingDown,
     Save,
     X,
-    Camera,
-    Printer
+    Filter,
+    ChevronDown,
+    Download,
+    BarChart3,
+    Package,
+    Store,
+    Truck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { printRestockList } from '../utils/printHelpers';
 
 const Inventory = () => {
     const navigate = useNavigate();
-    const {
-        ingredients, addIngredient, updateIngredient, deleteIngredient,
-        suppliers, addSupplier, updateSupplier, deleteSupplier,
-        invoices, addInvoice, deleteInvoice,
-        expenses, addExpense, deleteExpense
-    } = useInventory();
-
+    const { products, addProduct, updateProduct, deleteProduct, loading } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('alimentos');
-    const [activeSubcategory, setActiveSubcategory] = useState(null);
+    const [categoryFilter, setCategoryFilter] = useState('Todas');
     const [isAdding, setIsAdding] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [activeTab, setActiveTab] = useState('stock'); // 'stock', 'low-stock', 'stats'
 
-    // Mobile Responsiveness
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    React.useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    const categories = ['Todas', ...new Set(products.map(p => p.category))];
 
-    // Ingredient Form Data
-    const [formData, setFormData] = useState({
+    const filteredProducts = products.filter(p => {
+        const matchesSearch = (p.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = categoryFilter === 'Todas' || p.category === categoryFilter;
+        return matchesSearch && matchesCategory;
+    });
+
+    const lowStockProducts = products.filter(p => (p.currentStock || 0) <= (p.minStock || 5));
+
+    const [form, setForm] = useState({
         name: '',
-        quantity: 0,
-        critical: 5,
+        category: 'Tapas',
+        currentStock: 0,
+        minStock: 10,
         unit: 'uds',
-        cost: 0,
-        provider: 'Sin asignar',
-        category: 'alimentos',
-        subcategory: null
+        price: 0,
+        costPrice: 0,
+        supplier: ''
     });
 
-    // Supplier Mode State
-    const [selectedSupplierId, setSelectedSupplierId] = useState(null);
-    const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
-    const [isAddingInvoice, setIsAddingInvoice] = useState(false);
-    const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
-
-    // Expense State
-    const [expenseForm, setExpenseForm] = useState({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
-    const expenseCategories = ['Alquiler', 'Luz/Agua', 'Sueldos', 'Impuestos', 'Marketing', 'Otros'];
-
-
-    const categories = [
-        { id: 'alimentos', label: 'Alimentos', icon: '🥕', subcategories: ['Carne', 'Pescado', 'Verdura', 'Congelados', 'Secos', 'Lácteos'] },
-        { id: 'bebidas', label: 'Bebidas', icon: '🥤', subcategories: ['Refrescos', 'Alcohol', 'Cerveza', 'Agua', 'Zumos'] },
-        { id: 'menaje', label: 'Menaje', icon: '🍽️', subcategories: ['Vajilla', 'Cristalería', 'Cubiertos', 'Servilletas/Consumibles'] },
-        { id: 'limpieza', label: 'Limpieza', icon: '🧹', subcategories: ['Desinfectantes', 'Utensilios', 'Detergentes', 'Aseos'] },
-        { id: 'distribuidores', label: 'Distribuidores', icon: '🚛' },
-        { id: 'gastos', label: 'Gastos', icon: '📉' }
-    ];
-
-    const getSubcategories = (catId) => {
-        const cat = categories.find(c => c.id === catId);
-        return cat?.subcategories || null;
-    };
-
-    const filteredIngredients = ingredients.filter(ing => {
-        const matchesSearch = ing.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = (ing.category || 'alimentos') === activeTab;
-        const matchesSubcategory = !activeSubcategory || ing.subcategory === activeSubcategory;
-        return matchesSearch && matchesCategory && matchesSubcategory;
-    });
-
-    const handleEdit = (ing) => {
-        setEditingId(ing.id);
-        setFormData({
-            name: ing.name,
-            quantity: ing.quantity,
-            critical: ing.critical || ing.min_stock || 5,
-            unit: ing.unit || 'uds',
-            cost: ing.cost || 0,
-            provider: ing.provider || 'Sin asignar',
-            category: ing.category || 'alimentos'
+    const handleSave = (e) => {
+        e.preventDefault();
+        addProduct(form);
+        setIsAdding(false);
+        setForm({
+            name: '',
+            category: 'Tapas',
+            currentStock: 0,
+            minStock: 10,
+            unit: 'uds',
+            price: 0,
+            costPrice: 0,
+            supplier: ''
         });
     };
 
-    const handleSave = () => {
-        if (!formData.name || formData.name.trim() === '') {
-            alert("El nombre del ingrediente es obligatorio");
-            return;
-        }
-
-        if (editingId) {
-            updateIngredient(editingId, formData);
-            setEditingId(null);
-        } else {
-            addIngredient(formData);
-            setIsAdding(false);
-        }
-        setFormData({ name: '', quantity: 0, critical: 5, unit: 'uds', cost: 0, provider: 'Sin asignar', category: activeTab, subcategory: activeSubcategory });
+    const handleUpdate = (e) => {
+        e.preventDefault();
+        updateProduct(editingProduct.id, editingProduct);
+        setEditingProduct(null);
     };
 
-    // --- Supplier Handlers ---
-    const handleSaveSupplier = () => {
-        if (!supplierForm.name) return alert("Nombre requerido");
-
-        if (selectedSupplierId === 'new') {
-            addSupplier(supplierForm);
-            setSelectedSupplierId(null); // Return to list
-        } else {
-            updateSupplier(selectedSupplierId, supplierForm);
-        }
-    };
-
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setInvoiceForm(prev => ({ ...prev, image: reader.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSaveInvoice = () => {
-        if (!invoiceForm.amount) return alert("Importe requerido");
-        addInvoice({
-            supplierId: selectedSupplierId,
-            amount: parseFloat(invoiceForm.amount),
-            date: invoiceForm.date,
-            image: invoiceForm.image
-        });
-        setIsAddingInvoice(false);
-        setInvoiceForm({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
-    };
+    const stats = useMemo(() => {
+        const totalValue = products.reduce((sum, p) => sum + ((p.currentStock || 0) * (p.costPrice || 0)), 0);
+        const potentialRevenue = products.reduce((sum, p) => sum + ((p.currentStock || 0) * (p.price || 0)), 0);
+        return { totalValue, potentialRevenue, totalItems: products.length };
+    }, [products]);
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
+            <header className="header-card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button
                         onClick={() => navigate('/')}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
+                        className="btn-icon-circle"
                     >
-                        <ArrowLeft />
+                        <ArrowLeft size={20} />
                     </button>
                     <div>
                         <h1 style={{ margin: 0 }}>Almacén (Matriz)</h1>
-                        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Control central de stock e ingredientes</p>
+                        <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Control centralizado de existencias</p>
                     </div>
-                    <button
-                        onClick={() => {
-                            const lowStockItems = ingredients.filter(i => i.quantity <= (i.critical || 5));
-                            if (lowStockItems.length === 0) {
-                                alert('Todo el stock está correcto. No hace falta reposición.');
-                                return;
-                            }
-                            printRestockList(lowStockItems);
-                        }}
-                        style={{
-                            marginLeft: '1rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.5rem 1rem',
-                            background: 'rgba(239, 68, 68, 0.2)',
-                            border: '1px solid #ef4444',
-                            color: '#ef4444',
-                            borderRadius: '8px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <Printer size={16} /> Informe Reposición
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Download size={18} /> Exportar
+                    </button>
+                    <button className="btn-primary" onClick={() => setIsAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Plus size={18} /> Nuevo Artículo
                     </button>
                 </div>
-
-                {activeTab !== 'distribuidores' && activeTab !== 'gastos' && (
-                    <button
-                        className="btn-primary"
-                        onClick={() => { setIsAdding(true); setEditingId(null); setFormData(prev => ({ ...prev, category: activeTab })); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
-                        <Plus size={18} /> Nuevo Ingrediente
-                    </button>
-                )}
             </header>
 
-            {/* Category Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem', overflowX: 'auto' }}>
-                {categories.map(cat => (
-                    <button
-                        key={cat.id}
-                        onClick={() => {
-                            setActiveTab(cat.id);
-                            setSelectedSupplierId(null);
-                        }}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: activeTab === cat.id ? 'var(--color-primary)' : 'transparent',
-                            border: 'none',
-                            borderRadius: '12px',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontWeight: activeTab === cat.id ? 'bold' : 'normal',
-                            opacity: activeTab === cat.id ? 1 : 0.7,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        <span>{cat.icon}</span> {cat.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Subcategory Tabs (if applicable) */}
-            {activeTab !== 'distribuidores' && activeTab !== 'gastos' && getSubcategories(activeTab) && (
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                    <button
-                        onClick={() => setActiveSubcategory(null)}
-                        style={{
-                            padding: '0.5rem 1rem',
-                            background: activeSubcategory === null ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                            border: '1px solid',
-                            borderColor: activeSubcategory === null ? 'var(--color-primary)' : 'var(--glass-border)',
-                            borderRadius: '20px',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '0.8rem',
-                            whiteSpace: 'nowrap'
-                        }}
-                    >
-                        Todos los {categories.find(c => c.id === activeTab).label}
-                    </button>
-                    {getSubcategories(activeTab).map(sub => (
-                        <button
-                            key={sub}
-                            onClick={() => setActiveSubcategory(sub)}
-                            style={{
-                                padding: '0.5rem 1rem',
-                                background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                border: '1px solid',
-                                borderColor: activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)',
-                                borderRadius: '20px',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '0.8rem',
-                                whiteSpace: 'nowrap'
-                            }}
-                        >
-                            {sub}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* SUPPLIER MANAGEMENT MODE */}
-            {activeTab === 'distribuidores' ? (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '300px 1fr',
-                    gap: isMobile ? '1rem' : '2rem',
-                    minHeight: '600px'
-                }}>
-
-                    {/* Left: Supplier List */}
-                    <div className="glass-panel" style={{
-                        padding: '1rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        maxHeight: isMobile ? '300px' : 'none'
-                    }}>
-                        <button
-                            className="btn-primary"
-                            style={{ marginBottom: '1rem', width: '100%', justifyContent: 'center' }}
-                            onClick={() => {
-                                setSelectedSupplierId('new');
-                                setSupplierForm({ name: '', phone: '', email: '', address: '', notes: '' });
-                            }}
-                        >
-                            <Plus size={16} /> Nuevo Distribuidor
-                        </button>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
-                            {suppliers.map(sup => (
-                                <div
-                                    key={sup.id}
-                                    onClick={() => {
-                                        setSelectedSupplierId(sup.id);
-                                        setSupplierForm(sup);
-                                    }}
-                                    style={{
-                                        padding: '1rem',
-                                        borderRadius: '8px',
-                                        background: selectedSupplierId === sup.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                        border: selectedSupplierId === sup.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 'bold' }}>{sup.name}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{sup.phone}</div>
-                                </div>
-                            ))}
+            <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                {/* Dashboard Corto */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', color: '#3b82f6' }}><Package size={24} /></div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Valor Inventario</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.totalValue.toFixed(2)}€</div>
                         </div>
                     </div>
-
-                    {/* Right: Details & Invoices */}
-                    <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '2rem' }}>
-                        {selectedSupplierId ? (
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                                    <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.5rem' }}>{selectedSupplierId === 'new' ? 'Nuevo Distribuidor' : 'Editar Distribuidor'}</h2>
-                                    {selectedSupplierId !== 'new' && (
-                                        <button
-                                            onClick={() => { deleteSupplier(selectedSupplierId); setSelectedSupplierId(null); }}
-                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 />
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Supplier Form */}
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-                                    <div>
-                                        <label>Nombre Empresa</label>
-                                        <input
-                                            value={supplierForm.name}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                                            className="glass-panel"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Teléfono</label>
-                                        <input
-                                            value={supplierForm.phone}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                                            className="glass-panel"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Email</label>
-                                        <input
-                                            value={supplierForm.email}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                                            className="glass-panel"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Dirección</label>
-                                        <input
-                                            value={supplierForm.address}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-                                            className="glass-panel"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <button className="btn-primary" onClick={handleSaveSupplier} style={{ marginBottom: '3rem', width: isMobile ? '100%' : 'auto' }}>
-                                    <Save size={16} style={{ marginRight: '0.5rem' }} /> Guardar Datos
-                                </button>
-
-                                {/* Invoice Section (Only if not new) */}
-                                {selectedSupplierId !== 'new' && (
-                                    <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h3 style={{ margin: 0 }}>Facturas Guardadas</h3>
-                                            <button
-                                                className="glass-panel"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem 1rem' }}
-                                                onClick={() => setIsAddingInvoice(true)}
-                                            >
-                                                <Camera size={16} /> Subir Factura
-                                            </button>
-                                        </div>
-
-                                        {/* Invoice List */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '1rem' }}>
-                                            {invoices.filter(i => i.supplierId === selectedSupplierId).map(inv => (
-                                                <div key={inv.id} className="glass-panel" style={{ padding: '0.5rem', position: 'relative' }}>
-                                                    <div style={{ height: '80px', background: '#000', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
-                                                        {inv.image ? (
-                                                            <img src={inv.image} alt="Factura" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        ) : (
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666' }}>No img</div>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ fontWeight: 'bold' }}>{inv.amount.toFixed(2)}€</div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'gray' }}>{inv.date}</div>
-                                                    <button
-                                                        onClick={() => deleteInvoice(inv.id)}
-                                                        style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.7)', border: 'none', color: 'white', borderRadius: '50%', padding: '2px', cursor: 'pointer' }}
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Add Invoice Modal */}
-                                        <AnimatePresence>
-                                            {isAddingInvoice && (
-                                                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                                                        className="glass-panel"
-                                                        style={{ padding: '2rem', width: '90%', maxWidth: '400px', border: '1px solid var(--color-primary)' }}
-                                                    >
-                                                        <h3 style={{ marginTop: 0 }}>Nueva Factura</h3>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                            <div>
-                                                                <label>Importe Total (€)</label>
-                                                                <input
-                                                                    type="number" step="0.01"
-                                                                    value={invoiceForm.amount}
-                                                                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                                                                    className="glass-panel" style={{ width: '100%', padding: '0.5rem', color: 'white', marginTop: '0.5rem' }}
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label>Fecha</label>
-                                                                <input
-                                                                    type="date"
-                                                                    value={invoiceForm.date}
-                                                                    onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })}
-                                                                    className="glass-panel" style={{ width: '100%', padding: '0.5rem', color: 'white', marginTop: '0.5rem' }}
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label>Foto de Factura</label>
-                                                                <div style={{ marginTop: '0.5rem', border: '2px dashed #666', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        capture="environment"
-                                                                        onChange={handleImageUpload}
-                                                                        style={{ display: 'none' }}
-                                                                        id="invoice-upload"
-                                                                    />
-                                                                    <label htmlFor="invoice-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                                                        <Camera size={32} />
-                                                                        <span>Tocar para hacer foto</span>
-                                                                    </label>
-                                                                    {invoiceForm.image && (
-                                                                        <div style={{ marginTop: '1rem' }}>
-                                                                            <img src={invoiceForm.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '4px' }} />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                                                                <button onClick={() => setIsAddingInvoice(false)} style={{ background: 'none', border: 'none', color: 'gray', cursor: 'pointer' }}>Cancelar</button>
-                                                                <button onClick={handleSaveInvoice} className="btn-primary">Guardar</button>
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', opacity: 0.5 }}>
-                                <Box size={64} />
-                                <p>Selecciona un distribuidor o crea uno nuevo</p>
-                            </div>
-                        )}
+                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '1rem', borderRadius: '12px', color: '#eab308' }}><AlertTriangle size={24} /></div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Stock Bajo</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{lowStockProducts.length} <span style={{ fontSize: '0.9rem', color: '#94a3b8' }}>artículos</span></div>
+                        </div>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '12px', color: '#10b981' }}><TrendingUp size={24} /></div>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Venta Potencial</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.potentialRevenue.toFixed(2)}€</div>
+                        </div>
                     </div>
                 </div>
-            ) : activeTab === 'gastos' ? (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : '350px 1fr',
-                    gap: isMobile ? '1rem' : '2rem'
-                }}>
-                    <div className="glass-panel" style={{ padding: '2rem', alignSelf: 'start' }}>
-                        <h3 style={{ marginTop: 0 }}>Registrar Gasto</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>Concepto</label>
-                                <input
-                                    value={expenseForm.concept}
-                                    onChange={e => setExpenseForm({ ...expenseForm, concept: e.target.value })}
-                                    placeholder="Ej. Alquiler Local Enero"
-                                    className="glass-panel"
-                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Importe (€)</label>
-                                <input
-                                    type="number"
-                                    value={expenseForm.amount}
-                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                                    placeholder="0.00"
-                                    className="glass-panel"
-                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Categoría</label>
-                                <select
-                                    className="glass-panel"
-                                    style={{ width: '100%', padding: '0.75rem', background: '#1e293b', color: 'white' }}
-                                    value={expenseForm.category}
-                                    onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                                >
-                                    {expenseCategories.map(c => <option key={c} value={c} style={{ background: '#0f172a' }}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Fecha</label>
-                                <input
-                                    type="date"
-                                    value={expenseForm.date}
-                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
-                                    className="glass-panel"
-                                    style={{ width: '100%', padding: '0.75rem', color: 'white' }}
-                                />
-                            </div>
+
+                {/* Filtros */}
+                <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, position: 'relative', minWidth: '300px' }}>
+                        <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar artículo..."
+                            className="glass-panel"
+                            style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', color: 'white', border: '1px solid rgba(255,255,255,0.05)' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                        {categories.map(cat => (
                             <button
-                                className="btn-primary"
-                                style={{ marginTop: '1rem', width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                                onClick={() => {
-                                    if (!expenseForm.concept || !expenseForm.amount) return alert("Completa los campos");
-                                    addExpense({ ...expenseForm, amount: parseFloat(expenseForm.amount) });
-                                    setExpenseForm({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
+                                key={cat}
+                                onClick={() => setCategoryFilter(cat)}
+                                style={{
+                                    padding: '0.6rem 1.2rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: categoryFilter === cat ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                    color: categoryFilter === cat ? 'black' : 'white',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.2s'
                                 }}
                             >
-                                <Save size={18} /> Guardar Gasto
+                                {cat}
                             </button>
-                        </div>
-                    </div>
-
-                    <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0 }}>Historial de Gastos</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(exp => (
-                                <div key={exp.id} style={{
-                                    padding: '1rem',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    border: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>{exp.concept}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                            {exp.date} • <span style={{ color: 'var(--color-primary)' }}>{exp.category}</span>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1.5rem' }}>
-                                        <div style={{ fontWeight: '800', fontSize: isMobile ? '1rem' : '1.1rem', color: '#ef4444' }}>-{exp.amount.toFixed(2)}€</div>
-                                        <button
-                                            onClick={() => deleteExpense(exp.id)}
-                                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                            {expenses.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                                    No hay gastos registrados.
-                                </div>
-                            )}
-                        </div>
+                        ))}
                     </div>
                 </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} size={18} />
-                            <input
-                                type="text"
-                                placeholder={`Buscar en ${categories.find(c => c.id === activeTab)?.label || '...'}`}
-                                className="glass-panel"
-                                style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
 
-                    <AnimatePresence>
-                        {(isAdding || editingId) && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="glass-panel"
-                                style={{ padding: isMobile ? '1rem' : '2rem', marginBottom: '2rem', border: '1px solid var(--color-primary)' }}
-                            >
-                                <h3 style={{ marginTop: 0 }}>{editingId ? 'Editar Ingrediente' : 'Añadir Nuevo Ingrediente'}</h3>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Nombre</label>
-                                        <input
-                                            type="text"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.name}
-                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Categoría</label>
-                                        <select
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', background: '#1e293b' }}
-                                            value={formData.category}
-                                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        >
-                                            {categories.filter(c => c.id !== 'distribuidores' && c.id !== 'gastos').map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Subcategoría</label>
-                                        <select
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', background: '#1e293b' }}
-                                            value={formData.subcategory || ''}
-                                            onChange={(e) => setFormData({ ...formData, subcategory: e.target.value || null })}
-                                        >
-                                            <option value="">Sin subcategoría</option>
-                                            {getSubcategories(formData.category || activeTab)?.map(sub => (
-                                                <option key={sub} value={sub}>{sub}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Cantidad Actual</label>
-                                        <input
-                                            type="number"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.quantity}
-                                            onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Unidad (kg, L, uds...)</label>
-                                        <input
-                                            type="text"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.unit}
-                                            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Stock Crítico</label>
-                                        <input
-                                            type="number"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.critical}
-                                            onChange={(e) => setFormData({ ...formData, critical: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Coste por Unidad (€)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.cost}
-                                            onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label>Proveedor / Origen</label>
-                                        <input
-                                            type="text"
-                                            className="glass-panel"
-                                            placeholder="Ej. Makro, Pescadería García..."
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
-                                            value={formData.provider}
-                                            onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-                                <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                    <button
-                                        onClick={() => { setIsAdding(false); setEditingId(null); }}
-                                        style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button className="btn-primary" onClick={handleSave}>
-                                        <Save size={18} style={{ marginRight: '0.5rem' }} /> {editingId ? 'Actualizar' : 'Guardar Ingrediente'}
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                {/* Tabla de Artículos */}
+                <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead style={{ background: 'rgba(255,255,255,0.02)', color: '#94a3b8', fontSize: '0.85rem' }}>
+                            <tr>
+                                <th style={{ padding: '1.25rem' }}>Artículo</th>
+                                <th style={{ padding: '1.25rem' }}>Categoría</th>
+                                <th style={{ padding: '1.25rem' }}>Stock Actual</th>
+                                <th style={{ padding: '1.25rem' }}>Precio Venta</th>
+                                <th style={{ padding: '1.25rem' }}>Coste</th>
+                                <th style={{ padding: '1.25rem' }}>Margen</th>
+                                <th style={{ padding: '1.25rem', textAlign: 'right' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredProducts.map(product => {
+                                const isLowStock = (product.currentStock || 0) <= (product.minStock || 5);
+                                const margin = product.price - (product.costPrice || 0);
+                                const marginPercent = product.price > 0 ? (margin / product.price * 100).toFixed(0) : 0;
 
-                    <div className="glass-panel" style={{ overflow: isMobile ? 'visible' : 'hidden' }}>
-                        {isMobile ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem' }}>
-                                {filteredIngredients.length === 0 ? (
-                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                        No hay ingredientes en esta categoría.
-                                    </div>
-                                ) : (
-                                    filteredIngredients.map(ing => {
-                                        const isLow = ing.quantity <= (ing.critical || ing.min_stock || 5);
-                                        return (
-                                            <div key={ing.id} className="glass-panel" style={{ padding: '1rem', border: isLow ? '1px solid #ef4444' : '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ing.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                                            {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
-                                                            {ing.subcategory && ` • ${ing.subcategory}`}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <button onClick={() => handleEdit(ing)} style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px' }}><Edit2 size={16} /></button>
-                                                        <button onClick={() => deleteIngredient(ing.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '8px' }}><Trash2 size={16} /></button>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div>
-                                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{ing.quantity} <span style={{ fontSize: '0.9rem', fontWeight: 'normal', color: 'var(--color-text-muted)' }}>{ing.unit || 'uds'}</span></div>
-                                                        {isLow && <div style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.25rem' }}><AlertTriangle size={12} /> STOCK BAJO</div>}
-                                                    </div>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <div style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{ing.cost ? `${ing.cost.toFixed(2)}€` : '0.00€'}</div>
-                                                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{ing.provider || 'Sin asignar'}</div>
-                                                    </div>
-                                                </div>
+                                return (
+                                    <tr key={product.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
+                                        <td style={{ padding: '1.25rem' }}>
+                                            <div style={{ fontWeight: '500' }}>{product.name}</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Prov: {product.supplier || 'N/A'}</div>
+                                        </td>
+                                        <td style={{ padding: '1.25rem' }}>
+                                            <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+                                                {product.category}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1.25rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{
+                                                    fontWeight: 'bold',
+                                                    color: isLowStock ? '#ef4444' : '#10b981'
+                                                }}>
+                                                    {product.currentStock} {product.unit}
+                                                </span>
+                                                {isLowStock && <AlertTriangle size={14} color="#ef4444" />}
                                             </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                    <tr>
-                                        <th style={{ padding: '1.5rem' }}>Ingrediente</th>
-                                        <th style={{ padding: '1.5rem' }}>Categoría</th>
-                                        <th style={{ padding: '1.5rem' }}>Stock Actual</th>
-                                        <th style={{ padding: '1.5rem' }}>Estado</th>
-                                        <th style={{ padding: '1.5rem' }}>Coste Unit.</th>
-                                        <th style={{ padding: '1.5rem' }}>Proveedor</th>
-                                        <th style={{ padding: '1.5rem' }}>Acciones</th>
+                                            <div style={{ fontSize: '0.7rem', color: '#64748b' }}>Mín: {product.minStock}</div>
+                                        </td>
+                                        <td style={{ padding: '1.25rem', fontWeight: 'bold', color: 'var(--color-secondary)' }}>
+                                            {product.price.toFixed(2)}€
+                                        </td>
+                                        <td style={{ padding: '1.25rem', color: '#94a3b8' }}>
+                                            {(product.costPrice || 0).toFixed(2)}€
+                                        </td>
+                                        <td style={{ padding: '1.25rem' }}>
+                                            <div style={{ color: '#10b981', fontWeight: 'bold' }}>+{margin.toFixed(2)}€</div>
+                                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{marginPercent}%</div>
+                                        </td>
+                                        <td style={{ padding: '1.25rem', textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                <button
+                                                    onClick={() => setEditingProduct(product)}
+                                                    className="btn-icon-small"
+                                                >
+                                                    <Edit3 size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => deleteProduct(product.id)}
+                                                    className="btn-icon-small text-danger"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredIngredients.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="7" style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                                No hay ingredientes en esta categoría.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredIngredients.map(ing => {
-                                            const isLow = ing.quantity <= (ing.critical || ing.min_stock || 5);
-                                            return (
-                                                <tr key={ing.id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        <div style={{ fontWeight: 'bold' }}>{ing.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>ID: {ing.id}</div>
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        <span style={{ fontSize: '0.9rem', padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>
-                                                            {categories.find(c => c.id === (ing.category || 'alimentos'))?.label}
-                                                            {ing.subcategory && <span style={{ opacity: 0.5 }}> / {ing.subcategory}</span>}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{ing.quantity}</span>
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '0.25rem' }}>{ing.unit || 'uds'}</span>
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        {isLow ? (
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                                <AlertTriangle size={16} /> STOCK BAJO
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 'bold' }}>OK</div>
-                                                        )}
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        {ing.cost ? `${ing.cost.toFixed(2)}€` : '0.00€'}
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem', color: '#94a3b8', fontSize: '0.9rem' }}>
-                                                        {ing.provider || 'Sin asignar'}
-                                                    </td>
-                                                    <td style={{ padding: '1rem 1.5rem' }}>
-                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                            <button
-                                                                onClick={() => handleEdit(ing)}
-                                                                style={{ background: 'rgba(59, 130, 246, 0.1)', border: 'none', color: '#3b82f6', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
-                                                            >
-                                                                <Edit2 size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => deleteIngredient(ing.id)}
-                                                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: '#ef4444', padding: '0.5rem', borderRadius: '8px', cursor: 'pointer' }}
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
-                    </div>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {filteredProducts.length === 0 && (
+                        <div style={{ padding: '4rem', textAlign: 'center', color: '#64748b' }}>
+                            <Search size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                            <p>No se encontraron artículos con estos filtros.</p>
+                        </div>
+                    )}
                 </div>
-            )}
+
+                {/* Modales */}
+                <AnimatePresence>
+                    {(isAdding || editingProduct) && (
+                        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <motion.form
+                                onSubmit={isAdding ? handleSave : handleUpdate}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="glass-panel"
+                                style={{ padding: '2rem', width: '90%', maxWidth: '600px', border: '1px solid var(--color-primary)' }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                                    <h2 style={{ margin: 0 }}>{isAdding ? 'Nuevo Artículo' : 'Editar Artículo'}</h2>
+                                    <button type="button" onClick={() => { setIsAdding(false); setEditingProduct(null); }} className="btn-icon"><X size={20} /></button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                    <div style={{ gridColumn: 'span 2' }}>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Nombre del Artículo</label>
+                                        <input
+                                            required
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.name : editingProduct.name}
+                                            onChange={e => isAdding ? setForm({ ...form, name: e.target.value }) : setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Categoría</label>
+                                        <select
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white', background: '#1e293b' }}
+                                            value={isAdding ? form.category : editingProduct.category}
+                                            onChange={e => isAdding ? setForm({ ...form, category: e.target.value }) : setEditingProduct({ ...editingProduct, category: e.target.value })}
+                                        >
+                                            {categories.filter(c => c !== 'Todas').map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Proveedor</label>
+                                        <input
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.supplier : editingProduct.supplier}
+                                            onChange={e => isAdding ? setForm({ ...form, supplier: e.target.value }) : setEditingProduct({ ...editingProduct, supplier: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Stock Actual</label>
+                                        <input
+                                            type="number"
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.currentStock : editingProduct.currentStock}
+                                            onChange={e => isAdding ? setForm({ ...form, currentStock: parseFloat(e.target.value) }) : setEditingProduct({ ...editingProduct, currentStock: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Stock Mínimo</label>
+                                        <input
+                                            type="number"
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.minStock : editingProduct.minStock}
+                                            onChange={e => isAdding ? setForm({ ...form, minStock: parseFloat(e.target.value) }) : setEditingProduct({ ...editingProduct, minStock: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Venta (€)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.price : editingProduct.price}
+                                            onChange={e => isAdding ? setForm({ ...form, price: parseFloat(e.target.value) }) : setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Precio Coste (€)</label>
+                                        <input
+                                            type="number" step="0.01"
+                                            className="glass-panel" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                            value={isAdding ? form.costPrice : editingProduct.costPrice}
+                                            onChange={e => isAdding ? setForm({ ...form, costPrice: parseFloat(e.target.value) }) : setEditingProduct({ ...editingProduct, costPrice: parseFloat(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2.5rem' }}>
+                                    <button type="button" onClick={() => { setIsAdding(false); setEditingProduct(null); }} className="btn-secondary">Cancelar</button>
+                                    <button type="submit" className="btn-primary">
+                                        <Save size={18} /> {isAdding ? 'Crear Artículo' : 'Guardar Cambios'}
+                                    </button>
+                                </div>
+                            </motion.form>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };

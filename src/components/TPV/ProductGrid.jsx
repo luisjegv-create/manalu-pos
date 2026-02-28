@@ -1,16 +1,17 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const ProductGrid = ({ products, onProductClick, getProductCost, checkProductAvailability }) => {
+const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => {
     return (
         <div style={{
             flex: 1,
             overflowY: 'auto',
             padding: '1rem',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: '1.5rem',
-            alignContent: 'start'
+            gridTemplateColumns: window.innerWidth < 640 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: '1rem',
+            alignContent: 'start',
+            paddingBottom: '2rem'
         }}>
             <AnimatePresence mode='popLayout'>
                 {products.map(product => (
@@ -34,7 +35,12 @@ const ProductGrid = ({ products, onProductClick, getProductCost, checkProductAva
                             border: '1px solid var(--glass-border)',
                             position: 'relative'
                         }}
-                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--color-primary)' }}
+                        whileHover={{
+                            backgroundColor: 'rgba(30, 41, 59, 1)',
+                            borderColor: 'var(--color-primary)',
+                            y: -4,
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)'
+                        }}
                         whileTap={{ scale: 0.95 }}
                     >
                         {/* Improved Stock Indicator */}
@@ -97,47 +103,30 @@ const ProductGrid = ({ products, onProductClick, getProductCost, checkProductAva
                         </div>
                         <div style={{ fontWeight: '600' }}>{product.name}</div>
 
-                        {/* Price Hover Logic */}
-                        <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="discrete-price-folder"
-                            style={{
-                                marginTop: '0.25rem',
-                                padding: '0.25rem 0.5rem',
-                                background: 'rgba(255,255,255,0.1)',
-                                borderRadius: '6px',
-                                cursor: 'help',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.5rem',
-                                position: 'relative'
-                            }}
-                        >
-                            <span style={{ fontSize: '1.2rem' }}>📁</span>
-                            <div
-                                className="price-reveal"
-                                style={{
-                                    position: 'absolute',
-                                    bottom: '100%',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    background: 'rgba(0,0,0,0.9)',
-                                    border: '1px solid var(--color-primary)',
-                                    padding: '0.5rem',
-                                    borderRadius: '8px',
-                                    marginBottom: '0.5rem',
-                                    display: 'none',
-                                    width: 'max-content',
-                                    zIndex: 10
-                                }}
-                            >
-                                <div style={{ color: '#10b981', fontWeight: 'bold' }}>PVP: {product.price.toFixed(2)}€</div>
-                                {product.isWine ? (
-                                    <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Compra: {product.purchasePrice?.toFixed(2)}€</div>
-                                ) : (
-                                    <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>Coste Receta: {getProductCost(product.id).toFixed(2)}€</div>
-                                )}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            marginTop: '0.5rem'
+                        }}>
+                            <div style={{
+                                background: 'var(--color-primary-light)',
+                                color: 'var(--color-primary)',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                fontWeight: 'bold',
+                                fontSize: '1.1rem'
+                            }}>
+                                {product.price.toFixed(2)}€
+                            </div>
+
+                            {/* Subtle cost info for staff */}
+                            <div style={{
+                                fontSize: '0.7rem',
+                                color: 'var(--color-text-muted)',
+                                opacity: 0.6
+                            }}>
+                                {product.isWine ? 'Vino' : 'Ración'}
                             </div>
                         </div>
                     </motion.div>

@@ -14,7 +14,6 @@ const Card = ({ title, icon: Icon, description, onClick, color = "blue" }) => {
 
     return (
         <motion.div
-            className="glass-panel"
             whileHover={{ y: -5, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             initial={{ opacity: 0, y: 20 }}
@@ -29,7 +28,12 @@ const Card = ({ title, icon: Icon, description, onClick, color = "blue" }) => {
                 textAlign: 'center',
                 height: '100%',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                background: 'var(--color-surface)',
+                borderRadius: '16px',
+                border: '1px solid var(--glass-border)',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                color: 'white'
             }}
             onClick={onClick}
         >
@@ -46,18 +50,22 @@ const Card = ({ title, icon: Icon, description, onClick, color = "blue" }) => {
 
             <div
                 style={{
-                    background: `${accentColor}20`,
+                    background: `${accentColor}25`,
                     padding: '1rem',
                     borderRadius: '50%',
                     marginBottom: '1rem',
-                    color: accentColor
+                    color: accentColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: `0 0 20px ${accentColor}20`
                 }}
             >
                 <Icon size={32} />
             </div>
 
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem' }}>{title}</h3>
-            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', color: 'white' }}>{title}</h3>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
                 {description}
             </p>
         </motion.div>

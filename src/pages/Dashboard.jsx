@@ -143,7 +143,7 @@ const Dashboard = () => {
                         maxWidth: '90%'
                     }}
                 />
-                <h1 style={{ margin: 0, fontSize: 'clamp(1rem, 4vw, 1.2rem)', color: 'var(--color-text-muted)' }}>{restaurantInfo.name}</h1>
+                <h1 style={{ margin: 0, fontSize: 'clamp(1rem, 4vw, 1.5rem)', fontWeight: '800', color: 'var(--color-text-dark)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{restaurantInfo.name}</h1>
             </header>
 
             <div style={{

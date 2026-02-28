@@ -21,7 +21,10 @@ import {
     FileText,
     MessageSquare,
     Banknote,
-    Camera
+    Camera,
+    Layers,
+    ClipboardList,
+    LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printKitchenTicket, printBillTicket } from '../utils/printHelpers';
@@ -85,6 +88,9 @@ const BarTapas = () => {
     // Mobile Responsiveness State
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [showOrderMobile, setShowOrderMobile] = useState(false);
+    const [mobileActiveTab, setMobileActiveTab] = useState('menu'); // 'tables', 'menu', 'order'
+    const [showMobileSearch, setShowMobileSearch] = useState(false);
+    const [mobileSearchQuery, setMobileSearchQuery] = useState('');
 
     useEffect(() => {
         const handleResize = () => {
@@ -346,521 +352,374 @@ const BarTapas = () => {
     const iva = totalBill * 0.10;
     const subtotal = totalBill - iva;
 
+    // Mobile Search Logic
+    const mobileFilteredProducts = mobileSearchQuery.trim() === ''
+        ? []
+        : salesProducts.filter(p => p.name.toLowerCase().includes(mobileSearchQuery.toLowerCase()));
+
     return (
-        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', position: 'relative' }}>
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            overflow: 'hidden',
+            position: 'relative',
+            background: 'var(--color-bg)',
+            color: 'var(--color-text-dark)'
+        }}>
 
-            {/* LEFT SECTION: Catalog */}
-            <div style={{ flex: '1', display: 'flex', flexDirection: 'column', borderRight: isMobile ? 'none' : '1px solid var(--glass-border)' }}>
+            {/* MAIN CONTENT AREA */}
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                overflow: 'hidden',
+                paddingBottom: isMobile ? '70px' : 0 // Space for bottom nav
+            }}>
 
-                {/* Service Requests Banner */}
-                <AnimatePresence>
-                    {serviceRequests.length > 0 && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            style={{
-                                overflow: 'hidden',
-                                background: '#fbbf24',
-                                color: '#000',
-                                padding: serviceRequests.length > 0 ? '1rem 2rem' : '0',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem',
-                                borderBottom: '2px solid rgba(0,0,0,0.1)'
-                            }}
-                        >
-                            {serviceRequests.map(req => (
-                                <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        {req.type === 'waiter' ? '🛎️ LLAMADA:' : '🧾 CUENTA:'} {req.table_name || `Mesa ${req.table_id}`}
-                                    </div>
-                                    <button
-                                        onClick={() => clearServiceRequest(req.id)}
-                                        style={{
-                                            background: 'rgba(0,0,0,0.1)',
-                                            border: '1px solid black',
-                                            padding: '0.25rem 0.75rem',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.8rem'
-                                        }}
-                                    >
-                                        ATENDIDO
-                                    </button>
-                                </div>
-                            ))}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* LEFT SECTION: Catalog (Visible on desktop OR mobile 'menu' tab) */}
+                {(!isMobile || mobileActiveTab === 'menu' || mobileActiveTab === 'tables') && (
+                    <div style={{
+                        flex: '1',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        borderRight: isMobile ? 'none' : '1px solid var(--glass-border)',
+                        overflow: 'hidden'
+                    }}>
 
-                <header style={{
-                    padding: '1.5rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <button
-                            onClick={() => navigate('/tables')}
-                            style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
-                        >
-                            <ArrowLeft />
-                        </button>
-                        <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
-                        <div>
-                            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Gestión por mesas</h1>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                    {currentTable ? currentTable.name : 'Mesa no asignada'}
-                                </span>
-                                {currentTable && (() => {
-                                    const todayStr = new Date().toISOString().split('T')[0];
-                                    const reservation = reservations.find(r =>
-                                        (r.tableId === currentTable.id.toString() || r.tableId === currentTable.id) &&
-                                        r.date === todayStr &&
-                                        (r.status === 'confirmado' || r.status === 'sentado')
-                                    );
-                                    if (reservation) {
-                                        return (
-                                            <span style={{
-                                                fontSize: '0.8rem',
-                                                background: 'rgba(245, 158, 11, 0.15)',
-                                                color: '#f59e0b',
-                                                padding: '2px 8px',
-                                                borderRadius: '4px',
-                                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                RESERVA: {reservation.customerName} ({reservation.time})
-                                            </span>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Quick Mode Button (Added) */}
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                            onClick={() => setIsAddingProduct(true)}
-                            className="btn-primary"
-                            style={{
-                                background: 'rgba(16, 185, 129, 0.2)',
-                                border: '1px solid #10b981',
-                                color: '#10b981',
-                                borderRadius: '8px',
-                                padding: '0.5rem 1rem',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            <Plus size={18} /> Crear Producto
-                        </button>
-                    </div>
-                </header>
-
-                {/* LEFT SECTION: Categories & Products */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
-                    <CategoryTabs
-                        categories={categories}
-                        activeCategory={activeCategory}
-                        setActiveCategory={handleCategoryChange}
-                        isMobile={isMobile}
-                    />
-
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {availableSubcategories.length > 0 && (
-                            <div style={{
-                                display: 'flex',
-                                gap: '0.5rem',
-                                padding: '1rem',
-                                background: 'rgba(255,255,255,0.02)',
-                                borderBottom: '1px solid var(--glass-border)',
-                                overflowX: 'auto',
-                                whiteSpace: 'nowrap',
-                                scrollbarWidth: 'none'
-                            }}>
-                                <button
-                                    onClick={() => setActiveSubcategory(null)}
+                        {/* Service Requests Banner */}
+                        <AnimatePresence>
+                            {serviceRequests.length > 0 && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
                                     style={{
-                                        padding: '0.5rem 1rem',
-                                        borderRadius: '20px',
-                                        border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'var(--glass-border)'),
-                                        background: !activeSubcategory ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                        color: !activeSubcategory ? 'var(--color-primary)' : '#94a3b8',
-                                        cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 'bold',
-                                        transition: 'all 0.2s'
+                                        overflow: 'hidden',
+                                        background: '#fbbf24',
+                                        color: '#000',
+                                        padding: serviceRequests.length > 0 ? '1rem 2rem' : '0',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.5rem',
+                                        borderBottom: '2px solid rgba(0,0,0,0.1)'
                                     }}
                                 >
-                                    Todos
-                                </button>
-                                {availableSubcategories.map(sub => (
-                                    <button
-                                        key={sub}
-                                        onClick={() => setActiveSubcategory(sub)}
-                                        style={{
-                                            padding: '0.5rem 1rem',
-                                            borderRadius: '20px',
-                                            border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)'),
-                                            background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                            color: activeSubcategory === sub ? 'var(--color-primary)' : '#94a3b8',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem',
-                                            fontWeight: 'bold',
-                                            textTransform: 'capitalize',
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {sub}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                        <ProductGrid
-                            products={filteredProducts}
-                            onProductClick={handleProductClick}
-                            getProductCost={getProductCost}
-                            checkProductAvailability={checkProductAvailability}
-                        />
-                    </div>
-
-                    {/* Mobile Floating Button */}
-                    {isMobile && !showOrderMobile && order.length > 0 && (
-                        <button
-                            onClick={() => setShowOrderMobile(true)}
-                            style={{
-                                position: 'fixed', bottom: '2rem', right: '2rem', padding: '1rem 2rem',
-                                borderRadius: '50px', background: 'var(--color-primary)', color: 'white',
-                                border: 'none', boxShadow: '0 10px 25px rgba(59, 130, 246, 0.5)',
-                                display: 'flex', alignItems: 'center', gap: '0.75rem', zIndex: 40,
-                                fontWeight: 'bold', fontSize: '1.1rem'
-                            }}
-                        >
-                            <Wine size={20} />
-                            Ver Pedido ({calculateTotal().toFixed(2)}€)
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* RIGHT SECTION: Order Summary */}
-            <div style={{
-                width: isMobile ? '100%' : '480px',
-                height: isMobile ? '100%' : 'auto',
-                position: isMobile ? 'fixed' : 'relative',
-                top: 0,
-                right: isMobile ? (showOrderMobile ? 0 : '-100%') : 0,
-                zIndex: 50,
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: isMobile ? '#0f172a' : 'rgba(0,0,0,0.2)',
-                transition: 'right 0.3s ease'
-            }}>
-                {isMobile && (
-                    <div style={{ padding: '1rem', display: 'flex', justifyContent: 'flex-start', borderBottom: '1px solid var(--glass-border)' }}>
-                        <button
-                            onClick={() => setShowOrderMobile(false)}
-                            style={{ background: 'none', border: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                        >
-                            <ArrowLeft size={20} /> Volver a la Carta
-                        </button>
-                    </div>
-                )}
-
-                {/* Customer Selector */}
-                <div style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)', background: 'rgba(59, 130, 246, 0.05)' }}>
-                    {selectedCustomer ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <div style={{ width: '40px', height: '40px', background: 'var(--color-primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <User size={20} />
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{selectedCustomer.name}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-secondary)' }}>{selectedCustomer.points} pts acumulados</div>
-                                </div>
-                            </div>
-                            <button onClick={() => selectCustomer(null)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>Cambiar</button>
-                        </div>
-                    ) : (
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => setShowCustomerSearch(!showCustomerSearch)}
-                                style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px dashed var(--glass-border)', borderRadius: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}
-                            >
-                                <Plus size={16} /> Asignar Cliente (Fidelización)
-                            </button>
-                            {showCustomerSearch && (
-                                <div className="glass-panel" style={{ position: 'absolute', top: '110%', left: 0, right: 0, zIndex: 10, padding: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
-                                    <input
-                                        autoFocus
-                                        placeholder="Buscar cliente..."
-                                        value={customerSearchQuery}
-                                        onChange={(e) => setCustomerSearchQuery(e.target.value)}
-                                        style={{ width: '100%', padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', color: 'white', marginBottom: '0.5rem' }}
-                                    />
-                                    {customers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).map(c => (
-                                        <div
-                                            key={c.id}
-                                            onClick={() => { selectCustomer(c); setShowCustomerSearch(false); }}
-                                            style={{ padding: '0.75rem', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
-                                            onMouseEnter={(e) => e.target.style.background = 'rgba(255,255,255,0.05)'}
-                                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                                        >
-                                            <div style={{ fontWeight: '500' }}>{c.name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.phone}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Customer Favorites (Recomendar) */}
-                {selectedCustomer && selectedCustomer.favorites.length > 0 && (
-                    <div style={{ padding: '1rem', borderBottom: '1px solid var(--glass-border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-secondary)', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 'bold' }}>
-                            <Star size={14} /> RECOMENDACIONES (Favoritos)
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                            {selectedCustomer.favorites.map(favName => {
-                                const prod = salesProducts.find(p => p.name === favName);
-                                if (!prod) return null;
-                                return (
-                                    <button
-                                        key={prod.id}
-                                        onClick={() => addToOrder(prod)}
-                                        style={{ padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '20px', color: 'white', fontSize: '0.8rem', whiteSpace: 'nowrap', cursor: 'pointer' }}
-                                    >
-                                        {prod.image} {prod.name}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--glass-border)' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Comanda Actual</h2>
-                </div>
-
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                    {order.length === 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', opacity: 0.5 }}>
-                            <Utensils size={48} />
-                            <p>Selecciona productos</p>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {order.map(item => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                                        <div style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '1rem',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            {(String(item.image || '').startsWith('data:image') || String(item.image || '').startsWith('http') || String(item.image || '').startsWith('/'))
-                                                ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : item.image || '🍽️'}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <div style={{ fontWeight: '500', flex: 1, paddingRight: '0.5rem' }}>{item.name}</div>
-                                                <div style={{ display: 'flex', gap: '0.25rem' }}>
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingNoteId(editingNoteId === item.uniqueId ? null : item.uniqueId);
-                                                            setNoteDraft(item.notes || '');
-                                                        }}
-                                                        style={{ background: item.notes ? 'rgba(16, 185, 129, 0.2)' : 'none', border: 'none', color: item.notes ? '#10b981' : 'var(--color-text-muted)', padding: '4px', cursor: 'pointer', borderRadius: '4px' }}
-                                                        title="Añadir nota"
-                                                    >
-                                                        <MessageSquare size={14} />
-                                                    </button>
-                                                </div>
+                                    {serviceRequests.map(req => (
+                                        <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {req.type === 'waiter' ? '🛎️ LLAMADA:' : '🧾 CUENTA:'} {req.table_name || `Mesa ${req.table_id}`}
                                             </div>
-                                            {item.selectedModifiers && Object.entries(item.selectedModifiers).map(([key, value]) => (
-                                                <div key={key} style={{ fontSize: '0.75rem', color: '#10b981', marginLeft: '0.5rem' }}>
-                                                    • {value}
-                                                </div>
-                                            ))}
-                                            {item.notes && editingNoteId !== item.uniqueId && (
-                                                <div style={{ fontSize: '0.75rem', color: '#fbbf24', fontStyle: 'italic', marginLeft: '0.5rem' }}>
-                                                    Note: {item.notes}
-                                                </div>
-                                            )}
-                                            {editingNoteId === item.uniqueId && (
-                                                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.25rem' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={noteDraft}
-                                                        onChange={(e) => setNoteDraft(e.target.value)}
-                                                        placeholder="Ej: Poco hecho, Alérgico..."
-                                                        autoFocus
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                updateItemNote(item.uniqueId, noteDraft);
-                                                                setEditingNoteId(null);
-                                                            }
-                                                        }}
-                                                        style={{
-                                                            flex: 1,
-                                                            fontSize: '0.75rem',
-                                                            background: 'rgba(0,0,0,0.2)',
-                                                            border: '1px solid rgba(255,255,255,0.1)',
-                                                            borderRadius: '4px',
-                                                            color: 'white',
-                                                            padding: '2px 6px'
-                                                        }}
-                                                    />
-                                                    <button
-                                                        onClick={() => {
-                                                            updateItemNote(item.uniqueId, noteDraft);
-                                                            setEditingNoteId(null);
-                                                        }}
-                                                        style={{ background: '#10b981', border: 'none', color: 'white', borderRadius: '4px', padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                                    >
-                                                        OK
-                                                    </button>
-                                                </div>
-                                            )}
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{(item.price * item.quantity).toFixed(2)}€</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', borderRadius: '20px', padding: '2px' }}>
-                                        <button
-                                            onClick={() => item.quantity === 1 ? removeFromOrder(item.uniqueId || item.id) : updateQuantity(item.uniqueId || item.id, -1)}
-                                            style={{ background: 'none', border: 'none', color: 'white', padding: '4px', cursor: 'pointer', display: 'flex' }}
-                                        >
-                                            {item.quantity === 1 ? <Trash2 size={14} color="#ef4444" /> : <Minus size={14} />}
-                                        </button>
-                                        <span style={{ fontSize: '0.9rem', width: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                                        <button
-                                            onClick={() => updateQuantity(item.uniqueId || item.id, 1)}
-                                            style={{ background: 'none', border: 'none', color: 'white', padding: '4px', cursor: 'pointer', display: 'flex' }}
-                                        >
-                                            <Plus size={14} />
-                                        </button>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '4px', paddingLeft: '2.75rem' }}>
-                                        {['Poco hecho', 'Muy hecho', 'Celiaco', 'Vegano', 'Sin cebolla'].map(quickNote => (
                                             <button
-                                                key={quickNote}
-                                                onClick={() => updateItemNote(item.uniqueId, quickNote)}
+                                                onClick={() => clearServiceRequest(req.id)}
                                                 style={{
-                                                    fontSize: '0.65rem',
-                                                    padding: '2px 6px',
+                                                    background: 'rgba(0,0,0,0.1)',
+                                                    border: '1px solid black',
+                                                    padding: '0.25rem 0.75rem',
                                                     borderRadius: '4px',
-                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                    background: item.notes === quickNote ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.05)',
-                                                    color: item.notes === quickNote ? '#fbbf24' : '#94a3b8',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '0.8rem'
                                                 }}
                                             >
-                                                {quickNote}
+                                                ATENDIDO
+                                            </button>
+                                        </div>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <header className="header-card" style={{
+                            padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <button
+                                    onClick={() => navigate('/tables')}
+                                    className="btn-icon-circle"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                                <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
+                                <div>
+                                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-text-dark)' }}>Gestión por mesas</h1>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                            {currentTable ? currentTable.name : 'Mesa no asignada'}
+                                        </span>
+                                        {currentTable && (() => {
+                                            const todayStr = new Date().toISOString().split('T')[0];
+                                            const reservation = reservations.find(r =>
+                                                (r.tableId === currentTable.id.toString() || r.tableId === currentTable.id) &&
+                                                r.date === todayStr &&
+                                                (r.status === 'confirmado' || r.status === 'sentado')
+                                            );
+                                            if (reservation) {
+                                                return (
+                                                    <span style={{
+                                                        fontSize: '0.8rem',
+                                                        background: 'rgba(245, 158, 11, 0.15)',
+                                                        color: '#f59e0b',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                                                        fontWeight: 'bold'
+                                                    }}>
+                                                        RESERVA: {reservation.customerName} ({reservation.time})
+                                                    </span>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Mode Button (Added) */}
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {isMobile && (
+                                    <button
+                                        onClick={() => setShowMobileSearch(true)}
+                                        className="btn-icon-circle"
+                                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)' }}
+                                    >
+                                        <Search size={22} color="var(--color-primary)" />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setIsAddingProduct(true)}
+                                    className="btn-primary"
+                                    style={{
+                                        background: 'rgba(16, 185, 129, 0.2)',
+                                        border: '1px solid #10b981',
+                                        color: '#10b981',
+                                        borderRadius: '8px',
+                                        padding: '0.5rem 1rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    <Plus size={18} /> {isMobile ? '' : 'Crear Producto'}
+                                </button>
+                            </div>
+                        </header>
+
+                        {/* LEFT SECTION: Categories & Products */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+                            <div className="section-border-right">
+                                <CategoryTabs
+                                    categories={categories}
+                                    activeCategory={activeCategory}
+                                    setActiveCategory={handleCategoryChange}
+                                    isMobile={isMobile}
+                                />
+                            </div>
+
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                {availableSubcategories.length > 0 && (
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '0.5rem',
+                                        padding: '1rem',
+                                        background: 'rgba(255,255,255,0.02)',
+                                        borderBottom: '1px solid var(--glass-border)',
+                                        overflowX: 'auto',
+                                        whiteSpace: 'nowrap',
+                                        scrollbarWidth: 'none'
+                                    }}>
+                                        <button
+                                            onClick={() => setActiveSubcategory(null)}
+                                            style={{
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '20px',
+                                                border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'var(--glass-border)'),
+                                                background: !activeSubcategory ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                color: !activeSubcategory ? 'var(--color-primary)' : 'var(--color-text-dark)',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 'bold',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            Todos
+                                        </button>
+                                        {availableSubcategories.map(sub => (
+                                            <button
+                                                key={sub}
+                                                onClick={() => setActiveSubcategory(sub)}
+                                                style={{
+                                                    padding: '0.5rem 1rem',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)'),
+                                                    background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                                                    color: activeSubcategory === sub ? 'var(--color-primary)' : 'var(--color-text-dark)',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: 'bold',
+                                                    textTransform: 'capitalize',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {sub}
                                             </button>
                                         ))}
                                     </div>
-                                </div>
-                            ))}
+                                )}
+                                <ProductGrid
+                                    products={filteredProducts}
+                                    onProductClick={handleProductClick}
+                                    getProductCost={getProductCost}
+                                    checkProductAvailability={checkProductAvailability}
+                                />
+                            </div>
+
                         </div>
-                    )}
-                </div>
-
-                <div style={{ padding: '1.5rem', borderTop: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.3)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 'bold' }}>
-                        <span>Total Comanda</span>
-                        <span>{calculateTotal().toFixed(2)}€</span>
                     </div>
+                )}
 
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <button
-                            className="btn-primary"
-                            style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-                            onClick={handleSendOrder}
-                            disabled={order.length === 0}
-                        >
-                            <Send size={18} /> Enviar
-                        </button>
-
-                        <button
-                            className="glass-panel"
-                            style={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                padding: '0 1rem',
-                                background: 'rgba(255,165,0,0.2)',
-                                color: 'orange',
-                                border: '1px solid orange',
-                                cursor: 'pointer'
-                            }}
-                            onClick={() => {
-                                if (order.length === 0) return;
-                                printKitchenTicket(currentTable ? currentTable.name : 'Barra', order);
-                            }}
-                            title="Imprimir Comanda Cocina"
-                            disabled={order.length === 0}
-                        >
-                            <Printer size={20} />
-                        </button>
-
-                        <button
-                            className="glass-panel"
-                            style={{
-                                flex: 1,
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                background: bill.length > 0 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                color: bill.length > 0 ? '#3b82f6' : '#64748b',
-                                border: bill.length > 0 ? '1px solid #3b82f6' : '1px solid var(--glass-border)',
-                                fontWeight: 'bold'
-                            }}
-                            onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
-                            disabled={bill.length === 0}
-                        >
-                            <CreditCard size={18} /> Cobrar Partes
-                        </button>
-
-                        <button
-                            className="glass-panel"
-                            style={{
-                                flex: 1,
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                background: bill.length > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.05)',
-                                color: bill.length > 0 ? '#10b981' : '#64748b',
-                                border: bill.length > 0 ? '1px solid #10b981' : '1px solid var(--glass-border)',
-                                fontWeight: 'bold'
-                            }}
-                            onClick={() => setShowTicket(true)}
-                            disabled={bill.length === 0}
-                        >
-                            <FileText size={18} /> Cuenta ({calculateBillTotal().toFixed(2)}€)
-                        </button>
-                    </div>
-                </div>
+                {/* RIGHT SECTION: Order Summary (Modular Redesign) */}
+                {(!isMobile || mobileActiveTab === 'order') && (
+                    <OrderSummary
+                        isMobile={isMobile}
+                        showOrderMobile={isMobile ? mobileActiveTab === 'order' : showOrderMobile}
+                        setShowOrderMobile={(val) => isMobile ? setMobileActiveTab(val ? 'order' : 'menu') : setShowOrderMobile(val)}
+                        selectedCustomer={selectedCustomer}
+                        selectCustomer={selectCustomer}
+                        showCustomerSearch={showCustomerSearch}
+                        setShowCustomerSearch={setShowCustomerSearch}
+                        customerSearchQuery={customerSearchQuery}
+                        setCustomerSearchQuery={setCustomerSearchQuery}
+                        customers={customers}
+                        salesProducts={salesProducts}
+                        addToOrder={addToOrder}
+                        order={order}
+                        calculateTotal={calculateTotal}
+                        removeFromOrder={removeFromOrder}
+                        updateQuantity={updateQuantity}
+                        updateItemNote={updateItemNote}
+                        editingNoteId={editingNoteId}
+                        setEditingNoteId={setEditingNoteId}
+                        noteDraft={noteDraft}
+                        setNoteDraft={setNoteDraft}
+                        handleSendOrder={handleSendOrder}
+                        setIsPaymentModalOpen={setShowTicket}
+                        currentTable={currentTable}
+                    />
+                )}
             </div>
+
+            {/* MOBILE BOTTOM NAVIGATION */}
+            {isMobile && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: '70px',
+                    background: 'var(--color-surface)',
+                    borderTop: '1px solid var(--glass-border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    zIndex: 100,
+                    paddingBottom: 'env(safe-area-inset-bottom)',
+                    boxShadow: '0 -4px 15px rgba(0,0,0,0.1)'
+                }}>
+                    <button
+                        onClick={() => navigate('/tables')}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--color-text-muted)',
+                            fontSize: '0.7rem'
+                        }}
+                    >
+                        <Layers size={22} />
+                        <span>Mesas</span>
+                    </button>
+
+                    <button
+                        onClick={() => setMobileActiveTab('menu')}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            background: 'none',
+                            border: 'none',
+                            color: mobileActiveTab === 'menu' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                            fontSize: '0.7rem',
+                            fontWeight: mobileActiveTab === 'menu' ? 'bold' : 'normal'
+                        }}
+                    >
+                        <LayoutGrid size={22} />
+                        <span>Carta</span>
+                    </button>
+
+                    <button
+                        onClick={() => setMobileActiveTab('order')}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            background: 'none',
+                            border: 'none',
+                            color: mobileActiveTab === 'order' ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                            fontSize: '0.7rem',
+                            fontWeight: mobileActiveTab === 'order' ? 'bold' : 'normal',
+                            position: 'relative'
+                        }}
+                    >
+                        <ClipboardList size={22} />
+                        <span>Comanda</span>
+                        {order.length > 0 && (
+                            <span style={{
+                                position: 'absolute',
+                                top: '-5px',
+                                right: '10px',
+                                background: '#ef4444',
+                                color: 'white',
+                                fontSize: '0.6rem',
+                                padding: '2px 5px',
+                                borderRadius: '10px',
+                                fontWeight: 'bold',
+                                minWidth: '15px'
+                            }}>
+                                {order.length}
+                            </span>
+                        )}
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            setMobileActiveTab('order');
+                            // If there is a bill, maybe we want to go straight to payment?
+                            // For now let's just make sure they see the totals.
+                        }}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--color-text-muted)',
+                            fontSize: '0.7rem'
+                        }}
+                    >
+                        <CreditCard size={22} />
+                        <span>Cobrar</span>
+                    </button>
+                </div>
+            )}
             {/* TICKET / CHECKOUT MODAL */}
             <AnimatePresence>
                 {showTicket && (
@@ -1409,6 +1268,107 @@ const BarTapas = () => {
                             </button>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+            {/* MOBILE FULL-SCREEN SEARCH */}
+            <AnimatePresence>
+                {showMobileSearch && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'var(--color-bg)',
+                            zIndex: 200,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '1rem'
+                        }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Search size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                                <input
+                                    autoFocus
+                                    placeholder="¿Qué busca el cliente?..."
+                                    value={mobileSearchQuery}
+                                    onChange={(e) => setMobileSearchQuery(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '1rem 1rem 1rem 3rem',
+                                        background: 'var(--color-surface)',
+                                        border: '1px solid var(--color-primary)',
+                                        borderRadius: '16px',
+                                        color: 'white',
+                                        fontSize: '1.1rem',
+                                        outline: 'none'
+                                    }}
+                                />
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowMobileSearch(false);
+                                    setMobileSearchQuery('');
+                                }}
+                                style={{
+                                    padding: '0.75rem',
+                                    borderRadius: '12px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    color: '#ef4444',
+                                    border: 'none',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
+                            {mobileSearchQuery.trim() !== '' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                                    {mobileFilteredProducts.map(product => (
+                                        <div
+                                            key={product.id}
+                                            onClick={() => {
+                                                handleProductClick(product);
+                                                setShowMobileSearch(false);
+                                                setMobileSearchQuery('');
+                                                setMobileActiveTab('menu');
+                                            }}
+                                            style={{
+                                                padding: '1rem',
+                                                background: 'var(--color-surface)',
+                                                borderRadius: '16px',
+                                                border: '1px solid var(--glass-border)',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '2rem' }}>{product.image}</div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
+                                            <div style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>{product.price.toFixed(2)}€</div>
+                                        </div>
+                                    ))}
+                                    {mobileFilteredProducts.length === 0 && (
+                                        <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '2rem' }}>
+                                            No se han encontrado productos
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {mobileSearchQuery.trim() === '' && (
+                                <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '4rem' }}>
+                                    <Search size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                                    <p>Escribe el nombre de un artículo para buscarlo rápidamente</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

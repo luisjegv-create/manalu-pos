@@ -46,14 +46,14 @@ const TableSelection = () => {
     };
 
     return (
-        <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
+            <header className="header-card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button
                         onClick={() => navigate('/')}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
+                        className="btn-icon-circle"
                     >
-                        <ArrowLeft />
+                        <ArrowLeft size={20} />
                     </button>
                     <h1 style={{ margin: 0 }}>Selección de Mesa</h1>
                 </div>
@@ -74,189 +74,192 @@ const TableSelection = () => {
                 </button>
             </header>
 
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
-                {zones.map(zone => {
-                    const Icon = iconMap[zone.icon];
-                    const isActive = activeZone === zone.id;
-                    return (
-                        <button
-                            key={zone.id}
-                            onClick={() => setActiveZone(zone.id)}
-                            className={isActive ? 'glass-panel' : ''}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '1rem 2rem',
-                                borderRadius: '12px',
-                                border: isActive ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                background: isActive ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                                cursor: 'pointer',
-                                fontSize: '1.2rem',
-                                fontWeight: '600'
-                            }}
-                        >
-                            <Icon size={24} />
-                            {zone.name}
-                        </button>
-                    );
-                })}
-
-                {isEditMode && (
-                    <button
-                        onClick={handleAddTable}
-                        style={{
-                            padding: '1rem',
-                            borderRadius: '12px',
-                            border: '2px dashed #10b981',
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            color: '#10b981',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                            marginLeft: 'auto'
-                        }}
-                    >
-                        + Añadir Mesa
-                    </button>
-                )}
-            </div>
-
-            {/* Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '2rem'
-            }}>
-                {filteredTables.map(table => {
-                    const hasActiveOrder = tableOrders[table.id] && tableOrders[table.id].length > 0;
-                    const isOccupied = table.status === 'occupied' || hasActiveOrder;
-
-                    // Check for today's reservations
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const reservation = reservations.find(r =>
-                        (r.tableId === table.id.toString() || r.tableId === table.id) &&
-                        r.date === todayStr &&
-                        (r.status === 'confirmado' || r.status === 'sentado')
-                    );
-                    const isReserved = table.isReserved || (reservation && reservation.status === 'confirmado');
-
-                    // Traffic Light Logic
-                    let activityColor = null;
-                    if (isOccupied && table.lastActionAt) {
-                        const minsSinceAction = (new Date() - new Date(table.lastActionAt)) / 60000;
-                        const hasBillRequest = serviceRequests?.some(r =>
-                            (r.table_id === table.id || r.table_id === table.id.toString()) &&
-                            (r.type === 'cuenta' || r.type === 'bill') &&
-                            r.status === 'pending'
+            <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', alignItems: 'center' }}>
+                    {zones.map(zone => {
+                        const Icon = iconMap[zone.icon];
+                        const isActive = activeZone === zone.id;
+                        return (
+                            <button
+                                key={zone.id}
+                                onClick={() => setActiveZone(zone.id)}
+                                className={isActive ? 'glass-panel' : ''}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    padding: '1rem 2rem',
+                                    borderRadius: '12px',
+                                    border: isActive ? '1px solid var(--color-primary)' : '1px solid transparent',
+                                    background: isActive ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                    color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                                    cursor: 'pointer',
+                                    fontSize: '1.2rem',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                <Icon size={24} />
+                                {zone.name}
+                            </button>
                         );
+                    })}
 
-                        if (hasBillRequest) activityColor = '#ef4444'; // Red for bill request
-                        else if (minsSinceAction > 30) activityColor = '#ef4444'; // Red for legacy
-                        else if (minsSinceAction > 20) activityColor = '#f59e0b'; // Yellow
-                        else activityColor = '#10b981'; // Green
-                    }
-
-                    return (
-                        <motion.button
-                            key={table.id}
-                            whileHover={{ y: -5, scale: 1.02 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleTableSelect(table)}
-                            className="glass-panel"
+                    {isEditMode && (
+                        <button
+                            onClick={handleAddTable}
                             style={{
-                                padding: '2rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '1rem',
+                                padding: '1rem',
+                                borderRadius: '12px',
+                                border: '2px dashed #10b981',
+                                background: 'rgba(16, 185, 129, 0.1)',
+                                color: '#10b981',
                                 cursor: 'pointer',
-                                border: isEditMode ? '2px dashed #f59e0b' : '1px solid var(--glass-border)',
-                                backgroundColor: isReserved
-                                    ? 'rgba(245, 158, 11, 0.15)' // Orange/Yellow for reserved
-                                    : hasActiveOrder
-                                        ? 'rgba(59, 130, 246, 0.15)'
-                                        : isOccupied
-                                            ? 'rgba(239, 68, 68, 0.1)'
-                                            : 'rgba(16, 185, 129, 0.1)',
-                                borderColor: isReserved
-                                    ? '#f59e0b'
-                                    : hasActiveOrder
-                                        ? 'var(--color-primary)'
-                                        : isOccupied
-                                            ? '#ef4444'
-                                            : 'var(--glass-border)',
-                                color: 'var(--color-text)',
-                                position: 'relative'
+                                fontWeight: 'bold',
+                                marginLeft: 'auto'
                             }}
                         >
-                            {isEditMode && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8rem', color: '#f59e0b' }}>
-                                    ✏️
-                                </div>
-                            )}
+                            + Añadir Mesa
+                        </button>
+                    )}
+                </div>
 
-                            {/* Traffic Light Dot */}
-                            {activityColor && (
-                                <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '12px',
-                                        left: '12px',
-                                        width: '12px',
-                                        height: '12px',
-                                        borderRadius: '50%',
-                                        backgroundColor: activityColor,
-                                        boxShadow: `0 0 10px ${activityColor}`,
-                                        zIndex: 2
-                                    }}
-                                    title="Indicador de actividad"
-                                />
-                            )}
+                {/* Grid */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '2rem'
+                }}>
+                    {filteredTables.map(table => {
+                        const hasActiveOrder = tableOrders[table.id] && tableOrders[table.id].length > 0;
+                        const isOccupied = table.status === 'occupied' || hasActiveOrder;
 
-                            <div style={{
-                                padding: '1rem',
-                                borderRadius: '50%',
-                                background: isReserved
-                                    ? '#f59e0b'
-                                    : hasActiveOrder
-                                        ? 'var(--color-primary)'
-                                        : isOccupied ? '#ef4444' : '#10b981',
-                                color: 'white'
-                            }}>
-                                {table.zone === 'salon' ? <Utensils /> : <Armchair />}
-                            </div>
+                        // Check for today's reservations
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        const reservation = reservations.find(r =>
+                            (r.tableId === table.id.toString() || r.tableId === table.id) &&
+                            r.date === todayStr &&
+                            (r.status === 'confirmado' || r.status === 'sentado')
+                        );
+                        const isReserved = table.isReserved || (reservation && reservation.status === 'confirmado');
 
-                            <div style={{ textAlign: 'center' }}>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{table.name}</h3>
-                                <span style={{
-                                    fontSize: '0.9rem',
-                                    color: isReserved
+                        // Traffic Light Logic
+                        let activityColor = null;
+                        if (isOccupied && table.lastActionAt) {
+                            const minsSinceAction = (new Date() - new Date(table.lastActionAt)) / 60000;
+                            const hasBillRequest = serviceRequests?.some(r =>
+                                (r.table_id === table.id || r.table_id === table.id.toString()) &&
+                                (r.type === 'cuenta' || r.type === 'bill') &&
+                                r.status === 'pending'
+                            );
+
+                            if (hasBillRequest) activityColor = '#ef4444'; // Red for bill request
+                            else if (minsSinceAction > 30) activityColor = '#ef4444'; // Red for legacy
+                            else if (minsSinceAction > 20) activityColor = '#f59e0b'; // Yellow
+                            else activityColor = '#10b981'; // Green
+                        }
+
+                        return (
+                            <motion.button
+                                key={table.id}
+                                whileHover={{ y: -5, scale: 1.02 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleTableSelect(table)}
+                                className="glass-panel"
+                                style={{
+                                    padding: '2rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '1rem',
+                                    cursor: 'pointer',
+                                    border: isEditMode ? '2px dashed #f59e0b' : '1px solid var(--border-strong)',
+                                    backgroundColor: isReserved
+                                        ? 'rgba(245, 158, 11, 0.15)' // Orange/Yellow for reserved
+                                        : hasActiveOrder
+                                            ? 'rgba(59, 130, 246, 0.15)'
+                                            : isOccupied
+                                                ? 'rgba(239, 68, 68, 0.1)'
+                                                : 'rgba(16, 185, 129, 0.1)',
+                                    borderColor: isReserved
+                                        ? '#f59e0b'
+                                        : hasActiveOrder
+                                            ? 'var(--color-primary)'
+                                            : isOccupied
+                                                ? '#ef4444'
+                                                : 'var(--border-strong)',
+                                    color: 'var(--color-text)',
+                                    position: 'relative',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                }}
+                            >
+                                {isEditMode && (
+                                    <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8rem', color: '#f59e0b' }}>
+                                        ✏️
+                                    </div>
+                                )}
+
+                                {/* Traffic Light Dot */}
+                                {activityColor && (
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '12px',
+                                            left: '12px',
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            backgroundColor: activityColor,
+                                            boxShadow: `0 0 10px ${activityColor}`,
+                                            zIndex: 2
+                                        }}
+                                        title="Indicador de actividad"
+                                    />
+                                )}
+
+                                <div style={{
+                                    padding: '1rem',
+                                    borderRadius: '50%',
+                                    background: isReserved
                                         ? '#f59e0b'
                                         : hasActiveOrder
                                             ? 'var(--color-primary)'
                                             : isOccupied ? '#ef4444' : '#10b981',
-                                    fontWeight: 'bold'
+                                    color: 'white'
                                 }}>
-                                    {isReserved ? 'RESERVADA' : hasActiveOrder ? 'En preparación' : isOccupied ? 'Ocupada' : 'Libre'}
-                                </span>
-                                {reservation && !hasActiveOrder && (
-                                    <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#f59e0b', fontWeight: 'bold' }}>
-                                        {reservation.time} - {reservation.customerName}
-                                    </div>
-                                )}
-                                {hasActiveOrder && (
-                                    <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8 }}>
-                                        {tableOrders[table.id].length} productos
-                                    </div>
-                                )}
-                            </div>
-                        </motion.button>
-                    );
-                })}
+                                    {table.zone === 'salon' ? <Utensils /> : <Armchair />}
+                                </div>
+
+                                <div style={{ textAlign: 'center' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{table.name}</h3>
+                                    <span style={{
+                                        fontSize: '0.9rem',
+                                        color: isReserved
+                                            ? '#f59e0b'
+                                            : hasActiveOrder
+                                                ? 'var(--color-primary)'
+                                                : isOccupied ? '#ef4444' : '#10b981',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {isReserved ? 'RESERVADA' : hasActiveOrder ? 'En preparación' : isOccupied ? 'Ocupada' : 'Libre'}
+                                    </span>
+                                    {reservation && !hasActiveOrder && (
+                                        <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#f59e0b', fontWeight: 'bold' }}>
+                                            {reservation.time} - {reservation.customerName}
+                                        </div>
+                                    )}
+                                    {hasActiveOrder && (
+                                        <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8 }}>
+                                            {tableOrders[table.id].length} productos
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.button>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Edit Modal */}
@@ -288,34 +291,6 @@ const TableSelection = () => {
                             />
                             <label htmlFor="reserved">Marcar como RESERVADA</label>
                         </div>
-
-                        {editingTable.status === 'occupied' && (
-                            <button
-                                onClick={() => {
-                                    if (confirm('¿Liberar mesa y borrar cuenta actual?')) {
-                                        closeTable(editingTable.id);
-                                        setEditingTable(null);
-                                    }
-                                }}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem',
-                                    background: '#3b82f6',
-                                    border: 'none',
-                                    color: 'white',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    marginTop: '1rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                🧹 Liberar / Desocupar Mesa
-                            </button>
-                        )}
 
                         {editingTable.status === 'occupied' && (
                             <button
