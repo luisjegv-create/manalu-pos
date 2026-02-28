@@ -118,7 +118,130 @@ export const printKitchenTicket = (tableName, items, note = '') => {
     printWindow.document.close();
 };
 
-export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null) => {
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+export const printDepositTicket = (depositData, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=400,height=600');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const date = format(new Date(), 'dd/MM/yyyy', { locale: es });
+    const time = format(new Date(), 'HH:mm', { locale: es });
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Recibo de Depósito - ${depositData.customerName}</title>
+            <style>
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    width: 300px;
+                    margin: 0 auto;
+                    padding: 10px;
+                    color: black;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                .company-name {
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+                .meta {
+                    font-size: 0.8rem;
+                    margin-bottom: 5px;
+                    color: #333;
+                }
+                .separator {
+                    border-bottom: 1px dashed black;
+                    margin: 10px 0;
+                }
+                .title {
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    margin-bottom: 10px;
+                    text-align: center;
+                }
+                .details {
+                    font-size: 0.9rem;
+                    margin-bottom: 15px;
+                }
+                .details div {
+                    margin-bottom: 3px;
+                }
+                .amount {
+                    font-size: 1.5rem;
+                    font-weight: bold;
+                    text-align: center;
+                    margin-top: 15px;
+                    padding: 10px 0;
+                    border-top: 2px solid black;
+                    border-bottom: 2px solid black;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 20px;
+                    font-size: 0.8rem;
+                }
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { margin: 10px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div class="company-name">${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</div>
+                <div class="meta">${companyInfo.businessName || 'TAPAS Y BOCATAS / MANALU EVENTOS'}</div>
+                <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
+                <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
+                <div class="separator"></div>
+                <div class="title">${depositData.type === 'payment' ? 'RECIBO DE DEPÓSITO' : 'DEVOLUCIÓN DE DEPÓSITO'}</div>
+                <div class="meta">
+                    FECHA: ${date} - ${time}
+                </div>
+                <div class="separator"></div>
+            </div>
+
+            <div class="details">
+                <div><strong>Nº Recibo:</strong> ${depositData.receiptNumber || 'N/A'}</div>
+                <div><strong>Cliente:</strong> ${depositData.customerName}</div>
+                <div><strong>Concepto:</strong> ${depositData.concept}</div>
+                ${depositData.notes ? `<div><strong>Notas:</strong> ${depositData.notes}</div>` : ''}
+            </div>
+
+            <div class="amount">
+                ${depositData.type === 'payment' ? 'IMPORTE RECIBIDO:' : 'IMPORTE DEVUELTO:'} ${depositData.amount.toFixed(2)}€
+            </div>
+
+            <div class="footer">
+                ${depositData.type === 'payment' ? 'Gracias por su confianza.' : 'Devolución procesada correctamente.'}<br>
+                www.tapasybocatas.es<br>
+                www.manalueventos.com
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
+
+export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null) => {
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -131,8 +254,8 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
     const discountAmount = (total * discountPercent) / 100;
     const finalTotal = isInvitation ? 0 : Math.max(0, total - discountAmount);
 
-    // Tax Breakdown (Spain standard for hospitality: 10%)
-    const taxRate = 0.10;
+    // Tax Breakdown (Spain standard for hospitality: 10%, Rental: 21%)
+    const taxRate = taxRateOverride !== null ? taxRateOverride : 0.10;
     const baseTotal = finalTotal / (1 + taxRate);
     const taxAmount = finalTotal - baseTotal;
 
@@ -273,11 +396,11 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                 ` : ''}
 
                 <div class="total-row">
-                    <span>Base Imp. (10%):</span>
+                    <span>Base Imp. (${(taxRate * 100).toFixed(0)}%):</span>
                     <span>${baseTotal.toFixed(2)}€</span>
                 </div>
                 <div class="total-row">
-                    <span>IVA (10%):</span>
+                    <span>IVA (${(taxRate * 100).toFixed(0)}%):</span>
                     <span>${taxAmount.toFixed(2)}€</span>
                 </div>
                 <div class="total-row grand-total">
@@ -296,6 +419,227 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                 window.onload = function() {
                     window.print();
                     setTimeout(function() { window.close(); }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
+
+export const printA4Invoice = (event, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=800,height=1000');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const date = format(new Date(event.date), 'dd/MM/yyyy', { locale: es });
+    const issueDate = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es });
+
+    // Calculate totals
+    const taxRate = event.taxRate || 0.10;
+    const total = event.total || 0;
+    const baseAmount = total / (1 + taxRate);
+    const taxAmount = total - baseAmount;
+
+    // Prepare items list
+    let itemsHtml = '';
+    if (event.isVenueOnly) {
+        itemsHtml = `
+            <tr>
+                <td style="padding: 10px; border: 1px solid #eee;">1</td>
+                <td style="padding: 10px; border: 1px solid #eee;">ALQUILER DE LOCAL / ESPACIO</td>
+                <td style="padding: 10px; border: 1px solid #eee; text-align: right;">${(event.venuePrice || 0).toFixed(2)}€</td>
+                <td style="padding: 10px; border: 1px solid #eee; text-align: right;">${(event.venuePrice || 0).toFixed(2)}€</td>
+            </tr>
+        `;
+    } else if (event.selectedMenus && event.selectedMenus.length > 0) {
+        itemsHtml = event.selectedMenus.map(m => `
+            <tr>
+                <td style="padding: 10px; border: 1px solid #eee;">${m.quantity}</td>
+                <td style="padding: 10px; border: 1px solid #eee;">SERVICIO DE CATERING / MENÚ: ${m.name || 'Menú Evento'}</td>
+                <td style="padding: 10px; border: 1px solid #eee; text-align: right;">${(m.price || 0).toFixed(2)}€</td>
+                <td style="padding: 10px; border: 1px solid #eee; text-align: right;">${((m.price || 0) * m.quantity).toFixed(2)}€</td>
+            </tr>
+        `).join('');
+    }
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Factura ${event.invoiceNumber || 'Borrador'}</title>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 40px;
+                }
+                .invoice-header {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 40px;
+                    border-bottom: 2px solid #f4f4f4;
+                    padding-bottom: 20px;
+                }
+                .company-info h1 {
+                    margin: 0;
+                    color: #1a1a1a;
+                    font-size: 24px;
+                }
+                .invoice-title {
+                    text-align: right;
+                }
+                .invoice-title h2 {
+                    margin: 0;
+                    color: #2563eb;
+                    font-size: 28px;
+                }
+                .details-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 40px;
+                    margin-bottom: 40px;
+                }
+                .section-title {
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    font-size: 12px;
+                    color: #666;
+                    margin-bottom: 10px;
+                    border-bottom: 1px solid #eee;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 30px;
+                }
+                th {
+                    background: #f8fafc;
+                    text-align: left;
+                    padding: 12px 10px;
+                    border: 1px solid #eee;
+                    font-size: 13px;
+                }
+                .totals-table {
+                    width: 250px;
+                    margin-left: auto;
+                }
+                .totals-table td {
+                    padding: 8px 10px;
+                }
+                .grand-total {
+                    font-size: 18px;
+                    font-weight: bold;
+                    background: #2563eb;
+                    color: white;
+                }
+                .footer {
+                    margin-top: 60px;
+                    font-size: 11px;
+                    color: #999;
+                    text-align: center;
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                }
+                @media print {
+                    body { padding: 0; margin: 0; }
+                    @page { size: A4; margin: 1cm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-header">
+                <div class="company-info">
+                    <h1>${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</h1>
+                    <p>
+                        ${companyInfo.businessName || 'TAPAS Y BOCATAS / MANALU EVENTOS'}<br>
+                        ${companyInfo.address || 'C/ Principal 123'}<br>
+                        NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}<br>
+                        Tel: ${companyInfo.phone || '600 000 000'}
+                    </p>
+                </div>
+                <div class="invoice-title">
+                    <h2>FACTURA</h2>
+                    <p>
+                        <strong>Nº:</strong> ${event.invoiceNumber || 'BORRADOR'}<br>
+                        <strong>Fecha Emisión:</strong> ${issueDate}
+                    </p>
+                </div>
+            </div>
+
+            <div class="details-grid">
+                <div>
+                    <div class="section-title">CLIENTE / RECEPTOR</div>
+                    <p>
+                        <strong>${event.name}</strong><br>
+                        ${event.clientNif ? `NIF/CIF: ${event.clientNif}<br>` : ''}
+                        ${event.clientAddress ? `${event.clientAddress}` : ''}
+                    </p>
+                </div>
+                <div>
+                    <div class="section-title">DETALLES DEL EVENTO</div>
+                    <p>
+                        <strong>Fecha Evento:</strong> ${date}<br>
+                        <strong>Asistentes:</strong> ${event.guests} pax<br>
+                        <strong>Tipo:</strong> ${event.isVenueOnly ? 'Solo Alquiler' : 'Evento con Menú'}
+                    </p>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">Cant.</th>
+                        <th>Descripción / Concepto</th>
+                        <th style="text-align: right; width: 100px;">P. Unitario</th>
+                        <th style="text-align: right; width: 100px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsHtml}
+                </tbody>
+            </table>
+
+            <table class="totals-table">
+                <tr>
+                    <td>Base Imponible:</td>
+                    <td style="text-align: right;">${baseAmount.toFixed(2)}€</td>
+                </tr>
+                <tr>
+                    <td>IVA (${(taxRate * 100).toFixed(0)}%):</td>
+                    <td style="text-align: right;">${taxAmount.toFixed(2)}€</td>
+                </tr>
+                <tr class="grand-total">
+                    <td>TOTAL:</td>
+                    <td style="text-align: right;">${total.toFixed(2)}€</td>
+                </tr>
+            </table>
+
+            ${event.depositAmount > 0 ? `
+                <div style="margin-top: 20px; font-size: 13px; color: #666; font-style: italic;">
+                    Nota: Se ha tenido en cuenta el depósito previo de ${event.depositAmount.toFixed(2)}€ 
+                    (${event.depositStatus === 'paid' ? 'COBRADO' : 'PENDIENTE'}).
+                </div>
+            ` : ''}
+
+            <div class="footer">
+                De acuerdo con la Ley de Protección de Datos (RGPD)...<br>
+                Gracias por confiar en Manalú Eventos por Tapas y Bocatas.<br>
+                www.manalueventos.com | www.tapasybocatas.es
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                    // window.close(); // Optional: close after print
                 }
             </script>
         </body>

@@ -42,7 +42,16 @@ export const EventProvider = ({ children }) => {
                         return {
                             ...a,
                             tasks: parsedTasks,
-                            selectedMenus: parsedMenus
+                            selectedMenus: parsedMenus,
+                            isVenueOnly: a.is_venue_only || false,
+                            venuePrice: a.venue_price || 0,
+                            taxRate: a.tax_rate || 0.10,
+                            hasVat: a.has_vat || false,
+                            depositAmount: a.deposit_amount || 0,
+                            depositStatus: a.deposit_status || 'pending',
+                            clientNif: a.client_nif || '',
+                            clientAddress: a.client_address || '',
+                            invoiceNumber: a.invoice_number || null
                         };
                     }));
                 }
@@ -106,7 +115,16 @@ export const EventProvider = ({ children }) => {
                 status: event.status || 'draft',
                 total: event.total,
                 tasks: event.tasks || [],
-                selected_menus: event.selectedMenus || []
+                selected_menus: event.selectedMenus || [],
+                is_venue_only: event.isVenueOnly || false,
+                venue_price: event.venuePrice || 0,
+                tax_rate: event.taxRate || 0.10,
+                has_vat: event.hasVat || false,
+                deposit_amount: event.depositAmount || 0,
+                deposit_status: event.depositStatus || 'pending',
+                client_nif: event.clientNif || '',
+                client_address: event.clientAddress || '',
+                invoice_number: event.invoiceNumber || null
             }]).select();
 
             if (error) throw error;
@@ -191,11 +209,49 @@ export const EventProvider = ({ children }) => {
 
     const updateEventStatus = async (eventId, newStatus) => {
         try {
-            const { error } = await supabase.from('agenda').update({ status: newStatus }).eq('id', eventId);
+            const { error } = await supabase
+                .from('agenda')
+                .update({ status: newStatus })
+                .eq('id', eventId);
+
             if (error) throw error;
             setAgenda(prev => prev.map(ev => ev.id === eventId ? { ...ev, status: newStatus } : ev));
-        } catch (err) {
-            console.error("Error updating event status:", err);
+        } catch (error) {
+            console.error('Error updating event status:', error);
+            alert('Error al actualizar el estado del evento');
+        }
+    };
+
+    const updateEventDepositStatus = async (eventId, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('agenda')
+                .update({ deposit_status: newStatus })
+                .eq('id', eventId);
+
+            if (error) throw error;
+            setAgenda(prev => prev.map(ev => ev.id === eventId ? { ...ev, depositStatus: newStatus } : ev));
+        } catch (error) {
+            console.error('Error updating deposit status:', error);
+            alert('Error al actualizar el estado de la fianza');
+        }
+    };
+
+    const assignInvoiceNumber = async (eventId, number) => {
+        try {
+            const { error } = await supabase
+                .from('agenda')
+                .update({
+                    invoice_number: number,
+                    is_invoiced: true
+                })
+                .eq('id', eventId);
+
+            if (error) throw error;
+            setAgenda(prev => prev.map(ev => ev.id === eventId ? { ...ev, invoiceNumber: number, isInvoiced: true } : ev));
+        } catch (error) {
+            console.error('Error assigning invoice number:', error);
+            alert('Error al asignar el número de factura');
         }
     };
 
@@ -282,6 +338,8 @@ export const EventProvider = ({ children }) => {
             loading,
             addEvent,
             updateEventStatus,
+            updateEventDepositStatus,
+            assignInvoiceNumber,
             toggleTask,
             deleteEvent,
             addReservation,
