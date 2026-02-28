@@ -596,7 +596,9 @@ const BarTapas = () => {
                         salesProducts={salesProducts}
                         addToOrder={addToOrder}
                         order={order}
+                        bill={bill}
                         calculateTotal={calculateTotal}
+                        calculateBillTotal={calculateBillTotal}
                         removeFromOrder={removeFromOrder}
                         updateQuantity={updateQuantity}
                         updateItemNote={updateItemNote}
@@ -606,6 +608,7 @@ const BarTapas = () => {
                         setNoteDraft={setNoteDraft}
                         handleSendOrder={handleSendOrder}
                         setIsPaymentModalOpen={setShowTicket}
+                        setPartialPaymentModal={setPartialPaymentModal}
                         currentTable={currentTable}
                     />
                 )}
