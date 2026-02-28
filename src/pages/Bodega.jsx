@@ -134,92 +134,71 @@ const Bodega = () => {
 
     return (
         <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
-            <header className="header-card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header className="header-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <button onClick={() => navigate('/')} className="btn-icon-circle">
                         <ArrowLeft size={20} />
                     </button>
                     <div>
-                        <h1 style={{ margin: 0 }}>Gestión de Bodega</h1>
-                        <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>Control de stock, ventas y reposiciones</p>
+                        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Gestión de Bodega</h1>
+                        <p className="text-muted" style={{ margin: 0 }}>Control de stock, ventas y reposiciones</p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
                         onClick={() => setIsAdding(true)}
-                        className="btn-primary"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        className="btn btn-primary"
                     >
                         <Plus size={18} /> Añadir Vino
                     </button>
                 </div>
             </header>
 
-            <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
                 {/* Stats Dashboard */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', color: '#3b82f6' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', color: 'var(--color-primary)' }}>
                             <Package size={24} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Stock Total</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.totalStock} <span style={{ fontSize: '0.9rem' }}>uds</span></div>
+                            <div className="text-muted" style={{ fontSize: '0.8rem' }}>Stock Total</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{stats.totalStock} <span style={{ fontSize: '0.9rem' }}>uds</span></div>
                         </div>
                     </div>
-                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '12px', color: '#10b981' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '1rem', borderRadius: '12px', color: 'var(--color-success)' }}>
                             <TrendingUp size={24} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Valor de Coste</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.totalValue.toFixed(2)}€</div>
+                            <div className="text-muted" style={{ fontSize: '0.8rem' }}>Valor de Coste</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{stats.totalValue.toFixed(2)}€</div>
                         </div>
                     </div>
-                    <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '1rem', borderRadius: '12px', color: '#eab308' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '1rem', borderRadius: '12px', color: 'var(--color-warning)' }}>
                             <BarChart3 size={24} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Ingresos Potenciales</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{stats.potentialRevenue.toFixed(2)}€</div>
+                            <div className="text-muted" style={{ fontSize: '0.8rem' }}>Ingresos Potenciales</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{stats.potentialRevenue.toFixed(2)}€</div>
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--glass-border)', paddingBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-strong)', paddingBottom: '1rem' }}>
                     <button
                         onClick={() => setActiveTab('stock')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: activeTab === 'stock' ? 'var(--color-primary)' : 'transparent',
-                            border: 'none',
-                            borderRadius: '12px',
-                            color: activeTab === 'stock' ? 'black' : 'white',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            opacity: activeTab === 'stock' ? 1 : 0.6
-                        }}
+                        className={`btn ${activeTab === 'stock' ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.75rem 1.5rem' }}
                     >
                         <Package size={18} /> Almacén y Stock
                     </button>
                     <button
                         onClick={() => setActiveTab('sales')}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: activeTab === 'sales' ? 'var(--color-primary)' : 'transparent',
-                            border: 'none',
-                            borderRadius: '12px',
-                            color: activeTab === 'sales' ? 'black' : 'white',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            opacity: activeTab === 'sales' ? 1 : 0.6
-                        }}
+                        className={`btn ${activeTab === 'sales' ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.75rem 1.5rem' }}
                     >
                         <History size={18} /> Historial de Ventas
                     </button>
@@ -227,14 +206,14 @@ const Bodega = () => {
 
                 {activeTab === 'stock' ? (
                     <>
-                        <div className="glass-panel" style={{ padding: '1rem', marginBottom: '2rem', display: 'flex', gap: '1rem' }}>
-                            <Search className="text-muted" />
+                        <div className="surface-card" style={{ padding: '1.25rem', marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <Search className="text-muted" size={20} />
                             <input
                                 type="text"
                                 placeholder="Buscar por nombre, bodega o región..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                style={{ background: 'none', border: 'none', color: 'white', width: '100%', outline: 'none' }}
+                                style={{ background: 'none', border: 'none', color: 'var(--color-text)', width: '100%', outline: 'none', fontSize: '1rem' }}
                             />
                         </div>
 
@@ -259,7 +238,8 @@ const Bodega = () => {
                                             marginBottom: '1.5rem',
                                             display: 'flex',
                                             alignItems: 'center',
-                                            gap: '0.5rem'
+                                            gap: '0.5rem',
+                                            fontSize: '1.25rem'
                                         }}>
                                             {section.id === 'Vermut' ? '🥃' : section.id === 'Blanco' ? '🥂' : section.id === 'Tinto' ? '🍷' : section.id === 'Rosado' ? '🌷' : '🍾'} {section.label}
                                         </h2>
@@ -276,20 +256,20 @@ const Bodega = () => {
                                                         initial={{ opacity: 0, y: 20 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, scale: 0.95 }}
-                                                        className="glass-panel"
+                                                        className="surface-card"
                                                         style={{ padding: '1.5rem', position: 'relative', borderLeft: `4px solid ${section.color}` }}
                                                     >
                                                         <div style={{ display: 'flex', gap: '1.5rem' }}>
                                                             <div style={{
                                                                 width: '100px',
                                                                 height: '140px',
-                                                                background: 'rgba(255,255,255,0.03)',
+                                                                background: '#f8fafc',
                                                                 borderRadius: '12px',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 overflow: 'hidden',
-                                                                border: '1px solid var(--glass-border)'
+                                                                border: '1px solid var(--border-strong)'
                                                             }}>
                                                                 {(wine.image && (wine.image.startsWith('data:image') || wine.image.startsWith('http'))) ? (
                                                                     <img src={wine.image} alt={wine.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -298,9 +278,9 @@ const Bodega = () => {
                                                                 )}
                                                             </div>
                                                             <div style={{ flex: 1 }}>
-                                                                <h3 style={{ margin: '0 0 0.5rem 0' }}>{wine.name}</h3>
-                                                                <div style={{ fontSize: '0.9rem', color: 'var(--color-primary)', fontWeight: 'bold', marginBottom: '0.25rem' }}>{wine.bodega}</div>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                                                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>{wine.name}</h3>
+                                                                <div className="text-primary" style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.25rem' }}>{wine.bodega}</div>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.75rem', fontSize: '0.85rem' }}>
                                                                     <span className="text-muted">Región:</span> <span>{wine.region}</span>
                                                                     <span className="text-muted">Uva:</span> <span>{wine.grape}</span>
                                                                     <span className="text-muted">Añada:</span> <span>{wine.year}</span>
@@ -309,13 +289,13 @@ const Bodega = () => {
                                                             </div>
                                                         </div>
 
-                                                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                                                             <div>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Stock</div>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>Stock</div>
                                                                 <div style={{
                                                                     fontSize: '1.1rem',
-                                                                    fontWeight: 'bold',
-                                                                    color: wine.stock <= 5 ? '#ef4444' : 'white',
+                                                                    fontWeight: '800',
+                                                                    color: wine.stock <= 5 ? 'var(--color-danger)' : 'var(--color-text)',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     gap: '0.4rem'
@@ -323,23 +303,22 @@ const Bodega = () => {
                                                                     {wine.stock}
                                                                     <button
                                                                         onClick={(e) => { e.stopPropagation(); setReplenishId(wine.id); }}
-                                                                        style={{ border: 'none', background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', borderRadius: '4px', padding: '2px 4px', fontSize: '0.65rem', cursor: 'pointer' }}
+                                                                        className="btn-icon-small"
+                                                                        style={{ width: '20px', height: '20px', background: 'var(--color-primary)', color: 'white', borderRadius: '4px' }}
                                                                     >
                                                                         +
                                                                     </button>
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'center' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>PVP</div>
-                                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-secondary)' }}>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>PVP</div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-secondary)' }}>
                                                                     {wine.price.toFixed(2)}€
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.2rem' }}>
-                                                                    Beneficio
-                                                                </div>
-                                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#10b981' }}>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>Beneficio</div>
+                                                                <div className="text-success" style={{ fontSize: '1.1rem', fontWeight: '800' }}>
                                                                     +{(wine.price - (wine.purchasePrice || 0)).toFixed(2)}€
                                                                 </div>
                                                             </div>
@@ -352,7 +331,7 @@ const Bodega = () => {
                                                                     initial={{ opacity: 0, height: 0 }}
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     exit={{ opacity: 0, height: 0 }}
-                                                                    style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.3)', overflow: 'hidden' }}
+                                                                    style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-strong)', overflow: 'hidden' }}
                                                                 >
                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                         <div style={{ flex: 1 }}>
@@ -360,21 +339,20 @@ const Bodega = () => {
                                                                                 type="number"
                                                                                 value={replenishQty}
                                                                                 onChange={(e) => setReplenishQty(parseInt(e.target.value) || 0)}
-                                                                                style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', color: 'white', padding: '0.4rem', borderRadius: '4px' }}
+                                                                                style={{ width: '100%', background: 'white', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '0.6rem', borderRadius: '8px', outline: 'none' }}
                                                                                 autoFocus
                                                                             />
                                                                         </div>
-                                                                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                                             <button
                                                                                 onClick={() => { setReplenishId(null); setReplenishQty(1); }}
-                                                                                className="btn-secondary"
-                                                                                style={{ padding: '0.4rem' }}
-                                                                            ><X size={14} /></button>
+                                                                                className="btn-icon-small"
+                                                                            ><X size={16} /></button>
                                                                             <button
                                                                                 onClick={() => handleReplenish(wine.id)}
-                                                                                className="btn-primary"
-                                                                                style={{ padding: '0.4rem' }}
-                                                                            ><Save size={14} /></button>
+                                                                                className="btn btn-primary"
+                                                                                style={{ padding: '0.6rem' }}
+                                                                            ><Save size={16} /></button>
                                                                         </div>
                                                                     </div>
                                                                 </motion.div>
@@ -396,17 +374,17 @@ const Bodega = () => {
                     </>
                 ) : (
                     /* Ventas History View */
-                    <div className="glass-panel" style={{ padding: '2rem' }}>
+                    <div className="surface-card" style={{ padding: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                            <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><History size={24} /> Historial de Ventas</h2>
-                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                Ventas totales: <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{wineSales.length}</span>
+                            <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><History size={24} className="text-primary" /> Historial de Ventas</h2>
+                            <div className="text-muted" style={{ background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '500' }}>
+                                Ventas totales: <span className="text-primary">{wineSales.length}</span>
                             </div>
                         </div>
 
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                                <thead style={{ borderBottom: '1px solid var(--border-strong)', color: 'var(--color-text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     <tr>
                                         <th style={{ padding: '1rem' }}>Fecha</th>
                                         <th style={{ padding: '1rem' }}>Producto</th>
@@ -420,19 +398,19 @@ const Bodega = () => {
                                     {wineSales.map((sale, idx) => {
                                         const profit = (sale.price - (sale.purchasePrice || 0)) * sale.quantity;
                                         return (
-                                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
                                                 <td style={{ padding: '1rem', fontSize: '0.85rem' }}>{new Date(sale.saleDate).toLocaleString()}</td>
-                                                <td style={{ padding: '1rem', fontWeight: '500' }}>{sale.name}</td>
-                                                <td style={{ padding: '1rem' }}>{sale.quantity}</td>
+                                                <td style={{ padding: '1rem', fontWeight: '600' }}>{sale.name}</td>
+                                                <td style={{ padding: '1rem', fontWeight: '600' }}>{sale.quantity}</td>
                                                 <td style={{ padding: '1rem' }}>{sale.price.toFixed(2)}€</td>
-                                                <td style={{ padding: '1rem', fontWeight: 'bold' }}>{sale.totalPrice.toFixed(2)}€</td>
-                                                <td style={{ padding: '1rem', color: '#10b981', fontWeight: 'bold' }}>+{profit.toFixed(2)}€</td>
+                                                <td style={{ padding: '1rem', fontWeight: '800' }}>{sale.totalPrice.toFixed(2)}€</td>
+                                                <td style={{ padding: '1rem', fontWeight: '800' }} className="text-success">+{profit.toFixed(2)}€</td>
                                             </tr>
                                         );
                                     })}
                                     {wineSales.length === 0 && (
                                         <tr>
-                                            <td colSpan="6" style={{ padding: '4rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                            <td colSpan="6" style={{ padding: '4rem', textAlign: 'center' }} className="text-muted">
                                                 No se han registrado ventas de vino todavía.
                                             </td>
                                         </tr>
@@ -445,23 +423,26 @@ const Bodega = () => {
 
                 {/* Modal Añadir/Editar */}
                 {(isAdding || editingWine) && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            className="glass-panel"
-                            style={{ width: '100%', maxWidth: '600px', padding: '2rem' }}
+                            className="surface-card"
+                            style={{ width: '100%', maxWidth: '650px', padding: '2.5rem' }}
                         >
-                            <h2>{isAdding ? 'Nuevo Vino' : 'Editar Vino'}</h2>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h2 style={{ margin: 0 }}>{isAdding ? 'Nuevo Vino' : 'Editar Vino'}</h2>
+                                <button onClick={() => { setIsAdding(false); setEditingWine(null); }} className="btn-icon-circle" style={{ width: '32px', height: '32px' }}><X size={18} /></button>
+                            </div>
 
                             <div style={{ display: 'flex', justifyContent: 'center', margin: '1rem 0' }}>
                                 <div style={{ position: 'relative' }}>
                                     <div style={{
                                         width: '120px',
                                         height: '160px',
-                                        background: 'rgba(255,255,255,0.05)',
+                                        background: '#f8fafc',
                                         borderRadius: '16px',
-                                        border: '1px dashed var(--glass-border)',
+                                        border: '1px dashed var(--border-strong)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -481,7 +462,7 @@ const Bodega = () => {
                                         padding: '8px',
                                         borderRadius: '50%',
                                         cursor: 'pointer',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                                        boxShadow: 'var(--shadow-md)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center'
@@ -492,55 +473,50 @@ const Bodega = () => {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.5rem' }}>
                                 <div className="form-group">
-                                    <label>Nombre del Vino</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Nombre del Vino</label>
                                     <input
                                         value={isAdding ? newWine.name : editingWine.name}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, name: e.target.value }) : setEditingWine({ ...editingWine, name: e.target.value })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Bodega</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Bodega</label>
                                     <input
                                         value={isAdding ? newWine.bodega : editingWine.bodega}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, bodega: e.target.value }) : setEditingWine({ ...editingWine, bodega: e.target.value })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Región / D.O.</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Región / D.O.</label>
                                     <input
                                         value={isAdding ? newWine.region : editingWine.region}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, region: e.target.value }) : setEditingWine({ ...editingWine, region: e.target.value })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Uva</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Uva</label>
                                     <input
                                         value={isAdding ? newWine.grape : editingWine.grape}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, grape: e.target.value }) : setEditingWine({ ...editingWine, grape: e.target.value })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Añada</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Añada</label>
                                     <input
                                         type="number"
                                         value={isAdding ? newWine.year : editingWine.year}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, year: parseInt(e.target.value) }) : setEditingWine({ ...editingWine, year: parseInt(e.target.value) })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Tipo de Vino</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Tipo de Vino</label>
                                     <select
                                         value={isAdding ? newWine.type : editingWine.type}
                                         onChange={(e) => {
@@ -548,8 +524,7 @@ const Bodega = () => {
                                             const icon = type === 'Tinto' ? '🍷' : type === 'Blanco' ? '🥂' : type === 'Vermut' ? '🥃' : type === 'Espumoso' ? '🍾' : '🍇';
                                             isAdding ? setNewWine({ ...newWine, type, image: icon }) : setEditingWine({ ...editingWine, type, image: icon })
                                         }}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white', background: '#1e293b' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none', background: 'white' }}
                                     >
                                         <option value="Tinto">Tinto</option>
                                         <option value="Blanco">Blanco</option>
@@ -559,41 +534,38 @@ const Bodega = () => {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Stock Botellas</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Stock Botellas</label>
                                     <input
                                         type="number"
                                         value={isAdding ? newWine.stock : editingWine.stock}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, stock: parseInt(e.target.value) }) : setEditingWine({ ...editingWine, stock: parseInt(e.target.value) })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Precio Venta (€)</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Precio Venta (€)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={isAdding ? newWine.price : editingWine.price}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, price: parseFloat(e.target.value) }) : setEditingWine({ ...editingWine, price: parseFloat(e.target.value) })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>Precio Compra (€)</label>
+                                    <label className="text-muted" style={{ fontSize: '0.85rem', fontWeight: '500' }}>Precio Compra (€)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={isAdding ? newWine.purchasePrice : editingWine.purchasePrice}
                                         onChange={(e) => isAdding ? setNewWine({ ...newWine, purchasePrice: parseFloat(e.target.value) }) : setEditingWine({ ...editingWine, purchasePrice: parseFloat(e.target.value) })}
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                        style={{ width: '100%', padding: '0.85rem', marginTop: '0.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', outline: 'none' }}
                                     />
                                 </div>
                             </div>
-                            <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                <button onClick={() => { setIsAdding(false); setEditingWine(null); }} className="btn-secondary">Cancelar</button>
-                                <button onClick={isAdding ? handleSave : handleUpdate} className="btn-primary">
+                            <div style={{ marginTop: '3rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                <button onClick={() => { setIsAdding(false); setEditingWine(null); }} className="btn btn-secondary">Cancelar</button>
+                                <button onClick={isAdding ? handleSave : handleUpdate} className="btn btn-primary">
                                     <Save size={18} /> {isAdding ? 'Guardar Vino' : 'Actualizar'}
                                 </button>
                             </div>

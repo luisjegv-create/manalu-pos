@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -26,12 +26,11 @@ import {
     Wallet,
     RotateCcw
 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEvents } from '../context/EventContext';
 import { printA4Invoice, printDepositTicket } from '../utils/printHelpers';
 import { useInventory } from '../context/InventoryContext';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 const ManaluEventos = () => {
     const navigate = useNavigate();
@@ -294,71 +293,74 @@ const ManaluEventos = () => {
             };
 
             return { totalRevenue, confirmedEvents, menuEvents, rentalEvents, avgPax, revenueByStatus };
-        }, [agenda]);
+        }, []);
 
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)' }}>
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Ingresos Totales (Eventos)</div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-secondary)' }}>{stats.totalRevenue.toFixed(2)}€</div>
-                        <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.5rem' }}>Basado en {agenda.length} registros</div>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Ingresos Totales (Eventos)</div>
+                        <div style={{ fontSize: '2.25rem', fontWeight: '800', color: 'var(--color-secondary)' }}>{stats.totalRevenue.toFixed(2)}€</div>
+                        <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                            Basado en {agenda.length} registros
+                        </div>
                     </div>
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Pax Medio (Cubiertos)</div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white' }}>{stats.avgPax}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.5rem' }}>Promedio por evento con menú</div>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Pax Medio (Cubiertos)</div>
+                        <div style={{ fontSize: '2.25rem', fontWeight: '800', color: 'white' }}>{stats.avgPax}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.6rem' }}>Promedio por evento con menú</div>
                     </div>
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Eventos Confirmados</div>
-                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>{stats.confirmedEvents}</div>
-                        <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.5rem' }}>De un total de {agenda.length}</div>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.03)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Eventos Confirmados</div>
+                        <div style={{ fontSize: '2.25rem', fontWeight: '800', color: '#3b82f6' }}>{stats.confirmedEvents}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.6rem' }}>De un total de {agenda.length}</div>
                     </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <PieChart size={18} color="var(--color-primary)" /> Mix de Negocio
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <PieChart size={20} color="var(--color-primary)" /> Mix de Negocio
                         </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '500' }}>
                                     <span>Eventos con Menú</span>
-                                    <span>{stats.menuEvents}</span>
+                                    <span style={{ color: 'var(--color-primary)' }}>{stats.menuEvents}</span>
                                 </div>
-                                <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${(stats.menuEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: 'var(--color-primary)' }} />
+                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${(stats.menuEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: 'var(--color-primary)', borderRadius: '20px', boxShadow: '0 0 10px rgba(16, 224, 212, 0.3)' }} />
                                 </div>
                             </div>
                             <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '500' }}>
                                     <span>Solo Alquiler Local</span>
-                                    <span>{stats.rentalEvents}</span>
+                                    <span style={{ color: '#ec4899' }}>{stats.rentalEvents}</span>
                                 </div>
-                                <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${(stats.rentalEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: '#ec4899' }} />
+                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${(stats.rentalEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: '#ec4899', borderRadius: '20px', boxShadow: '0 0 10px rgba(236, 72, 153, 0.3)' }} />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <TrendingIcon size={18} color="#10b981" /> Estado Financiero
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <TrendingIcon size={20} color="#10b981" /> Estado Financiero
                         </h3>
                         <div style={{ display: 'grid', gap: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                                <span style={{ color: '#94a3b8' }}>Confirmado (Pendiente Cobro)</span>
-                                <span style={{ fontWeight: 'bold' }}>{stats.revenueByStatus.confirmed.toFixed(2)}€</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Confirmado (Pendiente Cobro)</span>
+                                <span style={{ fontWeight: '700' }}>{stats.revenueByStatus.confirmed.toFixed(2)}€</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                <span style={{ color: '#10b981' }}>Cobrado / Pagado</span>
-                                <span style={{ fontWeight: 'bold', color: '#10b981' }}>{stats.revenueByStatus.paid.toFixed(2)}€</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                <span style={{ color: '#10b981', fontWeight: '600', fontSize: '0.9rem' }}>Cobrado / Pagado</span>
+                                <span style={{ fontWeight: '800', color: '#10b981' }}>{stats.revenueByStatus.paid.toFixed(2)}€</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                                <span style={{ color: '#64748b' }}>Borradores / Presupuestos</span>
-                                <span style={{ fontWeight: 'bold', color: '#64748b' }}>{stats.revenueByStatus.draft.toFixed(2)}€</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                                <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Borradores / Presupuestos</span>
+                                <span style={{ fontWeight: '700', color: '#64748b' }}>{stats.revenueByStatus.draft.toFixed(2)}€</span>
                             </div>
                         </div>
                     </div>
@@ -372,43 +374,60 @@ const ManaluEventos = () => {
     return (
         <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto', color: 'white' }}>
             <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
                     <button
                         onClick={() => navigate('/')}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
+                        className="btn-icon-circle"
+                        title="Volver"
                     >
-                        <ArrowLeft />
+                        <ArrowLeft size={20} />
                     </button>
 
                     {/* Eventos Logo */}
-                    <img
-                        src="/logo-eventos.jpg"
-                        alt="Manalu Eventos"
-                        style={{
-                            height: '60px',
-                            objectFit: 'contain',
-                            borderRadius: '8px',
-                            border: '2px solid #ec4899',
-                            display: 'block'
-                        }}
-                    />
+                    <div style={{ position: 'relative' }}>
+                        <img
+                            src="/logo-eventos.jpg"
+                            alt="Manalu Eventos"
+                            style={{
+                                height: '56px',
+                                objectFit: 'contain',
+                                borderRadius: '12px',
+                                border: '2px solid rgba(236, 72, 153, 0.5)',
+                                display: 'block',
+                                boxShadow: '0 4px 12px rgba(236, 72, 153, 0.2)'
+                            }}
+                        />
+                    </div>
 
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '1.5rem', background: 'linear-gradient(to right, #ec4899, #f43f5e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        <h1 style={{
+                            margin: 0,
+                            fontSize: '1.75rem',
+                            fontWeight: '800',
+                            background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            letterSpacing: '-0.02em'
+                        }}>
                             Manalú Eventos
                         </h1>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
+                            Gestión Premium de Celebraciones
+                        </p>
                     </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <div className="glass-panel" style={{ display: 'flex', padding: '0.35rem', gap: '0.25rem', borderRadius: '14px', background: 'rgba(255,255,255,0.03)' }}>
                         <button
                             onClick={() => setView('calendar')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.6rem 1.2rem', borderRadius: '12px',
-                                background: view === 'calendar' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                padding: '0.6rem 1.2rem', borderRadius: '10px',
+                                background: view === 'calendar' ? 'var(--color-primary)' : 'transparent',
                                 color: view === 'calendar' ? 'black' : 'white',
-                                border: 'none', cursor: 'pointer', transition: 'all 0.3s'
+                                border: 'none', cursor: 'pointer', transition: 'all 0.3s',
+                                fontWeight: view === 'calendar' ? '700' : '500',
+                                fontSize: '0.9rem'
                             }}
                         >
                             <CalendarIcon size={18} /> Calendario
@@ -417,10 +436,12 @@ const ManaluEventos = () => {
                             onClick={() => setView('list')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.6rem 1.2rem', borderRadius: '12px',
-                                background: view === 'list' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                padding: '0.6rem 1.2rem', borderRadius: '10px',
+                                background: view === 'list' ? 'var(--color-primary)' : 'transparent',
                                 color: view === 'list' ? 'black' : 'white',
-                                border: 'none', cursor: 'pointer', transition: 'all 0.3s'
+                                border: 'none', cursor: 'pointer', transition: 'all 0.3s',
+                                fontWeight: view === 'list' ? '700' : '500',
+                                fontSize: '0.9rem'
                             }}
                         >
                             <List size={18} /> Lista
@@ -429,18 +450,20 @@ const ManaluEventos = () => {
                             onClick={() => setView('analytics')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.6rem 1.2rem', borderRadius: '12px',
-                                background: view === 'analytics' ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                padding: '0.6rem 1.2rem', borderRadius: '10px',
+                                background: view === 'analytics' ? 'var(--color-primary)' : 'transparent',
                                 color: view === 'analytics' ? 'black' : 'white',
-                                border: 'none', cursor: 'pointer', transition: 'all 0.3s'
+                                border: 'none', cursor: 'pointer', transition: 'all 0.3s',
+                                fontWeight: view === 'analytics' ? '700' : '500',
+                                fontSize: '0.9rem'
                             }}
                         >
                             <BarChart2 size={18} /> Estadísticas
                         </button>
                     </div>
 
-                    <button className="btn-primary" onClick={() => setIsFormOpen(true)} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px' }}>
-                        <Plus size={20} style={{ marginRight: '0.5rem' }} /> Nuevo Presupuesto
+                    <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
+                        <Plus size={20} /> <span style={{ marginLeft: '0.5rem' }}>Nuevo Presupuesto</span>
                     </button>
                 </div>
             </header>
@@ -472,38 +495,40 @@ const ManaluEventos = () => {
                                         <button onClick={() => setIsMenuManagerOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={18} /></button>
                                     </div>
 
-                                    <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
                                         <input
                                             placeholder="Nombre del Menú"
+                                            className="input-field"
                                             value={menuForm.name}
                                             onChange={e => setMenuForm({ ...menuForm, name: e.target.value })}
-                                            style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px' }}
                                         />
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.5rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
                                             <input
                                                 type="number"
                                                 placeholder="Precio"
+                                                className="input-field"
                                                 value={menuForm.price}
                                                 onChange={e => setMenuForm({ ...menuForm, price: e.target.value })}
-                                                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px' }}
                                             />
                                             <input
                                                 placeholder="Platos (sep. por comas)"
+                                                className="input-field"
                                                 value={menuForm.items}
                                                 onChange={e => setMenuForm({ ...menuForm, items: e.target.value })}
-                                                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px' }}
                                             />
                                         </div>
                                         <button
                                             onClick={handleSaveMenu}
-                                            style={{ padding: '0.5rem', background: 'var(--color-primary)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                            className="btn-primary"
+                                            style={{ width: '100%', justifyContent: 'center' }}
                                         >
-                                            <Save size={16} /> {editingMenu ? 'Actualizar Menú' : 'Guardar Nuevo Menú'}
+                                            <Save size={18} /> <span>{editingMenu ? 'Actualizar Menú' : 'Guardar Nuevo Menú'}</span>
                                         </button>
                                         {editingMenu && (
                                             <button
                                                 onClick={() => { setEditingMenu(null); setMenuForm({ name: '', price: '', items: '' }); }}
-                                                style={{ padding: '0.5rem', background: 'transparent', border: '1px solid #64748b', borderRadius: '6px', color: '#94a3b8', cursor: 'pointer' }}
+                                                className="btn-secondary"
+                                                style={{ width: '100%', justifyContent: 'center' }}
                                             >
                                                 Cancelar Edición
                                             </button>
@@ -533,33 +558,31 @@ const ManaluEventos = () => {
 
                             <div style={{ display: 'grid', gap: '1.5rem' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    <label style={{ color: '#94a3b8' }}>Nombre del Evento</label>
+                                    <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Nombre del Evento</label>
                                     <input
                                         type="text"
-                                        className="glass-panel"
-                                        style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
+                                        className="input-field"
+                                        placeholder="Ej: Boda de María y Juan"
                                         value={eventData.name}
                                         onChange={(e) => setEventData({ ...eventData, name: e.target.value })}
                                     />
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label style={{ color: '#94a3b8' }}>Fecha</label>
+                                        <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Fecha</label>
                                         <input
                                             type="date"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
+                                            className="input-field"
                                             value={eventData.date}
                                             onChange={(e) => setEventData({ ...eventData, date: e.target.value })}
                                         />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label style={{ color: '#94a3b8' }}>Comensales</label>
+                                        <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Comensales</label>
                                         <input
                                             type="number"
-                                            className="glass-panel"
-                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
+                                            className="input-field"
                                             value={eventData.guests}
                                             onChange={(e) => setEventData({ ...eventData, guests: parseInt(e.target.value) || 0 })}
                                         />
@@ -595,28 +618,27 @@ const ManaluEventos = () => {
                                     ) : null}
                                 </div>
 
-                                <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)' }}>
-                                    <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Users size={18} color="var(--color-primary)" /> Datos Fiscales del Cliente
+                                <div className="surface-card" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)' }}>
+                                    <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-primary)' }}>
+                                        <Users size={18} /> Datos Fiscales del Cliente
                                     </h3>
-                                    <div style={{ display: 'grid', gap: '1rem' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>NIF / CIF</label>
+                                    <div style={{ display: 'grid', gap: '1.25rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>NIF / CIF</label>
                                             <input
                                                 type="text"
-                                                className="glass-panel"
+                                                className="input-field"
                                                 placeholder="Ej: 12345678X"
-                                                style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white' }}
                                                 value={eventData.clientNif}
                                                 onChange={(e) => setEventData({ ...eventData, clientNif: e.target.value })}
                                             />
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                            <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Dirección de Facturación</label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <label style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>Dirección de Facturación</label>
                                             <textarea
-                                                className="glass-panel"
+                                                className="input-field"
                                                 placeholder="Calle, Número, CP, Ciudad..."
-                                                style={{ padding: '0.6rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', resize: 'vertical', minHeight: '60px' }}
+                                                style={{ resize: 'vertical', minHeight: '80px' }}
                                                 value={eventData.clientAddress}
                                                 onChange={(e) => setEventData({ ...eventData, clientAddress: e.target.value })}
                                             />
@@ -775,17 +797,15 @@ const ManaluEventos = () => {
                                 </div>
                             )}
 
-                            <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--glass-border)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                    <span style={{ color: '#94a3b8' }}>Total {eventData.hasVat ? 'con IVA' : 'sin IVA'}</span>
-                                    <span style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-secondary)' }}>
-                                        {calculateTotalWithTax(calculateBudget(), eventData.hasVat, eventData.taxRate).toFixed(2)}€
-                                    </span>
-                                </div>
-                                <button className="btn-primary" style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem' }} onClick={handleSaveEvent}>
-                                    <Plus size={20} style={{ marginRight: '0.5rem' }} /> Guardar en Agenda
-                                </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: '1.1rem' }}>Total {eventData.hasVat ? 'con IVA' : 'sin IVA'}</span>
+                                <span style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--color-secondary)', textShadow: '0 0 20px rgba(52, 211, 153, 0.2)' }}>
+                                    {calculateTotalWithTax(calculateBudget(), eventData.hasVat, eventData.taxRate).toFixed(2)}€
+                                </span>
                             </div>
+                            <button className="btn-primary" style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem', justifyContent: 'center' }} onClick={handleSaveEvent}>
+                                <Plus size={22} /> <span style={{ marginLeft: '0.5rem' }}>Guardar en Agenda</span>
+                            </button>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -833,41 +853,34 @@ const ManaluEventos = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                                                <select
-                                                    value={ev.status}
-                                                    onChange={(e) => updateEventStatus(ev.id, e.target.value)}
-                                                    style={{
-                                                        background: getStatusColor(ev.status),
-                                                        border: 'none',
-                                                        color: 'white',
-                                                        padding: '0.4rem 0.8rem',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.8rem',
-                                                        fontWeight: 'bold',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    {eventStatuses.map(s => <option key={s.id} value={s.id} style={{ background: '#0f172a' }}>{s.label}</option>)}
-                                                </select>
-                                                <strong style={{ color: 'var(--color-primary)' }}>{ev.total}€</strong>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'flex-end' }}>
+                                                <div style={{ position: 'relative' }}>
+                                                    <select
+                                                        value={ev.status}
+                                                        onChange={(e) => updateEventStatus(ev.id, e.target.value)}
+                                                        style={{
+                                                            background: getStatusColor(ev.status),
+                                                            border: 'none',
+                                                            color: 'white',
+                                                            padding: '0.5rem 1rem',
+                                                            borderRadius: '10px',
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: '700',
+                                                            cursor: 'pointer',
+                                                            appearance: 'none',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                                        }}
+                                                    >
+                                                        {eventStatuses.map(s => <option key={s.id} value={s.id} style={{ background: '#1e293b', color: 'white' }}>{s.label}</option>)}
+                                                    </select>
+                                                </div>
+                                                <strong style={{ color: 'var(--color-primary)', fontSize: '1.25rem', fontWeight: '800' }}>{ev.total}€</strong>
                                                 <button
                                                     onClick={() => handleGenerateInvoice(ev)}
-                                                    style={{
-                                                        background: 'rgba(255,255,255,0.05)',
-                                                        border: '1px solid var(--glass-border)',
-                                                        color: 'white',
-                                                        padding: '0.4rem 0.8rem',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.8rem',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '0.4rem',
-                                                        marginTop: '0.5rem'
-                                                    }}
+                                                    className="btn-secondary"
+                                                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
                                                 >
-                                                    <DollarSign size={14} /> Factura
+                                                    <DollarSign size={16} /> <span>Factura</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -888,35 +901,23 @@ const ManaluEventos = () => {
                                                 </span>
                                             </div>
 
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
                                                 {ev.depositStatus === 'pending' && (
                                                     <button
                                                         onClick={() => handleDepositAction(ev, 'pay')}
                                                         className="btn-primary"
-                                                        style={{ flex: 1, padding: '0.5rem', fontSize: '0.75rem' }}
+                                                        style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem', justifyContent: 'center' }}
                                                     >
-                                                        Cobrar Fianza
+                                                        <Wallet size={16} /> <span>Cobrar Fianza</span>
                                                     </button>
                                                 )}
                                                 {ev.depositStatus === 'paid' && (
                                                     <button
                                                         onClick={() => handleDepositAction(ev, 'return')}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '0.5rem',
-                                                            fontSize: '0.75rem',
-                                                            background: 'rgba(59, 130, 246, 0.1)',
-                                                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                                                            color: '#3b82f6',
-                                                            borderRadius: '8px',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '0.4rem'
-                                                        }}
+                                                        className="btn-secondary"
+                                                        style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.3)', justifyContent: 'center' }}
                                                     >
-                                                        <RotateCcw size={14} /> Devolver Fianza
+                                                        <RotateCcw size={16} /> <span>Devolver Fianza</span>
                                                     </button>
                                                 )}
                                                 {ev.depositStatus === 'returned' && (
@@ -956,9 +957,10 @@ const ManaluEventos = () => {
                                                 ))}
                                                 <button
                                                     onClick={() => { if (window.confirm('¿Eliminar evento?')) deleteEvent(ev.id) }}
-                                                    style={{ gridColumn: '1 / -1', marginTop: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.5rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                                                    className="btn-danger"
+                                                    style={{ gridColumn: '1 / -1', marginTop: '1rem', width: '100%', justifyContent: 'center', padding: '0.6rem' }}
                                                 >
-                                                    <Trash2 size={14} /> Eliminar Evento
+                                                    <Trash2 size={16} /> <span>Eliminar Evento</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -974,19 +976,21 @@ const ManaluEventos = () => {
                         <div className="glass-panel" style={{ padding: '2rem', flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                 <h2 style={{ margin: 0 }}>Calendario de Ocupación</h2>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.05)', padding: '0.5rem 1rem', borderRadius: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
                                     <button
                                         onClick={prevMonth}
-                                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        className="btn-icon-small"
+                                        style={{ background: 'transparent' }}
                                     >
                                         <ChevronLeft size={20} />
                                     </button>
-                                    <span style={{ fontWeight: 'bold', minWidth: '120px', textAlign: 'center' }}>
-                                        {monthNames[currentCalendarDate.getMonth()]} {currentCalendarDate.getFullYear()}
+                                    <span style={{ fontWeight: '800', minWidth: '140px', textAlign: 'center', fontSize: '0.9rem', color: 'white' }}>
+                                        {monthNames[currentCalendarDate.getMonth()].toUpperCase()} {currentCalendarDate.getFullYear()}
                                     </span>
                                     <button
                                         onClick={nextMonth}
-                                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        className="btn-icon-small"
+                                        style={{ background: 'transparent' }}
                                     >
                                         <ChevronRight size={20} />
                                     </button>
