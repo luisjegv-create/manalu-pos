@@ -374,7 +374,7 @@ const BarTapas = () => {
                 display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
                 overflow: 'hidden',
-                paddingBottom: isMobile ? '70px' : 0 // Space for bottom nav
+                paddingBottom: isMobile ? '85px' : 0 // Space for bottom nav
             }}>
 
                 {/* LEFT SECTION: Catalog (Visible on desktop OR mobile 'menu' tab) */}
@@ -618,15 +618,15 @@ const BarTapas = () => {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    height: '70px',
+                    height: '85px',
                     background: 'var(--color-surface)',
-                    borderTop: '1px solid var(--glass-border)',
+                    borderTop: '1px solid var(--border-strong)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-around',
                     zIndex: 100,
                     paddingBottom: 'env(safe-area-inset-bottom)',
-                    boxShadow: '0 -4px 15px rgba(0,0,0,0.1)'
+                    boxShadow: '0 -10px 25px rgba(0,0,0,0.15)'
                 }}>
                     <button
                         onClick={() => navigate('/tables')}
@@ -634,14 +634,14 @@ const BarTapas = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.4rem',
                             background: 'none',
                             border: 'none',
                             color: 'var(--color-text-muted)',
-                            fontSize: '0.7rem'
+                            fontSize: '0.9rem'
                         }}
                     >
-                        <Layers size={22} />
+                        <Layers size={28} />
                         <span>Mesas</span>
                     </button>
 
@@ -651,15 +651,15 @@ const BarTapas = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.4rem',
                             background: 'none',
                             border: 'none',
                             color: mobileActiveTab === 'menu' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                            fontSize: '0.7rem',
+                            fontSize: '0.9rem',
                             fontWeight: mobileActiveTab === 'menu' ? 'bold' : 'normal'
                         }}
                     >
-                        <LayoutGrid size={22} />
+                        <LayoutGrid size={28} />
                         <span>Carta</span>
                     </button>
 
@@ -669,29 +669,30 @@ const BarTapas = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.4rem',
                             background: 'none',
                             border: 'none',
                             color: mobileActiveTab === 'order' ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                            fontSize: '0.7rem',
+                            fontSize: '0.9rem',
                             fontWeight: mobileActiveTab === 'order' ? 'bold' : 'normal',
                             position: 'relative'
                         }}
                     >
-                        <ClipboardList size={22} />
+                        <ClipboardList size={28} />
                         <span>Comanda</span>
                         {order.length > 0 && (
                             <span style={{
                                 position: 'absolute',
-                                top: '-5px',
+                                top: '-8px',
                                 right: '10px',
                                 background: '#ef4444',
                                 color: 'white',
-                                fontSize: '0.6rem',
-                                padding: '2px 5px',
+                                fontSize: '0.75rem',
+                                padding: '2px 6px',
                                 borderRadius: '10px',
                                 fontWeight: 'bold',
-                                minWidth: '15px'
+                                minWidth: '18px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                             }}>
                                 {order.length}
                             </span>
@@ -701,21 +702,19 @@ const BarTapas = () => {
                     <button
                         onClick={() => {
                             setMobileActiveTab('order');
-                            // If there is a bill, maybe we want to go straight to payment?
-                            // For now let's just make sure they see the totals.
                         }}
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.4rem',
                             background: 'none',
                             border: 'none',
                             color: 'var(--color-text-muted)',
-                            fontSize: '0.7rem'
+                            fontSize: '0.9rem'
                         }}
                     >
-                        <CreditCard size={22} />
+                        <CreditCard size={28} />
                         <span>Cobrar</span>
                     </button>
                 </div>
