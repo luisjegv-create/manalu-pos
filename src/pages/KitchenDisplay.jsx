@@ -173,11 +173,18 @@ const KitchenDisplay = () => {
                                                                     color: isItemReady ? '#10b981' : '#fff',
                                                                     textDecoration: isItemReady ? 'line-through' : 'none'
                                                                 }}>{item.quantity}x</span>
-                                                                <span style={{
-                                                                    fontSize: '1.2rem',
-                                                                    fontWeight: '700',
-                                                                    textDecoration: isItemReady ? 'line-through' : 'none'
-                                                                }}>{item.name}</span>
+                                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                    <span style={{
+                                                                        fontSize: '1.2rem',
+                                                                        fontWeight: '700',
+                                                                        textDecoration: isItemReady ? 'line-through' : 'none'
+                                                                    }}>{item.name}</span>
+                                                                    {item.isPriority && (
+                                                                        <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '0.9rem', marginTop: '4px', letterSpacing: '0.5px' }}>
+                                                                            ⚡ MARCHA RÁPIDA
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <button
                                                                 onClick={() => updateKitchenItemStatus(order.id, item.uniqueId, isItemReady ? 'pending' : 'ready')}

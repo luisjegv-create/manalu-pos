@@ -4,6 +4,20 @@ import { uploadImage, compressImage } from '../utils/storageUtils';
 
 const InventoryContext = createContext();
 
+// Helper for safe parsing
+const safeParse = (key, fallback) => {
+    try {
+        const saved = localStorage.getItem(key);
+        if (!saved) return fallback;
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+        return parsed;
+    } catch (error) {
+        console.error("Error parsing localStorage key:", key, error);
+        return fallback;
+    }
+};
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useInventory = () => useContext(InventoryContext);
 
@@ -16,6 +30,8 @@ export const InventoryProvider = ({ children }) => {
     const [suppliers, setSuppliers] = useState([]);
     const [invoices, setInvoices] = useState([]);
     const [expenses, setExpenses] = useState([]);
+    const [mermas, setMermas] = useState(() => safeParse('manalu_mermas', []));
+    const [physicalInventories, setPhysicalInventories] = useState(() => safeParse('manalu_physical_inventories', []));
     const [restaurantInfo, setRestaurantInfo] = useState({
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
         address: 'Calle Principal, 123',
@@ -29,19 +45,13 @@ export const InventoryProvider = ({ children }) => {
         gemUrl: 'https://gemini.google.com/gem/a75e2ed2d82d'
     });
 
-    // Helper for safe parsing
-    const safeParse = (key, fallback) => {
-        try {
-            const saved = localStorage.getItem(key);
-            if (!saved) return fallback;
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
-            return parsed;
-        } catch (error) {
-            console.error("Error parsing localStorage key:", key, error);
-            return fallback;
-        }
-    };
+    useEffect(() => {
+        localStorage.setItem('manalu_mermas', JSON.stringify(mermas));
+    }, [mermas]);
+
+    useEffect(() => {
+        localStorage.setItem('manalu_physical_inventories', JSON.stringify(physicalInventories));
+    }, [physicalInventories]);
 
     // --- INITIAL LOAD & MIGRATION ---
     useEffect(() => {
@@ -755,6 +765,37 @@ export const InventoryProvider = ({ children }) => {
         }
     };
 
+    // --- Mermas Actions ---
+    const addMerma = (merma) => {
+        const newMerma = { ...merma, id: `merma-${Date.now()}`, date: new Date().toISOString() };
+        setMermas(prev => [newMerma, ...prev]);
+
+        // Also deduct from ingredient stock
+        const ing = ingredients.find(i => i.id === merma.ingredientId);
+        if (ing) {
+            updateIngredient(ing.id, { ...ing, quantity: Math.max(0, (ing.quantity || 0) - merma.weight) });
+        }
+    };
+
+    const deleteMerma = (id) => {
+        const merma = mermas.find(m => m.id === id);
+        if (merma) {
+            const ing = ingredients.find(i => i.id === merma.ingredientId);
+            if (ing) {
+                updateIngredient(ing.id, { ...ing, quantity: (ing.quantity || 0) + merma.weight });
+            }
+        }
+        setMermas(prev => prev.filter(m => m.id !== id));
+    };
+
+    // --- Physical Inventory Actions ---
+    const addPhysicalInventory = (inventory) => {
+        const newInv = { ...inventory, id: `inv-${Date.now()}`, date: new Date().toISOString() };
+        setPhysicalInventories(prev => [newInv, ...prev]);
+    };
+
+
+
 
     return (
         <InventoryContext.Provider value={{
@@ -766,6 +807,8 @@ export const InventoryProvider = ({ children }) => {
             suppliers,
             invoices,
             expenses,
+            mermas,
+            physicalInventories,
             restaurantInfo,
             updateRestaurantInfo,
             addIngredient,
@@ -790,6 +833,9 @@ export const InventoryProvider = ({ children }) => {
             deleteInvoice,
             addExpense,
             deleteExpense,
+            addMerma,
+            deleteMerma,
+            addPhysicalInventory,
             incrementTicketNumber,
             checkProductAvailability
             // ... (rest of simple delete actions)

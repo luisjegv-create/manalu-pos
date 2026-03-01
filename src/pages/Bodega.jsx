@@ -256,20 +256,20 @@ const Bodega = () => {
                                                         initial={{ opacity: 0, y: 20 }}
                                                         animate={{ opacity: 1, y: 0 }}
                                                         exit={{ opacity: 0, scale: 0.95 }}
-                                                        className="surface-card"
-                                                        style={{ padding: '1.5rem', position: 'relative', borderLeft: `4px solid ${section.color}` }}
+                                                        className="glass-panel"
+                                                        style={{ padding: '1.5rem', position: 'relative', borderLeft: `6px solid ${section.color}`, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}
                                                     >
                                                         <div style={{ display: 'flex', gap: '1.5rem' }}>
                                                             <div style={{
                                                                 width: '100px',
                                                                 height: '140px',
-                                                                background: '#f8fafc',
+                                                                background: 'rgba(255,255,255,0.05)',
                                                                 borderRadius: '12px',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 overflow: 'hidden',
-                                                                border: '1px solid var(--border-strong)'
+                                                                border: '1px solid rgba(255,255,255,0.1)'
                                                             }}>
                                                                 {(wine.image && (wine.image.startsWith('data:image') || wine.image.startsWith('http'))) ? (
                                                                     <img src={wine.image} alt={wine.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -278,24 +278,24 @@ const Bodega = () => {
                                                                 )}
                                                             </div>
                                                             <div style={{ flex: 1 }}>
-                                                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>{wine.name}</h3>
-                                                                <div className="text-primary" style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.25rem' }}>{wine.bodega}</div>
+                                                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: 'white' }}>{wine.name}</h3>
+                                                                <div style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#93c5fd' }}>{wine.bodega}</div>
                                                                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.3rem 0.75rem', fontSize: '0.85rem' }}>
-                                                                    <span className="text-muted">Región:</span> <span>{wine.region}</span>
-                                                                    <span className="text-muted">Uva:</span> <span>{wine.grape}</span>
-                                                                    <span className="text-muted">Añada:</span> <span>{wine.year}</span>
-                                                                    <span className="text-muted">Tipo:</span> <span>{wine.type}</span>
+                                                                    <span style={{ color: '#94a3b8' }}>Región:</span> <span style={{ color: '#e2e8f0' }}>{wine.region}</span>
+                                                                    <span style={{ color: '#94a3b8' }}>Uva:</span> <span style={{ color: '#e2e8f0' }}>{wine.grape}</span>
+                                                                    <span style={{ color: '#94a3b8' }}>Añada:</span> <span style={{ color: '#e2e8f0' }}>{wine.year}</span>
+                                                                    <span style={{ color: '#94a3b8' }}>Tipo:</span> <span style={{ color: '#e2e8f0' }}>{wine.type}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
 
-                                                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                                                             <div>
-                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>Stock</div>
+                                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Stock</div>
                                                                 <div style={{
                                                                     fontSize: '1.1rem',
                                                                     fontWeight: '800',
-                                                                    color: wine.stock <= 5 ? 'var(--color-danger)' : 'var(--color-text)',
+                                                                    color: wine.stock <= 5 ? '#f87171' : 'white',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     gap: '0.4rem'
@@ -311,14 +311,14 @@ const Bodega = () => {
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'center' }}>
-                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>PVP</div>
-                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-secondary)' }}>
+                                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>PVP</div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#f472b6' }}>
                                                                     {wine.price.toFixed(2)}€
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
-                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>Beneficio</div>
-                                                                <div className="text-success" style={{ fontSize: '1.1rem', fontWeight: '800' }}>
+                                                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Beneficio</div>
+                                                                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#34d399' }}>
                                                                     +{(wine.price - (wine.purchasePrice || 0)).toFixed(2)}€
                                                                 </div>
                                                             </div>
@@ -360,8 +360,8 @@ const Bodega = () => {
                                                         </AnimatePresence>
 
                                                         <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem' }}>
-                                                            <button onClick={() => setEditingWine(wine)} className="btn-icon-small"><Edit3 size={16} /></button>
-                                                            <button onClick={() => deleteWine(wine.id)} className="btn-icon-small text-danger"><Trash2 size={16} /></button>
+                                                            <button onClick={() => setEditingWine(wine)} className="btn-icon-small" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}><Edit3 size={16} /></button>
+                                                            <button onClick={() => deleteWine(wine.id)} className="btn-icon-small" style={{ background: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </motion.div>
                                                 ))}

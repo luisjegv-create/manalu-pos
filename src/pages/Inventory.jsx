@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printRestockList } from '../utils/printHelpers';
+import MermasManagement from '../components/Inventory/MermasManagement';
 
 const Inventory = () => {
     const navigate = useNavigate();
@@ -58,6 +59,7 @@ const Inventory = () => {
         { id: 'bebidas', label: 'Bebidas', icon: '🥂' },
         { id: 'menaje', label: 'Menaje', icon: '🍽️' },
         { id: 'limpieza', label: 'Limpieza', icon: '🧹' },
+        { id: 'mermas', label: 'Inventarios y Mermas', icon: '⚖️' },
         { id: 'distribuidores', label: 'Distribuidores', icon: '🚚' },
         { id: 'gastos', label: 'Gastos', icon: '💸' }
     ];
@@ -167,7 +169,7 @@ const Inventory = () => {
                     </button>
                 </div>
 
-                {activeTab !== 'distribuidores' && activeTab !== 'gastos' && (
+                {['alimentos', 'bebidas', 'menaje', 'limpieza'].includes(activeTab) && (
                     <button
                         className="btn-primary"
                         onClick={() => { setIsAdding(true); setEditingId(null); setFormData(prev => ({ ...prev, category: activeTab })); }}
@@ -209,8 +211,13 @@ const Inventory = () => {
                 ))}
             </div>
 
+            {/* MERMAS MANAGEMENT MODE */}
+            {activeTab === 'mermas' && (
+                <MermasManagement />
+            )}
+
             {/* SUPPLIER MANAGEMENT MODE */}
-            {activeTab === 'distribuidores' ? (
+            {activeTab === 'distribuidores' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', minHeight: '600px' }}>
 
                     {/* Left: Supplier List */}
@@ -417,7 +424,9 @@ const Inventory = () => {
                         )}
                     </div>
                 </div>
-            ) : (
+            )}
+
+            {['alimentos', 'bebidas', 'menaje', 'limpieza'].includes(activeTab) && (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     {/* Content Control Bar */}
                     <div style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', width: '100%', maxWidth: '300px' }}>

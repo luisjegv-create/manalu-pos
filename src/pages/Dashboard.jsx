@@ -17,9 +17,9 @@ const Dashboard = () => {
             path: "/tables"
         },
         {
-            title: "Barra Rápida",
+            title: "Barra rapida & Takeaway",
             icon: Wine,
-            description: "Acceso directo a TPV sin elegir mesa.",
+            description: "Venta directa sin asociar a mesa. Ideal para takeaway y barra.",
             color: "green",
             path: "/bar-tapas?mode=quick"
         },

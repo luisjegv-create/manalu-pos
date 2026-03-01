@@ -94,6 +94,7 @@ export const printKitchenTicket = (tableName, items, note = '') => {
                     <tr class="item-row">
                         <td class="qty">${item.quantity}</td>
                         <td class="name">
+                            ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
                             ${item.name}
                             ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
                             ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}

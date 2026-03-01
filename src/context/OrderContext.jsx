@@ -608,6 +608,17 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
+    const toggleItemPriority = (uniqueId) => {
+        if (!currentTable) return;
+        setTableOrders(prev => {
+            const currentOrder = prev[currentTable.id] || [];
+            const nextOrder = currentOrder.map(item =>
+                item.uniqueId === uniqueId ? { ...item, isPriority: !item.isPriority } : item
+            );
+            return { ...prev, [currentTable.id]: nextOrder };
+        });
+    };
+
     const calculateOrderTotal = (items) => {
         return items.reduce((total, item) => total + (item.price * item.quantity), 0);
     };
@@ -718,6 +729,7 @@ export const OrderProvider = ({ children }) => {
             removeFromOrder,
             updateQuantity,
             updateItemNote,
+            toggleItemPriority,
             clearOrder,
             calculateTotal: () => calculateOrderTotal(order),
             calculateBillTotal: () => calculateOrderTotal(bill),

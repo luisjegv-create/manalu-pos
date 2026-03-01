@@ -58,6 +58,7 @@ const BarTapas = () => {
         removeFromOrder,
         updateQuantity,
         updateItemNote,
+        toggleItemPriority,
         calculateTotal,
         calculateBillTotal,
         sendToKitchen,
@@ -101,17 +102,18 @@ const BarTapas = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Quick Mode Effect
+    // Quick Mode Effect (Takeaway / Barra Rapida)
     useEffect(() => {
         const mode = searchParams.get('mode');
-        if (mode === 'quick' && !currentTable && tables.length > 0) {
-            // Find first available bar table
-            const barTable = tables.find(t => t.zone === 'barra');
-            if (barTable) {
-                selectTable(barTable);
-            }
+        if (mode === 'quick' && (!currentTable || currentTable.id !== 'direct-sale')) {
+            selectTable({
+                id: 'direct-sale',
+                name: 'Ticket Directo (Takeaway)',
+                zone: 'direct',
+                status: 'occupied'
+            });
         }
-    }, [searchParams, tables, currentTable, selectTable]);
+    }, [searchParams, currentTable, selectTable]);
 
     // New Product Creator State
     const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -234,7 +236,11 @@ const BarTapas = () => {
 
                 // Check if table is still active or closed
                 if (!bill || bill.length === 0) {
-                    navigate('/tables');
+                    if (searchParams.get('mode') === 'quick') {
+                        navigate('/bar-tapas?mode=quick');
+                    } else {
+                        navigate('/tables');
+                    }
                 }
             } else {
                 alert('No se pudo procesar el pago parcial. Por favor, revisa los datos.');
@@ -310,14 +316,16 @@ const BarTapas = () => {
     };
 
 
-    const handleSendOrder = () => {
+    const handleSendOrder = (isSilent = false) => {
         if (order.length === 0) return;
 
         // Automatically print ticket for kitchen
         printKitchenTicket(currentTable ? currentTable.name : 'Barra', order);
 
         sendToKitchen();
-        alert('¡Pedido enviado a cocina e impreso! 👨‍🍳');
+        if (!isSilent) {
+            alert('¡Pedido enviado a cocina e impreso! 👨‍🍳');
+        }
     };
 
     const handleCloseTable = async (method = 'Efectivo') => {
@@ -342,7 +350,12 @@ const BarTapas = () => {
             setDiscountPercent(0);
             setIsInvitation(false);
             setIsFullInvoice(false);
-            navigate('/bar-tapas');
+
+            if (searchParams.get('mode') === 'quick') {
+                navigate('/bar-tapas?mode=quick');
+            } else {
+                navigate('/bar-tapas');
+            }
         } else {
             alert('Error al cerrar la mesa.');
         }
@@ -435,19 +448,21 @@ const BarTapas = () => {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <button
-                                    onClick={() => navigate('/tables')}
+                                    onClick={() => searchParams.get('mode') === 'quick' ? navigate('/') : navigate('/tables')}
                                     className="btn-icon-circle"
                                 >
                                     <ArrowLeft size={20} />
                                 </button>
                                 <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
                                 <div>
-                                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-text-dark)' }}>Gestión por mesas</h1>
+                                    <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--color-text-dark)' }}>
+                                        {searchParams.get('mode') === 'quick' ? 'Barra rapida & Takeaway' : 'Gestión por mesas'}
+                                    </h1>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                            {currentTable ? currentTable.name : 'Mesa no asignada'}
+                                            {searchParams.get('mode') === 'quick' ? 'Venta Directa' : (currentTable ? currentTable.name : 'Mesa no asignada')}
                                         </span>
-                                        {currentTable && (() => {
+                                        {currentTable && searchParams.get('mode') !== 'quick' && (() => {
                                             const todayStr = new Date().toISOString().split('T')[0];
                                             const reservation = reservations.find(r =>
                                                 (r.tableId === currentTable.id.toString() || r.tableId === currentTable.id) &&
@@ -602,6 +617,7 @@ const BarTapas = () => {
                         removeFromOrder={removeFromOrder}
                         updateQuantity={updateQuantity}
                         updateItemNote={updateItemNote}
+                        toggleItemPriority={toggleItemPriority}
                         editingNoteId={editingNoteId}
                         setEditingNoteId={setEditingNoteId}
                         noteDraft={noteDraft}
@@ -632,7 +648,7 @@ const BarTapas = () => {
                     boxShadow: '0 -10px 25px rgba(0,0,0,0.15)'
                 }}>
                     <button
-                        onClick={() => navigate('/tables')}
+                        onClick={() => searchParams.get('mode') === 'quick' ? navigate('/') : navigate('/tables')}
                         style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -645,7 +661,7 @@ const BarTapas = () => {
                         }}
                     >
                         <Layers size={28} />
-                        <span>Mesas</span>
+                        <span>{searchParams.get('mode') === 'quick' ? 'Inicio' : 'Mesas'}</span>
                     </button>
 
                     <button

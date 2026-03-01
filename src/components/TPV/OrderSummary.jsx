@@ -24,6 +24,7 @@ const OrderSummary = ({
     removeFromOrder,
     updateQuantity,
     updateItemNote,
+    toggleItemPriority,
     editingNoteId,
     setEditingNoteId,
     noteDraft,
@@ -234,7 +235,10 @@ const OrderSummary = ({
                                                     : item.image || '🍽️'}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', color: 'var(--color-text)', fontSize: '1.1rem', lineHeight: '1.2' }}>{item.name}</div>
+                                                <div style={{ fontWeight: '700', color: item.isPriority ? '#ef4444' : 'var(--color-text)', fontSize: '1.1rem', lineHeight: '1.2' }}>
+                                                    {item.isPriority && <span style={{ marginRight: '4px' }}>⚡</span>}
+                                                    {item.name}
+                                                </div>
                                                 <div style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 'bold', marginTop: '4px' }}>{item.price.toFixed(2)}€</div>
                                             </div>
                                         </div>
@@ -306,6 +310,21 @@ const OrderSummary = ({
                                             style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
                                         >
                                             <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} /> Personalizar
+                                        </button>
+                                        <button
+                                            onClick={() => toggleItemPriority(item.uniqueId || item.id)}
+                                            style={{
+                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isPriority ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                                                background: item.isPriority ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                                                color: item.isPriority ? '#f87171' : '#94a3b8',
+                                                cursor: 'pointer',
+                                                fontWeight: item.isPriority ? 'bold' : 'normal',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            ⚡ Marcha Rápida
                                         </button>
                                         {['Poco hecho', 'Muy hecho', 'Celiaco', 'Vegano', 'Sin cebolla'].map(qn => (
                                             <button
@@ -400,7 +419,10 @@ const OrderSummary = ({
                     </button>
 
                     <button
-                        onClick={() => setIsPaymentModalOpen(true)}
+                        onClick={() => {
+                            if (order.length > 0) handleSendOrder(true);
+                            setIsPaymentModalOpen(true);
+                        }}
                         disabled={order.length === 0 && (!bill || bill.length === 0)}
                         className="btn-icon-circle"
                         style={{
@@ -421,7 +443,10 @@ const OrderSummary = ({
                     </button>
 
                     <button
-                        onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
+                        onClick={() => {
+                            if (order.length > 0) handleSendOrder(true);
+                            setPartialPaymentModal({ isOpen: true, itemsToPay: [] });
+                        }}
                         style={{
                             gridColumn: 'span 2',
                             padding: '0.75rem',
