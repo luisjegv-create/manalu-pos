@@ -98,10 +98,10 @@ const OrderSummary = ({
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px dashed rgba(255,255,255,0.2)',
+                                background: 'rgba(0,0,0,0.3)',
+                                border: '1px solid rgba(255,255,255,0.1)',
                                 borderRadius: '12px',
-                                color: '#cbd5e1',
+                                color: '#e2e8f0',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -209,9 +209,11 @@ const OrderSummary = ({
                                         display: 'flex',
                                         flexDirection: 'column',
                                         padding: '1.25rem',
-                                        background: 'rgba(255,255,255,0.05)',
+                                        background: 'var(--color-surface-dark)',
+                                        color: 'var(--color-text-on-dark)',
                                         borderRadius: '16px',
-                                        border: '1px solid rgba(255,255,255,0.08)',
+                                        border: '1px solid rgba(0,0,0,0.2)',
+                                        boxShadow: 'var(--shadow-md)',
                                         gap: '0.75rem'
                                     }}
                                 >
@@ -235,17 +237,17 @@ const OrderSummary = ({
                                                     : item.image || '🍽️'}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', color: item.isPriority ? '#ef4444' : 'var(--color-text)', fontSize: '1.1rem', lineHeight: '1.2' }}>
+                                                <div style={{ fontWeight: '700', color: item.isPriority ? '#ef4444' : 'var(--color-text-on-dark)', fontSize: '1.1rem', lineHeight: '1.2' }}>
                                                     {item.isPriority && <span style={{ marginRight: '4px' }}>⚡</span>}
                                                     {item.name}
                                                 </div>
-                                                <div style={{ fontSize: '1rem', color: 'var(--color-primary)', fontWeight: 'bold', marginTop: '4px' }}>{item.price.toFixed(2)}€</div>
+                                                <div style={{ fontSize: '1rem', color: '#93c5fd', fontWeight: 'bold', marginTop: '4px' }}>{item.price.toFixed(2)}€</div>
                                             </div>
                                         </div>
 
                                         {/* Action Column for item */}
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text)' }}>{(item.price * item.quantity).toFixed(2)}€</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text-on-dark)' }}>{(item.price * item.quantity).toFixed(2)}€</div>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -307,7 +309,7 @@ const OrderSummary = ({
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
                                         <button
                                             onClick={() => { setEditingNoteId(editingNoteId === item.uniqueId ? null : item.uniqueId); setNoteDraft(item.notes || ''); }}
-                                            style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
+                                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text-on-dark)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
                                         >
                                             <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} /> Personalizar
                                         </button>
@@ -352,8 +354,8 @@ const OrderSummary = ({
                                         ENVIADO A COCINA / CUENTA ACTIVA
                                     </div>
                                     {bill.map(item => (
-                                        <div key={item.uniqueId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(0,0,0,0.05)', opacity: 0.8 }}>
-                                            <span style={{ fontSize: '0.9rem' }}>{item.quantity}x {item.name}</span>
+                                        <div key={item.uniqueId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface-dark)', color: 'var(--color-text-on-dark)', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', marginBottom: '0.5rem', opacity: 0.9 }}>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{item.quantity}x {item.name}</span>
                                             <span style={{ fontWeight: 'bold' }}>{(item.price * item.quantity).toFixed(2)}€</span>
                                         </div>
                                     ))}
@@ -391,6 +393,7 @@ const OrderSummary = ({
                             fontSize: '1.1rem',
                             borderRadius: '16px',
                             background: 'linear-gradient(135deg, #6366f1, #3b82f6)',
+                            border: '1px solid rgba(255,255,255,0.2)',
                             boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
                             opacity: order.length === 0 ? 0.5 : 1
                         }}
@@ -408,7 +411,7 @@ const OrderSummary = ({
                             borderRadius: '16px',
                             background: '#fbbf24',
                             color: '#000',
-                            border: 'none',
+                            border: '1px solid rgba(255,255,255,0.3)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
@@ -431,7 +434,7 @@ const OrderSummary = ({
                             borderRadius: '16px',
                             background: '#10b981',
                             color: 'white',
-                            border: 'none',
+                            border: '1px solid rgba(255,255,255,0.2)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -452,9 +455,9 @@ const OrderSummary = ({
                             padding: '0.75rem',
                             fontSize: '0.9rem',
                             borderRadius: '12px',
-                            background: 'rgba(59, 130, 246, 0.1)',
-                            border: '1px solid var(--color-primary)',
-                            color: 'var(--color-primary)',
+                            background: 'var(--color-primary)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: '#ffffff',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -471,8 +474,8 @@ const OrderSummary = ({
                             padding: '0.75rem',
                             fontSize: '0.9rem',
                             borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: '#475569',
+                            border: '1px solid rgba(255,255,255,0.2)',
                             color: '#ffffff',
                             display: 'flex',
                             alignItems: 'center',

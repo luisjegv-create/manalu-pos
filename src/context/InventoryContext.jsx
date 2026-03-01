@@ -181,9 +181,9 @@ export const InventoryProvider = ({ children }) => {
                         await supabase.from('expenses').insert([{ description: e.description, amount: e.amount, category: e.category, date: e.date }]);
                     }
                     const { data: migrated } = await supabase.from('expenses').select('*');
-                    if (migrated) setExpenses(migrated);
+                    if (migrated) setExpenses(migrated.map(e => ({ ...e, concept: e.description, paymentMethod: e.payment_method })));
                 } else if (expData) {
-                    setExpenses(expData);
+                    setExpenses(expData.map(e => ({ ...e, concept: e.description, paymentMethod: e.payment_method })));
                 }
 
                 // 4. Clear localStorage on success to prevent re-migration
@@ -716,13 +716,16 @@ export const InventoryProvider = ({ children }) => {
     const addExpense = async (expense) => {
         try {
             const { data, error } = await supabase.from('expenses').insert([{
-                description: expense.description,
+                description: expense.concept || expense.description,
                 amount: expense.amount,
                 category: expense.category,
-                date: expense.date
+                date: expense.date,
+                payment_method: expense.paymentMethod || 'Efectivo',
+                status: expense.status || 'Pagado',
+                notes: expense.notes || ''
             }]).select();
             if (error) throw error;
-            if (data) setExpenses(prev => [...prev, data[0]]);
+            if (data) setExpenses(prev => [...prev, { ...data[0], concept: data[0].description, paymentMethod: data[0].payment_method }]);
         } catch (error) {
             console.error("Error al añadir gasto:", error);
         }

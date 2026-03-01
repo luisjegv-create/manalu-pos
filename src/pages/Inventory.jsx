@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { printRestockList } from '../utils/printHelpers';
 import MermasManagement from '../components/Inventory/MermasManagement';
+import ExpenseManagement from '../components/Inventory/ExpenseManagement';
 
 const Inventory = () => {
     const navigate = useNavigate();
@@ -26,7 +27,6 @@ const Inventory = () => {
         invoices, addInvoice, deleteInvoice,
         expenses, addExpense, deleteExpense
     } = useInventory();
-
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('alimentos');
     const [isAdding, setIsAdding] = useState(false);
@@ -49,10 +49,6 @@ const Inventory = () => {
     const [isAddingInvoice, setIsAddingInvoice] = useState(false);
     const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
 
-    // Expense State
-    const [expenseForm, setExpenseForm] = useState({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
-    const expenseCategories = ['Alquiler', 'Luz/Agua', 'Sueldos', 'Impuestos', 'Marketing', 'Otros'];
-
 
     const categories = [
         { id: 'alimentos', label: 'Alimentos', icon: '🥬' },
@@ -60,8 +56,7 @@ const Inventory = () => {
         { id: 'menaje', label: 'Menaje', icon: '🍽️' },
         { id: 'limpieza', label: 'Limpieza', icon: '🧹' },
         { id: 'mermas', label: 'Inventarios y Mermas', icon: '⚖️' },
-        { id: 'distribuidores', label: 'Distribuidores', icon: '🚚' },
-        { id: 'gastos', label: 'Gastos', icon: '💸' }
+        { id: 'distribuidores', label: 'Distribuidores', icon: '🚚' }
     ];
 
     const filteredIngredients = ingredients.filter(ing => {
@@ -143,6 +138,39 @@ const Inventory = () => {
                         <h1 style={{ margin: 0 }}>Almacén (Matriz)</h1>
                         <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Control central de stock e ingredientes</p>
                     </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                        onClick={() => setActiveTab('gastos')}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            padding: '0.6rem 1.4rem',
+                            borderRadius: '4px',
+                            background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)',
+                            border: '1px solid #0f172a',
+                            color: 'white',
+                            fontWeight: '600',
+                            fontSize: '1rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease-in-out',
+                            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.6)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.4)';
+                        }}
+                    >
+                        <span style={{ fontSize: '1.2rem', fontWeight: '400', opacity: 0.9 }}>$</span>
+                        Añadir Gasto
+                    </button>
+
                     <button
                         onClick={() => {
                             const lowStockItems = ingredients.filter(i => i.quantity <= (i.critical || 5));
@@ -588,7 +616,7 @@ const Inventory = () => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '1rem 1.5rem' }}>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{ing.quantity}</span>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{Number.isInteger(ing.quantity) ? ing.quantity : Number(ing.quantity).toFixed(2)}</span>
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginLeft: '0.25rem' }}>{ing.unit || 'uds'}</span>
                                                 </td>
                                                 <td style={{ padding: '1rem 1.5rem' }}>
@@ -634,100 +662,7 @@ const Inventory = () => {
             )}
             {/* --- GASTOS GENERALES TAB --- */}
             {activeTab === 'gastos' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '2rem' }}>
-                    {/* Add Expense Form */}
-                    <div className="surface-card" style={{ padding: '2rem', alignSelf: 'start' }}>
-                        <h3 style={{ marginTop: 0 }}>Registrar Gasto</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div className="form-group">
-                                <label>Concepto</label>
-                                <input
-                                    value={expenseForm.concept}
-                                    onChange={e => setExpenseForm({ ...expenseForm, concept: e.target.value })}
-                                    placeholder="Ej. Alquiler Local Enero"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Importe (€)</label>
-                                <input
-                                    type="number"
-                                    value={expenseForm.amount}
-                                    onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Categoría</label>
-                                <select
-                                    className="surface-card"
-                                    style={{ width: '100%', padding: '0.5rem', background: 'transparent', color: 'var(--color-text)' }}
-                                    value={expenseForm.category}
-                                    onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                                >
-                                    {expenseCategories.map(c => <option key={c} value={c} style={{ background: '#0f172a' }}>{c}</option>)}
-                                </select>
-                            </div>
-                            <div className="form-group">
-                                <label>Fecha</label>
-                                <input
-                                    type="date"
-                                    value={expenseForm.date}
-                                    onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
-                                />
-                            </div>
-                            <button
-                                className="btn-primary"
-                                style={{ marginTop: '1rem', width: '100%', justifyContent: 'center' }}
-                                onClick={() => {
-                                    if (!expenseForm.concept || !expenseForm.amount) return alert("Completa los campos");
-                                    addExpense({ ...expenseForm, amount: parseFloat(expenseForm.amount) });
-                                    setExpenseForm({ concept: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Alquiler' });
-                                }}
-                            >
-                                <Save size={18} /> Guardar Gasto
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Expense List */}
-                    <div className="surface-card" style={{ padding: '2rem' }}>
-                        <h3 style={{ marginTop: 0 }}>Historial de Gastos</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).map(exp => (
-                                <div key={exp.id} style={{
-                                    padding: '1rem',
-                                    background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '12px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    border: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold' }}>{exp.concept}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                                            {exp.date} • <span style={{ color: 'var(--color-primary)' }}>{exp.category}</span>
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                                        <div style={{ fontWeight: '800', fontSize: '1.1rem', color: '#ef4444' }}>-{exp.amount.toFixed(2)}€</div>
-                                        <button
-                                            onClick={() => deleteExpense(exp.id)}
-                                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.2)', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                            {expenses.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
-                                    No hay gastos registrados.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <ExpenseManagement />
             )}
         </div>
     );

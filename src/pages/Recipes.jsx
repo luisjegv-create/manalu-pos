@@ -17,7 +17,8 @@ import {
     Sandwich,
     Beer,
     Cake,
-    Camera
+    Camera,
+    Coffee
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categories as categoriesData } from '../data/products';
@@ -208,6 +209,7 @@ const Recipes = () => {
                                     {cat.id === 'bebidas' && <Beer size={14} />}
                                     {cat.id === 'vinos' && <Beer size={14} />} {/* Using Beer for lack of Wine icon in current view but verified Wine is imported */}
                                     {cat.id === 'postres' && <Cake size={14} />}
+                                    {cat.id === 'cafes' && <Coffee size={14} />}
                                     {cat.name}
                                 </button>
                             ))}
@@ -268,8 +270,8 @@ const Recipes = () => {
                                         justifyContent: 'space-between',
                                         padding: '0.75rem',
                                         borderRadius: '12px',
-                                        border: selectedProductId === product.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                        background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.03)',
+                                        border: selectedProductId === product.id ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.15)',
+                                        background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.08)',
                                         color: 'white',
                                         cursor: 'pointer',
                                         textAlign: 'left',
@@ -362,6 +364,7 @@ const Recipes = () => {
                                             <option value="bocatas">Bocatas</option>
                                             <option value="bebidas">Bebidas</option>
                                             <option value="vinos">Vinos</option>
+                                            <option value="cafes">Cafés</option>
                                             <option value="postres">Postres</option>
                                             <option value="otros">Otros</option>
                                         </select>
@@ -502,8 +505,8 @@ const Recipes = () => {
                                             : selectedProduct.image || '🍽️'}
                                     </div>
                                     <div>
-                                        <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.5rem' }}>{selectedProduct.name}</h2>
-                                        <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase', fontSize: '0.7rem' }}>{selectedProduct.category}</span>
+                                        <h2 style={{ margin: 0, fontSize: isMobile ? '1.2rem' : '1.5rem', color: '#ffffff' }}>{selectedProduct.name}</h2>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', fontSize: '0.7rem' }}>{selectedProduct.category}</span>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem', width: isMobile ? '100%' : 'auto' }}>
@@ -547,15 +550,15 @@ const Recipes = () => {
                                 gap: isMobile ? '1rem' : '2rem'
                             }}>
                                 <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--glass-border)', borderBottom: isMobile ? '1px solid var(--glass-border)' : 'none', paddingBottom: isMobile ? '1rem' : 0 }}>
-                                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>P.V.P (Venta)</p>
+                                    <p style={{ margin: 0, color: '#ffffff', fontSize: '0.85rem', fontWeight: '500' }}>P.V.P (Venta)</p>
                                     <h2 style={{ margin: '0.25rem 0', color: 'var(--color-primary)', fontSize: isMobile ? '1.5rem' : '2rem' }}>{price.toFixed(2)}€</h2>
                                 </div>
                                 <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--glass-border)', borderBottom: isMobile ? '1px solid var(--glass-border)' : 'none', paddingBottom: isMobile ? '1rem' : 0 }}>
-                                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Coste Ingredientes</p>
+                                    <p style={{ margin: 0, color: '#ffffff', fontSize: '0.85rem', fontWeight: '500' }}>Coste Ingredientes</p>
                                     <h2 style={{ margin: '0.25rem 0', color: '#ef4444', fontSize: isMobile ? '1.5rem' : '2rem' }}>{cost.toFixed(2)}€</h2>
                                 </div>
                                 <div>
-                                    <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Margen Bruto</p>
+                                    <p style={{ margin: 0, color: '#ffffff', fontSize: '0.85rem', fontWeight: '500' }}>Margen Bruto</p>
                                     <h2 style={{ margin: '0.25rem 0', color: '#10b981', fontSize: isMobile ? '1.5rem' : '2rem' }}>{margin}%</h2>
                                 </div>
                             </div>
@@ -563,7 +566,7 @@ const Recipes = () => {
                             {/* Ingredients Table */}
                             <div className="glass-panel" style={{ flex: 1, padding: isMobile ? '1rem' : '2rem' }}>
                                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '1.5rem', gap: '1rem' }}>
-                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isMobile ? '1.1rem' : '1.25rem' }}>
+                                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isMobile ? '1.1rem' : '1.25rem', color: '#ffffff' }}>
                                         <Package size={20} /> Composición
                                     </h3>
                                     <button className="btn-primary" onClick={handleAddIngredientToRecipe} style={{ fontSize: '0.8rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
@@ -586,12 +589,13 @@ const Recipes = () => {
                                                     gap: isMobile ? '0.75rem' : '1.5rem',
                                                     alignItems: isMobile ? 'stretch' : 'center',
                                                     padding: '1rem',
-                                                    background: 'rgba(255,255,255,0.03)',
+                                                    background: 'rgba(59, 130, 246, 0.08)',
+                                                    border: '1px solid rgba(59, 130, 246, 0.2)',
                                                     borderRadius: '12px',
                                                     position: 'relative'
                                                 }}>
                                                     <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                        <label style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Ingrediente</label>
+                                                        <label style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: '500' }}>Ingrediente</label>
                                                         <select
                                                             className="glass-panel"
                                                             style={{ padding: '0.6rem', border: '1px solid var(--glass-border)', color: 'white', width: '100%', background: '#1e293b' }}
@@ -606,7 +610,7 @@ const Recipes = () => {
 
                                                     <div style={{ display: 'flex', gap: '1rem', flex: 1 }}>
                                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                            <label style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Cantidad</label>
+                                                            <label style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: '500' }}>Cantidad</label>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                                 <input
                                                                     type="number"
@@ -616,28 +620,32 @@ const Recipes = () => {
                                                                     value={item.quantity}
                                                                     onChange={(e) => handleUpdateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
                                                                 />
-                                                                <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', minWidth: '30px' }}>{ing?.unit || 'uds'}</span>
+                                                                <span style={{ fontSize: '0.8rem', color: '#ffffff', minWidth: '30px' }}>{ing?.unit || 'uds'}</span>
                                                             </div>
                                                         </div>
 
                                                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                                            <label style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>Subtotal</label>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', padding: '0.6rem 0' }}>{(item.quantity * (ing?.cost || 0)).toFixed(2)}€</div>
+                                                            <label style={{ fontSize: '0.75rem', color: '#ffffff', fontWeight: '500' }}>Subtotal</label>
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1.2rem', color: '#fbbf24', padding: '0.6rem 0' }}>{(item.quantity * (ing?.cost || 0)).toFixed(2)}€</div>
                                                         </div>
                                                     </div>
 
                                                     <button
                                                         onClick={() => handleRemoveIngredient(index)}
                                                         style={{
-                                                            background: 'rgba(239, 68, 68, 0.1)',
+                                                            background: '#ef4444',
                                                             border: 'none',
-                                                            color: '#ef4444',
+                                                            color: '#ffffff',
                                                             padding: '0.6rem',
                                                             borderRadius: '10px',
                                                             cursor: 'pointer',
                                                             alignSelf: isMobile ? 'flex-end' : 'center',
-                                                            marginTop: isMobile ? '-1.5rem' : 0
+                                                            marginTop: isMobile ? '-1.5rem' : 0,
+                                                            transition: 'background 0.2s',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                                         }}
+                                                        onMouseOver={(e) => e.currentTarget.style.background = '#dc2626'}
+                                                        onMouseOut={(e) => e.currentTarget.style.background = '#ef4444'}
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>

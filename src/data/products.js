@@ -18,6 +18,7 @@ export const categories = [
         icon: 'Wine',
         subcategories: ['tintos', 'blancos', 'rosados', 'espumosos']
     },
+    { id: 'cafes', name: 'Cafés', icon: 'Coffee' },
     { id: 'postres', name: 'Postres', icon: 'Cake' }
 ];
 

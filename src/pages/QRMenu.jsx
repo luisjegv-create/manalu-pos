@@ -64,6 +64,7 @@ const QRMenu = () => {
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
         { id: 'vinos', name: 'Vinos', icon: '🍷' },
         { id: 'bebidas', name: 'Bebidas', icon: '🥤' },
+        { id: 'cafes', name: 'Cafés', icon: '☕' },
         { id: 'postres', name: 'Postres', icon: '🍰' }
     ];
 
