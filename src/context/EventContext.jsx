@@ -3,6 +3,20 @@ import { supabase } from '../utils/supabaseClient';
 
 const EventContext = createContext();
 
+// Helper for safe parsing from localStorage
+const safeParse = (key, fallback) => {
+    try {
+        const saved = localStorage.getItem(key);
+        if (!saved) return fallback;
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
+        return parsed;
+    } catch (error) {
+        console.error("Error parsing localStorage key:", key, error);
+        return fallback;
+    }
+};
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useEvents = () => useContext(EventContext);
 
@@ -10,7 +24,12 @@ export const EventProvider = ({ children }) => {
     const [agenda, setAgenda] = useState([]);
     const [reservations, setReservations] = useState([]);
     const [eventMenus, setEventMenus] = useState([]);
+    const [venueExpenses, setVenueExpenses] = useState(() => safeParse('manalu_venue_expenses', []));
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        localStorage.setItem('manalu_venue_expenses', JSON.stringify(venueExpenses));
+    }, [venueExpenses]);
 
     useEffect(() => {
         const syncEvents = async () => {
@@ -39,10 +58,29 @@ export const EventProvider = ({ children }) => {
                             parsedMenus = a.menu_id ? [{ menuId: a.menu_id, quantity: a.guests || 0 }] : [];
                         }
 
+                        let parsedExpenses = [];
+                        try {
+                            parsedExpenses = typeof a.event_expenses === 'string' ? JSON.parse(a.event_expenses) : (a.event_expenses || []);
+                        } catch (e) {
+                            console.warn("Failed to parse event_expenses for event:", a.id, e);
+                            parsedExpenses = [];
+                        }
+
+                        let parsedStaff = [];
+                        try {
+                            parsedStaff = typeof a.assigned_staff === 'string' ? JSON.parse(a.assigned_staff) : (a.assigned_staff || []);
+                        } catch (e) {
+                            console.warn("Failed to parse assigned_staff for event:", a.id, e);
+                            parsedStaff = [];
+                        }
+
+
                         return {
                             ...a,
                             tasks: parsedTasks,
                             selectedMenus: parsedMenus,
+                            eventExpenses: parsedExpenses,
+                            assignedStaff: parsedStaff,
                             isVenueOnly: a.is_venue_only || false,
                             venuePrice: a.venue_price || 0,
                             taxRate: a.tax_rate || 0.10,
@@ -116,6 +154,8 @@ export const EventProvider = ({ children }) => {
                 total: event.total,
                 tasks: event.tasks || [],
                 selected_menus: event.selectedMenus || [],
+                event_expenses: event.eventExpenses || [],
+                assigned_staff: event.assignedStaff || [],
                 is_venue_only: event.isVenueOnly || false,
                 venue_price: event.venuePrice || 0,
                 tax_rate: event.taxRate || 0.10,
@@ -132,7 +172,9 @@ export const EventProvider = ({ children }) => {
                 setAgenda(prev => [...prev, {
                     ...data[0],
                     tasks: event.tasks || [],
-                    selectedMenus: event.selectedMenus || []
+                    selectedMenus: event.selectedMenus || [],
+                    eventExpenses: event.eventExpenses || [],
+                    assignedStaff: event.assignedStaff || []
                 }]);
             }
         } catch (err) {
@@ -271,6 +313,28 @@ export const EventProvider = ({ children }) => {
         }
     };
 
+    const updateEventExpenses = async (eventId, expensesArray) => {
+        try {
+            const { error } = await supabase.from('agenda').update({ event_expenses: expensesArray }).eq('id', eventId);
+            if (error) throw error;
+            setAgenda(prev => prev.map(ev => ev.id === eventId ? { ...ev, eventExpenses: expensesArray } : ev));
+        } catch (err) {
+            console.error("Error updating event expenses:", err);
+            alert("Error al guardar gasto del evento: " + (err.message || "Error desconocido"));
+        }
+    };
+
+    const updateEventStaff = async (eventId, staffArray) => {
+        try {
+            const { error } = await supabase.from('agenda').update({ assigned_staff: staffArray }).eq('id', eventId);
+            if (error) throw error;
+            setAgenda(prev => prev.map(ev => ev.id === eventId ? { ...ev, assignedStaff: staffArray } : ev));
+        } catch (err) {
+            console.error("Error updating assigned staff:", err);
+            alert("Error al actualizar personal asignado: " + (err.message || "Error desconocido"));
+        }
+    };
+
     const deleteEvent = async (eventId) => {
         try {
             const { error } = await supabase.from('agenda').delete().eq('id', eventId);
@@ -330,24 +394,43 @@ export const EventProvider = ({ children }) => {
         }
     };
 
+    const addVenueExpense = (expense) => {
+        const newExpense = { ...expense, id: `venue-exp-${Date.now()}`, date: expense.date || new Date().toISOString() };
+        setVenueExpenses(prev => [newExpense, ...prev]);
+    };
+
+    const updateVenueExpense = (id, updatedExpense) => {
+        setVenueExpenses(prev => prev.map(exp => exp.id === id ? { ...exp, ...updatedExpense } : exp));
+    };
+
+    const deleteVenueExpense = (id) => {
+        setVenueExpenses(prev => prev.filter(exp => exp.id !== id));
+    };
+
     return (
         <EventContext.Provider value={{
             agenda,
             reservations,
             eventMenus,
+            venueExpenses,
             loading,
             addEvent,
             updateEventStatus,
             updateEventDepositStatus,
             assignInvoiceNumber,
             toggleTask,
+            updateEventExpenses,
+            updateEventStaff,
             deleteEvent,
             addReservation,
             updateReservation,
             deleteReservation,
             addMenu,
             updateMenu,
-            deleteMenu
+            deleteMenu,
+            addVenueExpense,
+            updateVenueExpense,
+            deleteVenueExpense
         }}>
             {children}
         </EventContext.Provider>

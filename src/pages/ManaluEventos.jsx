@@ -32,26 +32,395 @@ import { useEvents } from '../context/EventContext';
 import { printA4Invoice, printDepositTicket } from '../utils/printHelpers';
 import { useInventory } from '../context/InventoryContext';
 
+const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExpense, deleteVenueExpense }) => {
+    const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+    const [filterYear, setFilterYear] = useState(new Date().getFullYear());
+    const [activeTab, setActiveTab] = useState('eventos'); // 'eventos' | 'local'
+
+    const [isAdding, setIsAdding] = useState(false);
+    const [expenseForm, setExpenseForm] = useState({
+        eventId: '',
+        concept: '',
+        amount: '',
+        category: 'Floristería',
+        date: new Date().toISOString().split('T')[0]
+    });
+
+    const eventExpenseCategories = ['Floristería', 'Música/DJ', 'Personal Extra', 'Comercial/Comisiones', 'Decoración', 'Otros'];
+    const venueExpenseCategories = ['Luz/Agua', 'Mantenimiento', 'Alquiler', 'Seguros', 'Gestoría', 'Limpieza', 'Otros'];
+
+    const analytics = useMemo(() => {
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        const expensesList = [];
+
+        agenda.forEach(ev => {
+            if (!ev.date) return;
+            const [evYear, evMonth] = ev.date.split('-').map(Number);
+            if (evMonth === parseInt(filterMonth) && evYear === parseInt(filterYear)) {
+                if (ev.status !== 'cancelado') {
+                    totalIncome += parseFloat(ev.total || 0);
+                }
+
+                if (ev.eventExpenses && ev.eventExpenses.length > 0) {
+                    ev.eventExpenses.forEach(exp => {
+                        const amount = parseFloat(exp.amount || 0);
+                        totalExpenses += amount;
+                        expensesList.push({
+                            ...exp,
+                            eventName: ev.name,
+                            eventId: ev.id,
+                            eventDate: ev.date
+                        });
+                    });
+                }
+            }
+        });
+
+        expensesList.sort((a, b) => new Date(b.date || a.eventDate) - new Date(a.date || b.eventDate));
+
+        let totalVenueExpenses = 0;
+        const currentVenueExpenses = (venueExpenses || []).filter(exp => {
+            if (!exp.date) return false;
+            const [y, m] = exp.date.split('-').map(Number);
+            return m === parseInt(filterMonth) && y === parseInt(filterYear);
+        }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        currentVenueExpenses.forEach(exp => {
+            totalVenueExpenses += parseFloat(exp.amount || 0);
+        });
+
+        return {
+            totalIncome,
+            totalEventExpenses: totalExpenses,
+            totalVenueExpenses,
+            netProfit: totalIncome - totalExpenses - totalVenueExpenses,
+            expensesList,
+            currentVenueExpenses
+        };
+    }, [agenda, venueExpenses, filterMonth, filterYear]);
+
+    const handleSaveExpense = () => {
+        if (!expenseForm.concept || !expenseForm.amount) {
+            alert("Por favor completa concepto e importe.");
+            return;
+        }
+
+        if (activeTab === 'eventos') {
+            if (!expenseForm.eventId) {
+                alert("Por favor selecciona un evento.");
+                return;
+            }
+            const event = agenda.find(e => e.id === expenseForm.eventId);
+            if (!event) return;
+
+            const newExpense = {
+                id: Date.now().toString(),
+                concept: expenseForm.concept,
+                amount: parseFloat(expenseForm.amount),
+                category: expenseForm.category,
+                date: expenseForm.date
+            };
+
+            const updatedExpenses = [...(event.eventExpenses || []), newExpense];
+            updateEventExpenses(event.id, updatedExpenses);
+        } else {
+            addVenueExpense({
+                concept: expenseForm.concept,
+                amount: parseFloat(expenseForm.amount),
+                category: expenseForm.category,
+                date: expenseForm.date
+            });
+        }
+
+        setExpenseForm({ ...expenseForm, concept: '', amount: '' });
+        setIsAdding(false);
+    };
+
+    const handleDeleteExpense = (expenseId, eventId = null) => {
+        if (!window.confirm('¿Eliminar este gasto?')) return;
+
+        if (activeTab === 'eventos' && eventId) {
+            const event = agenda.find(e => e.id === eventId);
+            if (!event) return;
+            const updatedExpenses = (event.eventExpenses || []).filter(exp => exp.id !== expenseId);
+            updateEventExpenses(eventId, updatedExpenses);
+        } else {
+            deleteVenueExpense(expenseId);
+        }
+    };
+
+    const currentMonthEvents = agenda.filter(ev => {
+        if (!ev.date) return false;
+        const [evYear, evMonth] = ev.date.split('-').map(Number);
+        return evMonth === parseInt(filterMonth) && evYear === parseInt(filterYear);
+    });
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
+            {/* Header & Filters */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'white' }}>
+                    <DollarSign size={28} color="var(--color-primary)" />
+                    Finanzas de Eventos
+                </h2>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
+                        <select
+                            value={filterMonth}
+                            onChange={(e) => setFilterMonth(e.target.value)}
+                            className="input-field"
+                            style={{ padding: '0.5rem', minWidth: '120px' }}
+                        >
+                            {[...Array(12)].map((_, i) => (
+                                <option key={i + 1} value={i + 1}>{new Date(2000, i, 1).toLocaleString('es-ES', { month: 'long' })}</option>
+                            ))}
+                        </select>
+                        <select
+                            value={filterYear}
+                            onChange={(e) => setFilterYear(e.target.value)}
+                            className="input-field"
+                            style={{ padding: '0.5rem', width: '90px' }}
+                        >
+                            {[2023, 2024, 2025, 2026, 2027].map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                {/* Ingresos Estimados */}
+                <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', color: '#10b981' }}>
+                        <TrendingIcon size={28} />
+                    </div>
+                    <div>
+                        <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.9rem' }}>Ingresos Brutos</p>
+                        <h2 style={{ margin: '0.25rem 0 0 0', color: '#10b981' }}>{analytics.totalIncome.toFixed(2)}€</h2>
+                    </div>
+                </div>
+
+                {/* Gastos Totales Eventos & Local */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        <div style={{ padding: '0.8rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px', color: '#ef4444' }}>
+                            <Calculator size={22} />
+                        </div>
+                        <div>
+                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem' }}>Gastos de Eventos</p>
+                            <h3 style={{ margin: '0.2rem 0 0 0', color: '#ef4444', fontSize: '1.2rem' }}>{analytics.totalEventExpenses.toFixed(2)}€</h3>
+                        </div>
+                    </div>
+                    <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                        <div style={{ padding: '0.8rem', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '12px', color: '#f59e0b' }}>
+                            <Box size={22} />
+                        </div>
+                        <div>
+                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem' }}>Gastos del Local (Fijos)</p>
+                            <h3 style={{ margin: '0.2rem 0 0 0', color: '#f59e0b', fontSize: '1.2rem' }}>{analytics.totalVenueExpenses.toFixed(2)}€</h3>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Beneficio Neto */}
+                <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                    <div style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '12px', color: '#3b82f6' }}>
+                        <Wallet size={28} />
+                    </div>
+                    <div>
+                        <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.9rem' }}>Beneficio Neto Estimado</p>
+                        <h2 style={{ margin: '0.25rem 0 0 0', color: '#3b82f6' }}>{analytics.netProfit.toFixed(2)}€</h2>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content Area: Expenses List & Form */}
+            <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem', borderRadius: '10px' }}>
+                        <button
+                            onClick={() => { setActiveTab('eventos'); setIsAdding(false); }}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'eventos' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'eventos' ? 'white' : 'rgba(255,255,255,0.6)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'eventos' ? 'bold' : 'normal' }}
+                        >Gastos de Eventos</button>
+                        <button
+                            onClick={() => { setActiveTab('local'); setIsAdding(false); }}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'local' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'local' ? 'white' : 'rgba(255,255,255,0.6)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'local' ? 'bold' : 'normal' }}
+                        >Gastos del Local fijos</button>
+                    </div>
+
+                    <button onClick={() => {
+                        setIsAdding(!isAdding);
+                        setExpenseForm({
+                            eventId: '', concept: '', amount: '', date: new Date().toISOString().split('T')[0],
+                            category: activeTab === 'eventos' ? eventExpenseCategories[0] : venueExpenseCategories[0]
+                        });
+                    }} className="btn-primary" style={{ padding: '0.6rem 1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {isAdding ? <X size={18} /> : <Plus size={18} />}
+                        <span>{isAdding ? 'Cancelar' : (activeTab === 'eventos' ? 'Añadir Gasto Evento' : 'Añadir Gasto Local')}</span>
+                    </button>
+                </div>
+
+                <AnimatePresence>
+                    {isAdding && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            style={{ overflow: 'hidden' }}
+                        >
+                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                {activeTab === 'eventos' && (
+                                    <div className="form-group">
+                                        <label>Evento Asociado *</label>
+                                        <select
+                                            className="input-field"
+                                            value={expenseForm.eventId}
+                                            onChange={e => setExpenseForm({ ...expenseForm, eventId: e.target.value })}
+                                        >
+                                            <option value="">Seleccione un evento...</option>
+                                            {currentMonthEvents.map(ev => (
+                                                <option key={ev.id} value={ev.id}>{ev.date} - {ev.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div className="form-group">
+                                    <label>Fecha del Gasto *</label>
+                                    <input
+                                        type="date"
+                                        className="input-field"
+                                        value={expenseForm.date}
+                                        onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-group" style={{ gridColumn: activeTab === 'local' ? '1 / -1' : 'auto' }}>
+                                    <label>Concepto *</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={expenseForm.concept}
+                                        onChange={e => setExpenseForm({ ...expenseForm, concept: e.target.value })}
+                                        placeholder={activeTab === 'eventos' ? "Ej. Decoración floral salón" : "Ej. Factura de luz Enero"}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Categoría</label>
+                                    <select
+                                        className="input-field"
+                                        value={expenseForm.category}
+                                        onChange={e => setExpenseForm({ ...expenseForm, category: e.target.value })}
+                                    >
+                                        {(activeTab === 'eventos' ? eventExpenseCategories : venueExpenseCategories).map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Importe (€) *</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        value={expenseForm.amount}
+                                        onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                                        placeholder="0.00"
+                                        step="0.01"
+                                    />
+                                </div>
+                                <div className="form-group" style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                                    <button onClick={handleSaveExpense} className="btn-primary" style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}>
+                                        <Save size={18} style={{ marginRight: '0.5rem' }} /> Guardar Gasto
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Table of Expenses */}
+                <div style={{ overflowX: 'auto', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                        <thead>
+                            <tr style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <th style={{ padding: '1rem' }}>Fecha</th>
+                                {activeTab === 'eventos' && <th style={{ padding: '1rem' }}>Evento</th>}
+                                <th style={{ padding: '1rem' }}>Concepto</th>
+                                <th style={{ padding: '1rem' }}>Categoría</th>
+                                <th style={{ padding: '1rem', textAlign: 'right' }}>Importe</th>
+                                <th style={{ padding: '1rem', textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {(activeTab === 'eventos' ? analytics.expensesList : analytics.currentVenueExpenses).length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} style={{ padding: '3rem 1rem', textAlign: 'center', color: '#64748b' }}>
+                                        No hay gastos de {activeTab === 'eventos' ? 'eventos' : 'local'} registrados para este periodo.
+                                    </td>
+                                </tr>
+                            ) : (
+                                (activeTab === 'eventos' ? analytics.expensesList : analytics.currentVenueExpenses).map((exp, idx) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                                        <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>{exp.date || exp.eventDate}</td>
+                                        {activeTab === 'eventos' && <td style={{ padding: '1rem', fontWeight: 'bold' }}>{exp.eventName}</td>}
+                                        <td style={{ padding: '1rem' }}>{exp.concept}</td>
+                                        <td style={{ padding: '1rem' }}>
+                                            <span style={{ padding: '0.3rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', color: '#e2e8f0' }}>
+                                                {exp.category}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', color: '#ef4444' }}>
+                                            -{parseFloat(exp.amount).toFixed(2)}€
+                                        </td>
+                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => handleDeleteExpense(exp.id, exp.eventId)}
+                                                className="btn-icon-small"
+                                                style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}
+                                                title="Eliminar Gasto"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ManaluEventos = () => {
     const navigate = useNavigate();
     const {
         agenda,
         eventMenus,
-        loading, // 'loading' is used below for spinner
+        venueExpenses,
+        loading,
         addEvent,
         updateEventStatus,
         updateEventDepositStatus,
         toggleTask,
-        deleteEvent, // 'deleteEvent' is a core function from context, likely used elsewhere in the full component
+        deleteEvent,
         addMenu,
         updateMenu,
         deleteMenu,
-        assignInvoiceNumber
+        assignInvoiceNumber,
+        updateEventExpenses,
+        addVenueExpense,
+        deleteVenueExpense
     } = useEvents();
 
     const { incrementTicketNumber, restaurantInfo } = useInventory();
 
-    const [view, setView] = useState('calendar'); // 'calendar' | 'list' | 'analytics'
+    const [view, setView] = useState('calendar'); // 'calendar' | 'list' | 'analytics' | 'finances'
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     const [eventData, setEventData] = useState({
@@ -459,6 +828,20 @@ const ManaluEventos = () => {
                             }}
                         >
                             <BarChart2 size={18} /> Estadísticas
+                        </button>
+                        <button
+                            onClick={() => setView('finances')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.6rem 1.2rem', borderRadius: '10px',
+                                background: view === 'finances' ? 'var(--color-primary)' : 'transparent',
+                                color: view === 'finances' ? 'black' : 'white',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.3s',
+                                fontWeight: view === 'finances' ? '700' : '500',
+                                fontSize: '0.9rem'
+                            }}
+                        >
+                            <DollarSign size={18} /> Finanzas
                         </button>
                     </div>
 
@@ -1116,6 +1499,15 @@ const ManaluEventos = () => {
                 }
 
                 {view === 'analytics' && <EventAnalytics />}
+                {view === 'finances' && (
+                    <EventFinances
+                        agenda={agenda}
+                        updateEventExpenses={updateEventExpenses}
+                        venueExpenses={venueExpenses}
+                        addVenueExpense={addVenueExpense}
+                        deleteVenueExpense={deleteVenueExpense}
+                    />
+                )}
             </div >
         </div >
     );
