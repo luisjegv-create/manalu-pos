@@ -537,8 +537,8 @@ const BarTapas = () => {
                                 {availableSubcategories.length > 0 && (
                                     <div style={{
                                         display: 'flex',
-                                        gap: '0.5rem',
-                                        padding: '1rem',
+                                        gap: '0.4rem',
+                                        padding: '0.75rem',
                                         background: 'rgba(255,255,255,0.02)',
                                         borderBottom: '1px solid var(--glass-border)',
                                         overflowX: 'auto',
@@ -548,13 +548,13 @@ const BarTapas = () => {
                                         <button
                                             onClick={() => setActiveSubcategory(null)}
                                             style={{
-                                                padding: '0.5rem 1rem',
-                                                borderRadius: '20px',
+                                                padding: '0.4rem 0.8rem',
+                                                borderRadius: '16px',
                                                 border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'var(--glass-border)'),
                                                 background: !activeSubcategory ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                                                 color: !activeSubcategory ? 'var(--color-primary)' : 'var(--color-text-dark)',
                                                 cursor: 'pointer',
-                                                fontSize: '0.85rem',
+                                                fontSize: '0.75rem',
                                                 fontWeight: 'bold',
                                                 transition: 'all 0.2s'
                                             }}
@@ -566,13 +566,13 @@ const BarTapas = () => {
                                                 key={sub}
                                                 onClick={() => setActiveSubcategory(sub)}
                                                 style={{
-                                                    padding: '0.5rem 1rem',
-                                                    borderRadius: '20px',
+                                                    padding: '0.4rem 0.8rem',
+                                                    borderRadius: '16px',
                                                     border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)'),
                                                     background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
                                                     color: activeSubcategory === sub ? 'var(--color-primary)' : 'var(--color-text-dark)',
                                                     cursor: 'pointer',
-                                                    fontSize: '0.85rem',
+                                                    fontSize: '0.75rem',
                                                     fontWeight: 'bold',
                                                     textTransform: 'capitalize',
                                                     transition: 'all 0.2s'

@@ -8,8 +8,8 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
             overflowY: 'auto',
             padding: '1rem',
             display: 'grid',
-            gridTemplateColumns: window.innerWidth < 640 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '1rem',
+            gridTemplateColumns: window.innerWidth < 640 ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: '0.75rem',
             alignContent: 'start',
             paddingBottom: '2rem'
         }}>
@@ -24,16 +24,17 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                         onClick={() => onProductClick(product)}
                         className="glass-panel"
                         style={{
-                            padding: '1.25rem',
+                            padding: '0.75rem',
                             cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             textAlign: 'center',
-                            gap: '0.75rem',
+                            gap: '0.5rem',
                             transition: 'background 0.2s',
                             border: '1px solid var(--glass-border)',
-                            position: 'relative'
+                            position: 'relative',
+                            borderRadius: '10px'
                         }}
                         whileHover={{
                             backgroundColor: 'rgba(30, 41, 59, 1)',
@@ -87,21 +88,21 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                             return null;
                         })()}
                         <div style={{
-                            width: '120px',
-                            height: '110px',
+                            width: '80px',
+                            height: '75px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '3rem',
+                            fontSize: '2rem',
                             overflow: 'hidden',
-                            borderRadius: '12px',
+                            borderRadius: '8px',
                             background: 'rgba(0,0,0,0.2)'
                         }}>
                             {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
                                 ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : product.image || '🍽️'}
                         </div>
-                        <div style={{ fontWeight: '600' }}>{product.name}</div>
+                        <div style={{ fontWeight: '600', fontSize: '0.85rem', lineHeight: '1.2' }}>{product.name}</div>
 
                         <div style={{
                             display: 'flex',
@@ -112,10 +113,10 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                             <div style={{
                                 background: 'var(--color-primary-light)',
                                 color: 'var(--color-primary)',
-                                padding: '4px 12px',
-                                borderRadius: '20px',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
                                 fontWeight: 'bold',
-                                fontSize: '1.1rem'
+                                fontSize: '0.9rem'
                             }}>
                                 {product.price.toFixed(2)}€
                             </div>
