@@ -25,11 +25,16 @@ export const EventProvider = ({ children }) => {
     const [reservations, setReservations] = useState([]);
     const [eventMenus, setEventMenus] = useState([]);
     const [venueExpenses, setVenueExpenses] = useState(() => safeParse('manalu_venue_expenses', []));
+    const [eventInventory, setEventInventory] = useState(() => safeParse('manalu_event_inventory', [])); // Nuevo estado de inventario
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         localStorage.setItem('manalu_venue_expenses', JSON.stringify(venueExpenses));
     }, [venueExpenses]);
+
+    useEffect(() => {
+        localStorage.setItem('manalu_event_inventory', JSON.stringify(eventInventory));
+    }, [eventInventory]);
 
     useEffect(() => {
         const syncEvents = async () => {
@@ -407,12 +412,27 @@ export const EventProvider = ({ children }) => {
         setVenueExpenses(prev => prev.filter(exp => exp.id !== id));
     };
 
+    // --- Funciones para Inventario de Eventos ---
+    const addInventoryItem = (item) => {
+        const newItem = { ...item, id: `inv-${Date.now()}` };
+        setEventInventory(prev => [...prev, newItem].sort((a, b) => a.category.localeCompare(b.category)));
+    };
+
+    const updateInventoryItem = (id, updatedItem) => {
+        setEventInventory(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } : item));
+    };
+
+    const deleteInventoryItem = (id) => {
+        setEventInventory(prev => prev.filter(item => item.id !== id));
+    };
+
     return (
         <EventContext.Provider value={{
             agenda,
             reservations,
             eventMenus,
             venueExpenses,
+            eventInventory, // Exportar estado
             loading,
             addEvent,
             updateEventStatus,
@@ -430,7 +450,10 @@ export const EventProvider = ({ children }) => {
             deleteMenu,
             addVenueExpense,
             updateVenueExpense,
-            deleteVenueExpense
+            deleteVenueExpense,
+            addInventoryItem,     // Exportar funciones
+            updateInventoryItem,
+            deleteInventoryItem
         }}>
             {children}
         </EventContext.Provider>

@@ -28,13 +28,17 @@ import {
     LayoutDashboard,
     Bell,
     FileText,
-    Activity
+    Activity,
+    User
 } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEvents } from '../context/EventContext';
 import { printA4Invoice, printDepositTicket } from '../utils/printHelpers';
 import { useInventory } from '../context/InventoryContext';
+import EventCustomers from '../components/EventCustomers';
+import EventInventory from '../components/EventInventory'; // Nuevo componente
+
 
 const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExpense, deleteVenueExpense }) => {
     const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
@@ -164,12 +168,12 @@ const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExp
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
             {/* Header & Filters */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'white' }}>
+                <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
                     <DollarSign size={28} color="var(--color-primary)" />
                     Finanzas de Eventos
                 </h2>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ background: 'var(--color-surface)', border: '1px solid var(--border-strong)', padding: '0.5rem', borderRadius: '12px', display: 'flex', gap: '0.5rem' }}>
                         <select
                             value={filterMonth}
                             onChange={(e) => setFilterMonth(e.target.value)}
@@ -242,16 +246,16 @@ const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExp
             </div>
 
             {/* Content Area: Expenses List & Form */}
-            <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', background: 'var(--color-surface)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.35rem', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--color-bg)', padding: '0.35rem', borderRadius: '10px', border: '1px solid var(--border-strong)' }}>
                         <button
                             onClick={() => { setActiveTab('eventos'); setIsAdding(false); }}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'eventos' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'eventos' ? 'white' : 'rgba(255,255,255,0.6)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'eventos' ? 'bold' : 'normal' }}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'eventos' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'eventos' ? 'white' : 'var(--color-text)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'eventos' ? 'bold' : 'normal' }}
                         >Gastos de Eventos</button>
                         <button
                             onClick={() => { setActiveTab('local'); setIsAdding(false); }}
-                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'local' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'local' ? 'white' : 'rgba(255,255,255,0.6)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'local' ? 'bold' : 'normal' }}
+                            style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: activeTab === 'local' ? 'var(--color-primary)' : 'transparent', color: activeTab === 'local' ? 'white' : 'var(--color-text)', border: 'none', cursor: 'pointer', fontWeight: activeTab === 'local' ? 'bold' : 'normal' }}
                         >Gastos del Local fijos</button>
                     </div>
 
@@ -275,7 +279,7 @@ const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExp
                             exit={{ opacity: 0, height: 0 }}
                             style={{ overflow: 'hidden' }}
                         >
-                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                            <div style={{ background: 'var(--color-bg)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border-strong)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                                 {activeTab === 'eventos' && (
                                     <div className="form-group">
                                         <label>Evento Asociado *</label>
@@ -347,16 +351,16 @@ const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExp
                 </AnimatePresence>
 
                 {/* Table of Expenses */}
-                <div style={{ overflowX: 'auto', background: 'rgba(15, 23, 42, 0.4)', borderRadius: '12px' }}>
+                <div style={{ overflowX: 'auto', background: 'var(--color-bg)', borderRadius: '12px', border: '1px solid var(--border-strong)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                <th style={{ padding: '1rem' }}>Fecha</th>
-                                {activeTab === 'eventos' && <th style={{ padding: '1rem' }}>Evento</th>}
-                                <th style={{ padding: '1rem' }}>Concepto</th>
-                                <th style={{ padding: '1rem' }}>Categoría</th>
-                                <th style={{ padding: '1rem', textAlign: 'right' }}>Importe</th>
-                                <th style={{ padding: '1rem', textAlign: 'center' }}>Acciones</th>
+                            <tr style={{ background: 'var(--color-surface)', color: 'var(--color-text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                <th style={{ padding: '1rem', borderBottom: '1px solid var(--border-strong)' }}>Fecha</th>
+                                {activeTab === 'eventos' && <th style={{ padding: '1rem', borderBottom: '1px solid var(--border-strong)' }}>Evento</th>}
+                                <th style={{ padding: '1rem', borderBottom: '1px solid var(--border-strong)' }}>Concepto</th>
+                                <th style={{ padding: '1rem', borderBottom: '1px solid var(--border-strong)' }}>Categoría</th>
+                                <th style={{ padding: '1rem', textAlign: 'right', borderBottom: '1px solid var(--border-strong)' }}>Importe</th>
+                                <th style={{ padding: '1rem', textAlign: 'center', borderBottom: '1px solid var(--border-strong)' }}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -368,12 +372,12 @@ const EventFinances = ({ agenda, updateEventExpenses, venueExpenses, addVenueExp
                                 </tr>
                             ) : (
                                 (activeTab === 'eventos' ? analytics.expensesList : analytics.currentVenueExpenses).map((exp, idx) => (
-                                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                                        <td style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.9rem' }}>{exp.date || exp.eventDate}</td>
-                                        {activeTab === 'eventos' && <td style={{ padding: '1rem', fontWeight: 'bold' }}>{exp.eventName}</td>}
-                                        <td style={{ padding: '1rem' }}>{exp.concept}</td>
+                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-strong)', background: idx % 2 === 0 ? 'var(--color-bg)' : 'var(--color-surface)' }}>
+                                        <td style={{ padding: '1rem', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>{exp.date || exp.eventDate}</td>
+                                        {activeTab === 'eventos' && <td style={{ padding: '1rem', fontWeight: 'bold', color: 'var(--color-text)' }}>{exp.eventName}</td>}
+                                        <td style={{ padding: '1rem', color: 'var(--color-text)' }}>{exp.concept}</td>
                                         <td style={{ padding: '1rem' }}>
-                                            <span style={{ padding: '0.3rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.1)', color: '#e2e8f0' }}>
+                                            <span style={{ padding: '0.3rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', color: 'var(--color-text)' }}>
                                                 {exp.category}
                                             </span>
                                         </td>
@@ -424,8 +428,10 @@ const ManaluEventos = () => {
 
     const { incrementTicketNumber, restaurantInfo } = useInventory();
 
-    const [view, setView] = useState('dashboard'); // 'dashboard' | 'calendar' | 'list' | 'analytics' | 'finances'
+    const [view, setView] = useState('dashboard'); // 'dashboard' | 'calendar' | 'list' | 'analytics' | 'finances' | 'customers' | 'inventory'
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+
 
     const [eventData, setEventData] = useState({
         name: '',
@@ -671,7 +677,7 @@ const ManaluEventos = () => {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', padding: '1rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
-                    <div className="surface-card" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Ingresos Totales (Eventos)</div>
                         <div style={{ fontSize: '2.25rem', fontWeight: '800', color: 'var(--color-secondary)' }}>{stats.totalRevenue.toFixed(2)}€</div>
                         <div style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -679,12 +685,12 @@ const ManaluEventos = () => {
                             Basado en {agenda.length} registros
                         </div>
                     </div>
-                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Pax Medio (Cubiertos)</div>
-                        <div style={{ fontSize: '2.25rem', fontWeight: '800', color: 'white' }}>{stats.avgPax}</div>
+                        <div style={{ fontSize: '2.25rem', fontWeight: '800', color: 'var(--color-text)' }}>{stats.avgPax}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.6rem' }}>Promedio por evento con menú</div>
                     </div>
-                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.03)', border: '1px solid rgba(59, 130, 246, 0.1)' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                         <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Eventos Confirmados</div>
                         <div style={{ fontSize: '2.25rem', fontWeight: '800', color: '#3b82f6' }}>{stats.confirmedEvents}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.6rem' }}>De un total de {agenda.length}</div>
@@ -692,51 +698,52 @@ const ManaluEventos = () => {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
                             <PieChart size={20} color="var(--color-primary)" /> Mix de Negocio
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                                    <span>Eventos con Menú</span>
+                                    <span style={{ color: 'var(--color-text)' }}>Eventos con Menú</span>
                                     <span style={{ color: 'var(--color-primary)' }}>{stats.menuEvents}</span>
                                 </div>
-                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${(stats.menuEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: 'var(--color-primary)', borderRadius: '20px', boxShadow: '0 0 10px rgba(16, 224, 212, 0.3)' }} />
+                                <div style={{ height: '10px', background: 'var(--color-bg)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border-strong)' }}>
+                                    <div style={{ width: `${(stats.menuEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: 'var(--color-primary)', borderRadius: '20px' }} />
                                 </div>
                             </div>
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.6rem', fontSize: '0.9rem', fontWeight: '500' }}>
-                                    <span>Solo Alquiler Local</span>
+                                    <span style={{ color: 'var(--color-text)' }}>Solo Alquiler Local</span>
                                     <span style={{ color: '#ec4899' }}>{stats.rentalEvents}</span>
                                 </div>
-                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '20px', overflow: 'hidden' }}>
-                                    <div style={{ width: `${(stats.rentalEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: '#ec4899', borderRadius: '20px', boxShadow: '0 0 10px rgba(236, 72, 153, 0.3)' }} />
+                                <div style={{ height: '10px', background: 'var(--color-bg)', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border-strong)' }}>
+                                    <div style={{ width: `${(stats.rentalEvents / (agenda.length || 1)) * 100}% `, height: '100%', background: '#ec4899', borderRadius: '20px' }} />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
                             <TrendingIcon size={20} color="#10b981" /> Estado Financiero
                         </h3>
                         <div style={{ display: 'grid', gap: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--color-bg)', borderRadius: '12px', border: '1px solid var(--border-strong)' }}>
                                 <span style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Confirmado (Pendiente Cobro)</span>
-                                <span style={{ fontWeight: '700' }}>{stats.revenueByStatus.confirmed.toFixed(2)}€</span>
+                                <span style={{ fontWeight: '700', color: 'var(--color-text)' }}>{stats.revenueByStatus.confirmed.toFixed(2)}€</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                                 <span style={{ color: '#10b981', fontWeight: '600', fontSize: '0.9rem' }}>Cobrado / Pagado</span>
                                 <span style={{ fontWeight: '800', color: '#10b981' }}>{stats.revenueByStatus.paid.toFixed(2)}€</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--color-bg)', borderRadius: '12px', border: '1px solid var(--border-strong)' }}>
                                 <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Borradores / Presupuestos</span>
                                 <span style={{ fontWeight: '700', color: '#64748b' }}>{stats.revenueByStatus.draft.toFixed(2)}€</span>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         );
@@ -756,7 +763,7 @@ const ManaluEventos = () => {
                 <button
                     onClick={() => navigate('/')}
                     style={{
-                        background: 'none', border: 'none', color: '#94a3b8',
+                        background: 'none', border: 'none', color: 'var(--color-text-muted)',
                         display: 'flex', alignItems: 'center', gap: '0.5rem',
                         cursor: 'pointer', marginBottom: '1.5rem', fontSize: '0.9rem',
                         padding: 0
@@ -779,14 +786,16 @@ const ManaluEventos = () => {
             </div>
 
             <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Navegación</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Navegación</div>
 
                 {[
                     { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
                     { id: 'calendar', label: 'Calendario', icon: CalendarIcon },
                     { id: 'list', label: 'Lista de Eventos', icon: List },
                     { id: 'analytics', label: 'Estadísticas', icon: BarChart2 },
-                    { id: 'finances', label: 'Finanzas', icon: DollarSign }
+                    { id: 'finances', label: 'Finanzas', icon: DollarSign },
+                    { id: 'inventory', label: 'Inventario Local', icon: Box }, // Nueva opción
+                    { id: 'customers', label: 'Registro de Clientes', icon: Users }
                 ].map(item => (
                     <button
                         key={item.id}
@@ -795,13 +804,14 @@ const ManaluEventos = () => {
                             display: 'flex', alignItems: 'center', gap: '0.75rem',
                             padding: '0.75rem 1rem', borderRadius: '10px',
                             background: view === item.id ? 'var(--color-primary)' : 'transparent',
-                            color: view === item.id ? 'black' : '#94a3b8',
+                            color: view === item.id ? '#0f172a' : '#475569',
                             border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                            fontWeight: view === item.id ? '700' : '500',
+                            fontWeight: view === item.id ? '800' : '600',
+                            fontSize: '1.05rem',
                             textAlign: 'left'
                         }}
                     >
-                        <item.icon size={18} /> {item.label}
+                        <item.icon size={20} /> {item.label}
                     </button>
                 ))}
             </div>
@@ -834,7 +844,7 @@ const ManaluEventos = () => {
                 {/* KPIs */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
                     <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', boxShadow: 'var(--shadow-sm)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#94a3b8', marginBottom: '0.75rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
                             <CalendarIcon size={18} /> <span style={{ fontWeight: '500' }}>Eventos este mes</span>
                         </div>
                         <div style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--color-text)' }}>{stats.currentMonthEvents}</div>
@@ -857,18 +867,18 @@ const ManaluEventos = () => {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {upcomingEvents.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>No hay eventos próximos programados.</div>
+                            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-muted)' }}>No hay eventos próximos programados.</div>
                         ) : (
                             upcomingEvents.map(ev => (
                                 <div key={ev.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--border-strong)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                         <div style={{ background: 'var(--color-bg)', padding: '0.5rem 1rem', borderRadius: '8px', textAlign: 'center', minWidth: '70px', border: '1px solid var(--border-light)' }}>
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase' }}>{new Date(ev.date).toLocaleDateString('es-ES', { month: 'short' })}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>{new Date(ev.date).toLocaleDateString('es-ES', { month: 'short' })}</div>
                                             <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--color-text)' }}>{new Date(ev.date).getDate()}</div>
                                         </div>
                                         <div>
                                             <div style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '0.25rem', color: 'var(--color-text)' }}>{ev.name}</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: '#94a3b8' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Users size={14} /> {ev.guests} pax</span>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: ev.isVenueOnly ? '#ec4899' : 'var(--color-primary)' }}>
                                                     {ev.isVenueOnly ? <Box size={14} /> : <FileText size={14} />}
@@ -904,16 +914,31 @@ const ManaluEventos = () => {
                             {view === 'list' && 'Listado de Eventos'}
                             {view === 'analytics' && 'Estadísticas e Informes'}
                             {view === 'finances' && 'Gestión Financiera'}
+                            {view === 'customers' && 'Registro de Clientes'}
+                            {view === 'inventory' && 'Gestión de Inventario'}
                         </h2>
-                        <p style={{ margin: '0.25rem 0 0 0', color: '#94a3b8' }}>Visión general y gestión de celebraciones</p>
+                        <p style={{ margin: '0.25rem 0 0 0', color: 'var(--color-text-muted)' }}>Visión general y gestión de celebraciones</p>
                     </div>
-                    <button className="btn-primary" onClick={() => setIsFormOpen(true)} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px' }}>
-                        <Plus size={20} /> <span style={{ marginLeft: '0.5rem', fontWeight: '600' }}>Nuevo Presupuesto</span>
-                    </button>
+                    {view !== 'inventory' && (
+                        <button
+                            className="btn-primary"
+                            onClick={() => setIsFormOpen(true)}
+                            style={{
+                                padding: '1rem 2rem',
+                                borderRadius: '12px',
+                                fontSize: '1.1rem',
+                                boxShadow: '0 4px 20px rgba(52, 211, 153, 0.4)',
+                                border: '2px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <Plus size={24} /> <span style={{ marginLeft: '0.5rem', fontWeight: '800' }}>Nuevo Evento</span>
+                        </button>
+                    )}
                 </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isFormOpen && view !== 'dashboard' ? '1fr 1fr' : '1fr', gap: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isFormOpen && view !== 'dashboard' && view !== 'customers' && view !== 'inventory' ? '1fr 1fr' : '1fr', gap: '2rem' }}>
                     {/* Form Section */}
+
                     <AnimatePresence>
                         {isFormOpen && (
                             <motion.div
@@ -924,19 +949,19 @@ const ManaluEventos = () => {
                             >
                                 <button
                                     onClick={() => setIsFormOpen(false)}
-                                    style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                                    style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
                                 >
                                     <X size={20} />
                                 </button>
-                                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                                    <Calculator size={20} /> Nuevo Presupuesto
+                                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+                                    <CalendarIcon size={24} color="var(--color-primary)" /> Nuevo Evento
                                 </h2>
 
                                 {isMenuManagerOpen ? (
-                                    <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem' }}>
+                                    <div style={{ background: 'var(--color-bg)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--border-strong)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                            <h3 style={{ fontSize: '1rem', margin: 0 }}>Gestionar Menús</h3>
-                                            <button onClick={() => setIsMenuManagerOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={18} /></button>
+                                            <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--color-text)' }}>Gestionar Menús</h3>
+                                            <button onClick={() => setIsMenuManagerOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
                                         </div>
 
                                         <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.25rem' }}>
@@ -981,13 +1006,13 @@ const ManaluEventos = () => {
 
                                         <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             {loading ? (
-                                                <div style={{ textAlign: 'center', padding: '1rem', color: '#94a3b8' }}>Cargando...</div>
+                                                <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--color-text-muted)' }}>Cargando...</div>
                                             ) : (
                                                 eventMenus.map(menu => (
-                                                    <div key={menu.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px' }}>
+                                                    <div key={menu.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', borderRadius: '6px' }}>
                                                         <div>
-                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{menu.name}</div>
-                                                            <div style={{ fontSize: '1rem', color: '#94a3b8' }}>{menu.price}€</div>
+                                                            <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--color-text)' }}>{menu.name}</div>
+                                                            <div style={{ fontSize: '1rem', color: 'var(--color-text-muted)' }}>{menu.price}€</div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                             <button onClick={() => handleEditMenu(menu)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}><Edit size={14} /></button>
@@ -1033,7 +1058,7 @@ const ManaluEventos = () => {
                                         </div>
                                     </div>
 
-                                    <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}>
+                                    <div className="glass-panel" style={{ padding: '1rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                                 <input
@@ -1047,25 +1072,34 @@ const ManaluEventos = () => {
 
                                         {eventData.isVenueOnly ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <label style={{ color: '#94a3b8' }}>Precio del Alquiler (Base)</label>
+                                                <label style={{ color: 'var(--color-text-muted)' }}>Precio del Alquiler (Base)</label>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                                     <input
                                                         type="number"
-                                                        className="glass-panel"
-                                                        style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', flex: 1 }}
+                                                        className="glass-panel input-field"
+                                                        style={{ padding: '0.75rem', flex: 1 }}
                                                         value={eventData.venuePrice}
                                                         onChange={(e) => setEventData({ ...eventData, venuePrice: parseFloat(e.target.value) || 0 })}
                                                     />
-                                                    <span style={{ fontSize: '1.2rem' }}>€</span>
+                                                    <span style={{ fontSize: '1.2rem', color: 'var(--color-text)' }}>€</span>
                                                 </div>
                                             </div>
                                         ) : null}
                                     </div>
 
-                                    <div className="surface-card" style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.02)' }}>
-                                        <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-primary)' }}>
-                                            <Users size={18} /> Datos Fiscales del Cliente
-                                        </h3>
+                                    <div className="surface-card" style={{ padding: '1.25rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                            <h3 style={{ fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-primary)' }}>
+                                                <Users size={18} /> Datos Fiscales del Cliente
+                                            </h3>
+                                            <button
+                                                onClick={() => setIsCustomerModalOpen(true)}
+                                                className="btn-secondary"
+                                                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                                            >
+                                                <User size={16} style={{ marginRight: '0.5rem' }} /> Asociar Cliente
+                                            </button>
+                                        </div>
                                         <div style={{ display: 'grid', gap: '1.25rem' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                 <label style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', fontWeight: '500' }}>NIF / CIF</label>
@@ -1102,45 +1136,45 @@ const ManaluEventos = () => {
 
                                         {eventData.hasVat && (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <label style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Tipo:</label>
+                                                <label style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Tipo:</label>
                                                 <select
                                                     value={eventData.taxRate}
                                                     onChange={(e) => setEventData({ ...eventData, taxRate: parseFloat(e.target.value) })}
-                                                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', color: 'white', padding: '2px 8px', borderRadius: '4px' }}
+                                                    style={{ background: 'var(--color-bg)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '2px 8px', borderRadius: '4px' }}
                                                 >
-                                                    <option value={0.10} style={{ background: '#0f172a' }}>10% (Comida)</option>
-                                                    <option value={0.21} style={{ background: '#0f172a' }}>21% (Alquiler)</option>
+                                                    <option value={0.10} style={{ background: 'var(--color-bg)' }}>10% (Comida)</option>
+                                                    <option value={0.21} style={{ background: 'var(--color-bg)' }}>21% (Alquiler)</option>
                                                 </select>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <label style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <label style={{ color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <Wallet size={16} /> Fianza / Reserva (Cobro Adelantado)
                                         </label>
                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                             <input
                                                 type="number"
-                                                className="glass-panel"
-                                                style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white', flex: 1 }}
+                                                className="glass-panel input-field"
+                                                style={{ padding: '0.75rem', flex: 1 }}
                                                 placeholder="Ej: 200"
                                                 value={eventData.depositAmount}
                                                 onChange={(e) => setEventData({ ...eventData, depositAmount: parseFloat(e.target.value) || 0 })}
                                             />
-                                            <span style={{ fontSize: '1.2rem' }}>€</span>
+                                            <span style={{ fontSize: '1.2rem', color: 'var(--color-text)' }}>€</span>
                                         </div>
-                                        <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.25rem 0 0 0' }}>Este importe se marcará como pendiente hasta que se cobre en la lista.</p>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0 0' }}>Este importe se marcará como pendiente hasta que se cobre en la lista.</p>
                                     </div>
                                 </div>
 
                                 {!eventData.isVenueOnly && (
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h3 style={{ fontSize: '1rem', margin: 0 }}>Menus Seleccionados</h3>
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                                            <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--color-text)' }}>Menus Seleccionados</h3>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
                                                 {selectedMenus.reduce((acc, m) => acc + m.quantity, 0)} cubiertos totales
                                             </div>
                                         </div>
@@ -1148,10 +1182,10 @@ const ManaluEventos = () => {
                                         {selectedMenus.length > 0 ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
                                                 {selectedMenus.map(m => (
-                                                    <div key={m.menuId} className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.05)' }}>
+                                                    <div key={m.menuId} className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                                                         <div>
-                                                            <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{m.quantity}x</span> {m.name}
-                                                            <div style={{ fontSize: '1rem', color: '#94a3b8' }}>{m.price}€ / pax</div>
+                                                            <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{m.quantity}x</span> <span style={{ color: 'var(--color-text)' }}>{m.name}</span>
+                                                            <div style={{ fontSize: '1rem', color: 'var(--color-text-muted)' }}>{m.price}€ / pax</div>
                                                         </div>
                                                         <button onClick={() => handleRemoveSelectedMenu(m.menuId)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
                                                             <Trash2 size={16} />
@@ -1160,13 +1194,13 @@ const ManaluEventos = () => {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', border: '1px dashed var(--glass-border)', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                            <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', border: '1px dashed var(--border-light)', borderRadius: '12px', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                                                 Añade menús desde la lista de abajo
                                             </div>
                                         )}
 
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h3 style={{ fontSize: '1rem', margin: 0 }}>Añadir Menú</h3>
+                                            <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--color-text)' }}>Añadir Menú</h3>
                                             {!isMenuManagerOpen && (
                                                 <button
                                                     onClick={() => setIsMenuManagerOpen(true)}
@@ -1181,10 +1215,10 @@ const ManaluEventos = () => {
                                             <motion.div
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: 'auto' }}
-                                                style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--color-primary)' }}
+                                                style={{ background: 'var(--color-surface)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--color-primary)' }}
                                             >
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                                    <span style={{ fontWeight: 'bold' }}>{menuPicking.name}</span>
+                                                    <span style={{ fontWeight: 'bold', color: 'var(--color-text)' }}>{menuPicking.name}</span>
                                                     <span style={{ color: 'var(--color-primary)' }}>{menuPicking.price}€</span>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -1192,7 +1226,7 @@ const ManaluEventos = () => {
                                                         type="number"
                                                         value={currentMenuQuantity}
                                                         onChange={e => setCurrentMenuQuantity(parseInt(e.target.value) || 0)}
-                                                        style={{ flex: 1, padding: '0.5rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '6px' }}
+                                                        style={{ flex: 1, padding: '0.5rem', background: 'var(--color-bg)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', borderRadius: '6px' }}
                                                         placeholder="Cantidad"
                                                     />
                                                     <button
@@ -1203,7 +1237,7 @@ const ManaluEventos = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => setMenuPicking(null)}
-                                                        style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }}
+                                                        style={{ padding: '0.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', borderRadius: '6px', color: 'var(--color-text)', cursor: 'pointer' }}
                                                     >
                                                         <X size={18} />
                                                     </button>
@@ -1219,10 +1253,10 @@ const ManaluEventos = () => {
                                                     style={{
                                                         padding: '1rem',
                                                         textAlign: 'left',
-                                                        background: menuPicking?.id === menu.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)',
-                                                        border: menuPicking?.id === menu.id ? '1px solid var(--color-primary)' : '1px solid var(--glass-border)',
+                                                        background: menuPicking?.id === menu.id ? 'rgba(59, 130, 246, 0.1)' : 'var(--color-surface)',
+                                                        border: menuPicking?.id === menu.id ? '1px solid var(--color-primary)' : '1px solid var(--border-strong)',
                                                         borderRadius: '12px',
-                                                        color: 'white',
+                                                        color: 'var(--color-text)',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         justifyContent: 'space-between',
@@ -1232,7 +1266,7 @@ const ManaluEventos = () => {
                                                 >
                                                     <div>
                                                         <div style={{ fontWeight: 'bold' }}>{menu.name}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{menu.items?.join(', ')}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{menu.items?.join(', ')}</div>
                                                     </div>
                                                     <div style={{ fontWeight: 'bold', color: 'var(--color-primary)', fontSize: '1.2rem' }}>{menu.price}€/pax</div>
                                                 </button>
@@ -1259,26 +1293,26 @@ const ManaluEventos = () => {
                 <div className="events-content" style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }}>
                     {view === 'list' && (
                         <div className="glass-panel" style={{ padding: '2rem', flex: 1, overflowY: 'auto' }}>
-                            <h2 style={{ marginBottom: '1.5rem' }}>Próximos Eventos</h2>
+                            <h2 style={{ marginBottom: '1.5rem', color: 'var(--color-text)' }}>Próximos Eventos</h2>
                             {agenda.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '4rem', color: '#94a3b8' }}>
+                                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-muted)' }}>
                                     <CalendarIcon size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                                     <p>No hay eventos registrados.</p>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     {agenda.map(ev => (
-                                        <div key={ev.id} className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
+                                        <div key={ev.id} className="glass-panel" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                                 <div>
-                                                    <h3 style={{ margin: 0 }}>{ev.name}</h3>
+                                                    <h3 style={{ margin: 0, color: 'var(--color-text)' }}>{ev.name}</h3>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem' }}>
-                                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><CalendarIcon size={14} /> {ev.date}</span>
                                                             {!ev.isVenueOnly && <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Users size={14} /> {ev.guests} pax</span>}
                                                             {ev.isVenueOnly && <span style={{ background: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem' }}>Solo Alquiler</span>}
                                                         </div>
-                                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
+                                                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                                                             {ev.isVenueOnly && <span style={{ background: 'rgba(236, 72, 153, 0.2)', color: '#ec4899', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem' }}>Solo Alquiler</span>}
                                                             {ev.invoiceNumber && <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#3b82f6', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem' }}>{ev.invoiceNumber} </span>}
                                                         </div>
@@ -1419,22 +1453,22 @@ const ManaluEventos = () => {
                         view === 'calendar' && (
                             <div className="glass-panel" style={{ padding: '2rem', flex: 1 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                    <h2 style={{ margin: 0 }}>Calendario de Ocupación</h2>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
+                                    <h2 style={{ margin: 0, color: 'var(--color-text)' }}>Calendario de Ocupación</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', padding: '0.35rem', borderRadius: '12px' }}>
                                         <button
                                             onClick={prevMonth}
                                             className="btn-icon-small"
-                                            style={{ background: 'transparent' }}
+                                            style={{ background: 'transparent', color: 'var(--color-text)' }}
                                         >
                                             <ChevronLeft size={20} />
                                         </button>
-                                        <span style={{ fontWeight: '800', minWidth: '140px', textAlign: 'center', fontSize: '0.9rem', color: 'white' }}>
+                                        <span style={{ fontWeight: '800', minWidth: '140px', textAlign: 'center', fontSize: '0.9rem', color: 'var(--color-text)' }}>
                                             {monthNames[currentCalendarDate.getMonth()].toUpperCase()} {currentCalendarDate.getFullYear()}
                                         </span>
                                         <button
                                             onClick={nextMonth}
                                             className="btn-icon-small"
-                                            style={{ background: 'transparent' }}
+                                            style={{ background: 'transparent', color: 'var(--color-text)' }}
                                         >
                                             <ChevronRight size={20} />
                                         </button>
@@ -1443,7 +1477,7 @@ const ManaluEventos = () => {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem' }}>
                                     {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-                                        <div key={day} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#94a3b8' }}>{day}</div>
+                                        <div key={day} style={{ textAlign: 'center', padding: '0.5rem', fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{day}</div>
                                     ))}
 
                                     {Array.from({ length: getFirstDayOfMonth(currentCalendarDate.getFullYear(), currentCalendarDate.getMonth()) }).map((_, i) => (
@@ -1471,13 +1505,13 @@ const ManaluEventos = () => {
                                                 }}
                                                 style={{
                                                     aspectRatio: '1',
-                                                    background: 'rgba(255,255,255,0.03)',
+                                                    background: 'var(--color-surface)',
                                                     borderRadius: '8px',
                                                     padding: '0.5rem',
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     position: 'relative',
-                                                    border: '1px solid var(--glass-border)',
+                                                    border: '1px solid var(--border-strong)',
                                                     transition: 'all 0.2s',
                                                     cursor: eventsThisDay.length > 0 ? 'pointer' : 'default',
                                                     transform: (previewDay?.day === day && previewDay?.month === month) ? 'scale(1.05)' : 'none',
@@ -1486,7 +1520,7 @@ const ManaluEventos = () => {
                                                 }}
                                                 className={eventsThisDay.length > 0 ? 'calendar-day-active' : ''}
                                             >
-                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: eventsThisDay.length > 0 ? 'var(--color-primary)' : '#64748b' }}>{day}</span>
+                                                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: eventsThisDay.length > 0 ? 'var(--color-primary)' : 'var(--color-text-muted)' }}>{day}</span>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px', overflowY: 'auto' }}>
                                                     {eventsThisDay.map(ev => (
                                                         <div
@@ -1526,13 +1560,13 @@ const ManaluEventos = () => {
                                                         >
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                                                                 <span style={{ fontWeight: 'bold', fontSize: '0.8rem', color: 'var(--color-primary)' }}>{day} de {monthNames[month]}</span>
-                                                                <button onClick={() => setPreviewDay(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}><X size={14} /></button>
+                                                                <button onClick={() => setPreviewDay(null)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={14} /></button>
                                                             </div>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                                 {previewDay.events.map(ev => (
-                                                                    <div key={ev.id} style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', borderLeft: `3px solid ${getStatusColor(ev.status)} ` }}>
-                                                                        <div style={{ fontWeight: 'bold', fontSize: '0.75rem', marginBottom: '2px' }}>{ev.name}</div>
-                                                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <div key={ev.id} style={{ padding: '0.5rem', background: 'var(--color-surface)', borderRadius: '6px', borderLeft: `3px solid ${getStatusColor(ev.status)} ` }}>
+                                                                        <div style={{ fontWeight: 'bold', fontSize: '0.75rem', marginBottom: '2px', color: 'white' }}>{ev.name}</div>
+                                                                        <div style={{ fontSize: '0.7rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
                                                                             <span>{ev.guests} pax</span>
                                                                             <span>{ev.total}€</span>
                                                                         </div>
@@ -1549,7 +1583,7 @@ const ManaluEventos = () => {
 
                                 <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                                     {eventStatuses.map(s => (
-                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
+                                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
                                             <div style={{ width: '8px', height: '8px', background: s.color, borderRadius: '50%' }} />
                                             {s.label}
                                         </div>
@@ -1570,8 +1604,52 @@ const ManaluEventos = () => {
                             deleteVenueExpense={deleteVenueExpense}
                         />
                     )}
+                    {view === 'customers' && (
+                        <div className="glass-panel" style={{ padding: '2rem', flex: 1, minHeight: '600px' }}>
+                            <EventCustomers />
+                        </div>
+                    )}
+                    {view === 'inventory' && (
+                        <div className="glass-panel" style={{ padding: '2rem', flex: 1, minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
+                            <EventInventory />
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Customer Selection Modal */}
+            <AnimatePresence>
+                {isCustomerModalOpen && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(5px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="glass-panel"
+                            style={{ width: '90%', maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-surface)' }}
+                        >
+                            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-strong)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h2 style={{ margin: 0, color: 'var(--color-text)' }}>Seleccionar Cliente</h2>
+                                <button onClick={() => setIsCustomerModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X /></button>
+                            </div>
+                            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+                                <EventCustomers
+                                    isSelectionMode={true}
+                                    onSelectCustomer={(customer) => {
+                                        setEventData(prev => ({
+                                            ...prev,
+                                            clientNif: customer.nif || '',
+                                            clientAddress: customer.address || '',
+                                            name: prev.name || `Evento de ${customer.name}` // Auto-fill event name if empty
+                                        }));
+                                        setIsCustomerModalOpen(false);
+                                    }}
+                                />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

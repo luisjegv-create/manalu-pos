@@ -871,3 +871,189 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
+
+export const printEventInventoryA4 = (inventoryItems, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=800,height=1000');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const date = new Date().toLocaleDateString('es-ES');
+
+    // Group items by category
+    const groupedItems = inventoryItems.reduce((acc, item) => {
+        const cat = item.category || 'Otros';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(item);
+        return acc;
+    }, {});
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Anexo de Inventario</title>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 40px;
+                }
+                .invoice-header {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 40px;
+                    border-bottom: 2px solid #f4f4f4;
+                    padding-bottom: 20px;
+                }
+                .company-info h1 {
+                    margin: 0;
+                    color: #1a1a1a;
+                    font-size: 24px;
+                }
+                .invoice-title {
+                    text-align: right;
+                }
+                .invoice-title h2 {
+                    margin: 0;
+                    color: #2563eb;
+                    font-size: 28px;
+                }
+                .section-title {
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    font-size: 14px;
+                    color: #2563eb;
+                    margin-top: 30px;
+                    margin-bottom: 10px;
+                    border-bottom: 2px solid #eee;
+                    padding-bottom: 5px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                th {
+                    background: #f8fafc;
+                    text-align: left;
+                    padding: 10px;
+                    border: 1px solid #eee;
+                    font-size: 13px;
+                }
+                td {
+                    padding: 8px 10px;
+                    border: 1px solid #eee;
+                    font-size: 13px;
+                }
+                .footer {
+                    margin-top: 60px;
+                    font-size: 11px;
+                    color: #999;
+                    text-align: center;
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                }
+                .signature-block {
+                    margin-top: 60px;
+                    display: flex;
+                    justify-content: space-between;
+                }
+                .signature-box {
+                    width: 45%;
+                    text-align: center;
+                    border-top: 1px solid #333;
+                    padding-top: 10px;
+                }
+                @media print {
+                    body { padding: 0; margin: 0; }
+                    @page { size: A4; margin: 1.5cm; }
+                    .page-break { page-break-before: always; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-header">
+                <div class="company-info">
+                    <h1>${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</h1>
+                    <p>
+                        ${companyInfo.businessName || 'TAPAS Y BOCATAS / MANALU EVENTOS'}<br>
+                        ${companyInfo.address || 'C/ Principal 123'}<br>
+                        NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}
+                    </p>
+                </div>
+                <div class="invoice-title">
+                    <h2>ANEXO INVENTARIO</h2>
+                    <p>
+                        <strong>Documento Adjunto a Contrato</strong><br>
+                        <strong>Fecha Emisión:</strong> ${date}
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 30px; font-size: 14px;">
+                <p>
+                    El presente documento detalla el inventario de mobiliario, maquinaria y elementos presentes en las instalaciones 
+                    de <strong>${companyInfo.businessName || 'MANALU EVENTOS'}</strong>. Este anexo forma parte indivisible del contrato 
+                    de arrendamiento / prestación de servicios del espacio.
+                </p>
+            </div>
+
+            ${Object.entries(groupedItems).map(([category, items]) => `
+                <div class="section-title">${category}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 80px; text-align: center;">Cantidad</th>
+                            <th>Descripción del Artículo</th>
+                            <th style="width: 150px;">Estado / Observaciones</th>
+                            <th style="width: 80px; text-align: center;">Check</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td style="text-align: center; font-weight: bold;">${item.quantity}</td>
+                                <td>${item.name}</td>
+                                <td style="font-size: 11px; color: #666;">${item.notes || ''}</td>
+                                <td style="text-align: center;">[ &nbsp;&nbsp; ]</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `).join('')}
+
+            <div class="signature-block">
+                <div class="signature-box">
+                    <strong>Por la Empresa (Arrendador)</strong><br><br><br><br>
+                    Fdo: _________________________
+                </div>
+                <div class="signature-box">
+                    <strong>El Cliente (Arrendatario)</strong><br><br><br><br>
+                    Fdo: _________________________
+                </div>
+            </div>
+
+            <div class="footer">
+                Manalú Eventos por Tapas y Bocatas | El cliente declara recibir los elementos listados en perfecto estado y se compromete a su devolución en idénticas condiciones.
+                <br>www.manalueventos.com
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                    // window.close(); // Optional: close after print
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
