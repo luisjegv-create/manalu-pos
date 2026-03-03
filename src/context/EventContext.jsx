@@ -94,7 +94,11 @@ export const EventProvider = ({ children }) => {
                             depositStatus: a.deposit_status || 'pending',
                             clientNif: a.client_nif || '',
                             clientAddress: a.client_address || '',
-                            invoiceNumber: a.invoice_number || null
+                            invoiceNumber: a.invoice_number || null,
+                            notes: a.notes || '',
+                            isHourly: a.is_hourly || false,
+                            rentHours: a.rent_hours || 0,
+                            rentStartTime: a.rent_start_time || ''
                         };
                     }));
                 }
@@ -159,8 +163,6 @@ export const EventProvider = ({ children }) => {
                 total: event.total,
                 tasks: event.tasks || [],
                 selected_menus: event.selectedMenus || [],
-                event_expenses: event.eventExpenses || [],
-                assigned_staff: event.assignedStaff || [],
                 is_venue_only: event.isVenueOnly || false,
                 venue_price: event.venuePrice || 0,
                 tax_rate: event.taxRate || 0.10,
@@ -169,7 +171,11 @@ export const EventProvider = ({ children }) => {
                 deposit_status: event.depositStatus || 'pending',
                 client_nif: event.clientNif || '',
                 client_address: event.clientAddress || '',
-                invoice_number: event.invoiceNumber || null
+                invoice_number: event.invoiceNumber || null,
+                notes: event.notes || '',
+                is_hourly: event.isHourly || false,
+                rent_hours: event.rentHours || 0,
+                rent_start_time: event.rentStartTime || ''
             }]).select();
 
             if (error) throw error;
@@ -185,6 +191,49 @@ export const EventProvider = ({ children }) => {
         } catch (err) {
             console.error("Error adding event:", err);
             alert("Error al añadir evento: " + (err.message || "Error desconocido"));
+        }
+    };
+
+    const updateEvent = async (eventId, updates) => {
+        try {
+            const dbUpdates = {};
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.date !== undefined) dbUpdates.date = updates.date;
+            if (updates.guests !== undefined) dbUpdates.guests = updates.guests;
+            if (updates.menuId !== undefined) dbUpdates.menu_id = updates.menuId;
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.total !== undefined) dbUpdates.total = updates.total;
+            if (updates.tasks !== undefined) dbUpdates.tasks = updates.tasks;
+            if (updates.selectedMenus !== undefined) dbUpdates.selected_menus = updates.selectedMenus;
+            if (updates.isVenueOnly !== undefined) dbUpdates.is_venue_only = updates.isVenueOnly;
+            if (updates.venuePrice !== undefined) dbUpdates.venue_price = updates.venuePrice;
+            if (updates.taxRate !== undefined) dbUpdates.tax_rate = updates.taxRate;
+            if (updates.hasVat !== undefined) dbUpdates.has_vat = updates.hasVat;
+            if (updates.depositAmount !== undefined) dbUpdates.deposit_amount = updates.depositAmount;
+            if (updates.depositStatus !== undefined) dbUpdates.deposit_status = updates.depositStatus;
+            if (updates.clientNif !== undefined) dbUpdates.client_nif = updates.clientNif;
+            if (updates.clientAddress !== undefined) dbUpdates.client_address = updates.clientAddress;
+            if (updates.invoiceNumber !== undefined) dbUpdates.invoice_number = updates.invoiceNumber;
+            if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+            if (updates.isHourly !== undefined) dbUpdates.is_hourly = updates.isHourly;
+            if (updates.rentHours !== undefined) dbUpdates.rent_hours = updates.rentHours;
+            if (updates.rentStartTime !== undefined) dbUpdates.rent_start_time = updates.rentStartTime;
+
+            const { data, error } = await supabase.from('agenda').update(dbUpdates).eq('id', eventId).select();
+
+            if (error) throw error;
+            if (data && data[0]) {
+                setAgenda(prev => prev.map(ev => ev.id === eventId ? {
+                    ...data[0],
+                    tasks: updates.tasks !== undefined ? updates.tasks : ev.tasks,
+                    selectedMenus: updates.selectedMenus !== undefined ? updates.selectedMenus : ev.selectedMenus,
+                    eventExpenses: ev.eventExpenses,
+                    assignedStaff: ev.assignedStaff
+                } : ev));
+            }
+        } catch (err) {
+            console.error("Error updating event:", err);
+            alert("Error al actualizar evento: " + (err.message || "Error desconocido"));
         }
     };
 
@@ -435,6 +484,7 @@ export const EventProvider = ({ children }) => {
             eventInventory, // Exportar estado
             loading,
             addEvent,
+            updateEvent,
             updateEventStatus,
             updateEventDepositStatus,
             assignInvoiceNumber,

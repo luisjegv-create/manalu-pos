@@ -413,6 +413,7 @@ const ManaluEventos = () => {
         venueExpenses,
         loading,
         addEvent,
+        updateEvent,
         updateEventStatus,
         updateEventDepositStatus,
         toggleTask,
@@ -431,6 +432,7 @@ const ManaluEventos = () => {
     const [view, setView] = useState('dashboard'); // 'dashboard' | 'calendar' | 'list' | 'analytics' | 'finances' | 'customers' | 'inventory'
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+    const [editingEventId, setEditingEventId] = useState(null);
 
 
     const [eventData, setEventData] = useState({
@@ -444,7 +446,11 @@ const ManaluEventos = () => {
         depositAmount: 0,
         depositStatus: 'pending',
         clientNif: '',
-        clientAddress: ''
+        clientAddress: '',
+        notes: '',
+        isHourly: false,
+        rentHours: 1,
+        rentStartTime: '12:00'
     });
 
     const [isMenuManagerOpen, setIsMenuManagerOpen] = useState(false);
@@ -526,7 +532,7 @@ const ManaluEventos = () => {
 
     const calculateBudget = () => {
         if (eventData.isVenueOnly) {
-            return eventData.venuePrice || 0;
+            return eventData.isHourly ? (parseFloat(eventData.venuePrice) || 0) * (parseInt(eventData.rentHours) || 1) : (parseFloat(eventData.venuePrice) || 0);
         }
         return selectedMenus.reduce((acc, m) => acc + (m.price * m.quantity), 0);
     };
@@ -632,14 +638,25 @@ const ManaluEventos = () => {
             menuId: !eventData.isVenueOnly && selectedMenus.length > 0 ? selectedMenus[0].menuId : null,
             selectedMenus: eventData.isVenueOnly ? [] : selectedMenus,
             total: finalTotal.toFixed(2),
-            status: 'draft',
-            tasks: [
+            status: eventData.status || 'draft',
+            notes: eventData.notes || '',
+            isHourly: eventData.isVenueOnly ? eventData.isHourly : false,
+            rentHours: eventData.isVenueOnly && eventData.isHourly ? eventData.rentHours : 0,
+            rentStartTime: eventData.isVenueOnly ? eventData.rentStartTime : '',
+            tasks: eventData.tasks || [
                 { id: 't1', text: 'Confirmar alérgenos', completed: false },
                 { id: 't2', text: 'Reserva de espacio', completed: false },
                 { id: 't3', text: 'Contratar música/DJ', completed: false }
             ]
         };
-        await addEvent(newEvent);
+
+        if (editingEventId) {
+            await updateEvent(editingEventId, newEvent);
+        } else {
+            await addEvent(newEvent);
+        }
+
+        setEditingEventId(null);
         setEventData({
             name: '',
             date: '',
@@ -649,10 +666,41 @@ const ManaluEventos = () => {
             taxRate: 0.10,
             hasVat: false,
             depositAmount: 0,
-            depositStatus: 'pending'
+            depositStatus: 'pending',
+            notes: '',
+            isHourly: false,
+            rentHours: 1,
+            rentStartTime: '12:00'
         });
         setSelectedMenus([]);
+        setEditingEventId(null);
+        setSelectedMenus([]);
         setIsFormOpen(false); // Close form after saving
+    };
+
+    const openEditForm = (ev) => {
+        setEditingEventId(ev.id);
+        setEventData({
+            name: ev.name,
+            date: ev.date,
+            guests: ev.guests,
+            isVenueOnly: ev.isVenueOnly || false,
+            venuePrice: ev.venuePrice || 0,
+            taxRate: ev.taxRate || 0.10,
+            hasVat: ev.hasVat || false,
+            depositAmount: ev.depositAmount || 0,
+            depositStatus: ev.depositStatus || 'pending',
+            clientNif: ev.clientNif || '',
+            clientAddress: ev.clientAddress || '',
+            notes: ev.notes || '',
+            isHourly: ev.isHourly || false,
+            rentHours: ev.rentHours || 1,
+            rentStartTime: ev.rentStartTime || '12:00',
+            status: ev.status,
+            tasks: ev.tasks
+        });
+        setSelectedMenus(ev.selectedMenus || []);
+        setIsFormOpen(true);
     };
 
     const EventAnalytics = () => {
@@ -858,12 +906,15 @@ const ManaluEventos = () => {
                 </div>
 
                 {/* Próximos Eventos */}
-                <div className="surface-card" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem', position: 'relative' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Activity size={20} color="var(--color-primary)" /> Próximos Eventos
+                        <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text)' }}>
+                            <Plus size={24} color="var(--color-primary)" /> {editingEventId ? 'Editar Evento' : 'Nuevo Evento'}
                         </h2>
-                        <button onClick={() => setView('calendar')} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', fontWeight: '600', fontSize: '0.9rem' }}>Ver Calendario Completo</button>
+                        <button onClick={() => {
+                            setIsFormOpen(false);
+                            setEditingEventId(null);
+                        }} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}>Ver Calendario Completo</button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {upcomingEvents.length === 0 ? (
@@ -891,6 +942,12 @@ const ManaluEventos = () => {
                                         <span style={{ padding: '0.4rem 0.8rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '600', color: getStatusColor(ev.status), background: `${getStatusColor(ev.status)}15`, border: `1px solid ${getStatusColor(ev.status)}30` }}>
                                             {eventStatuses.find(s => s.id === ev.status)?.label}
                                         </span>
+                                        <button
+                                            onClick={() => openEditForm(ev)}
+                                            style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        >
+                                            <Edit size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -922,7 +979,24 @@ const ManaluEventos = () => {
                     {view !== 'inventory' && (
                         <button
                             className="btn-primary"
-                            onClick={() => setIsFormOpen(true)}
+                            onClick={() => {
+                                setEditingEventId(null);
+                                setEventData({
+                                    name: '',
+                                    date: '',
+                                    guests: 50,
+                                    isVenueOnly: false,
+                                    venuePrice: 0,
+                                    taxRate: 0.10,
+                                    hasVat: false,
+                                    depositAmount: 0,
+                                    depositStatus: 'pending',
+                                    clientNif: '',
+                                    clientAddress: ''
+                                });
+                                setSelectedMenus([]);
+                                setIsFormOpen(true);
+                            }}
                             style={{
                                 padding: '1rem 2rem',
                                 borderRadius: '12px',
@@ -949,16 +1023,16 @@ const ManaluEventos = () => {
                             >
                                 <button
                                     onClick={() => setIsFormOpen(false)}
-                                    style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
+                                    style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--color-text)', cursor: 'pointer', borderRadius: '50%', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
                                 >
                                     <X size={20} />
                                 </button>
                                 <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
-                                    <CalendarIcon size={24} color="var(--color-primary)" /> Nuevo Evento
+                                    <CalendarIcon size={24} color="var(--color-primary)" /> {editingEventId ? 'Editar Evento' : 'Nuevo Evento'}
                                 </h2>
 
                                 {isMenuManagerOpen ? (
-                                    <div style={{ background: 'var(--color-bg)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid var(--border-strong)' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid rgba(255,255,255,0.1)' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                             <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--color-text)' }}>Gestionar Menús</h3>
                                             <button onClick={() => setIsMenuManagerOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}><X size={18} /></button>
@@ -1032,6 +1106,7 @@ const ManaluEventos = () => {
                                             type="text"
                                             className="input-field"
                                             placeholder="Ej: Boda de María y Juan"
+                                            style={{ padding: '1rem', fontSize: '1.1rem' }}
                                             value={eventData.name}
                                             onChange={(e) => setEventData({ ...eventData, name: e.target.value })}
                                         />
@@ -1043,6 +1118,7 @@ const ManaluEventos = () => {
                                             <input
                                                 type="date"
                                                 className="input-field"
+                                                style={{ padding: '1rem', fontSize: '1.1rem' }}
                                                 value={eventData.date}
                                                 onChange={(e) => setEventData({ ...eventData, date: e.target.value })}
                                             />
@@ -1052,13 +1128,14 @@ const ManaluEventos = () => {
                                             <input
                                                 type="number"
                                                 className="input-field"
+                                                style={{ padding: '1rem', fontSize: '1.1rem' }}
                                                 value={eventData.guests}
                                                 onChange={(e) => setEventData({ ...eventData, guests: parseInt(e.target.value) || 0 })}
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="glass-panel" style={{ padding: '1rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
+                                    <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                                 <input
@@ -1071,23 +1148,86 @@ const ManaluEventos = () => {
                                         </div>
 
                                         {eventData.isVenueOnly ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                <label style={{ color: 'var(--color-text-muted)' }}>Precio del Alquiler (Base)</label>
-                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                                    <input
-                                                        type="number"
-                                                        className="glass-panel input-field"
-                                                        style={{ padding: '0.75rem', flex: 1 }}
-                                                        value={eventData.venuePrice}
-                                                        onChange={(e) => setEventData({ ...eventData, venuePrice: parseFloat(e.target.value) || 0 })}
-                                                    />
-                                                    <span style={{ fontSize: '1.2rem', color: 'var(--color-text)' }}>€</span>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--color-text)' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!eventData.isHourly}
+                                                            onChange={() => setEventData({ ...eventData, isHourly: false })}
+                                                            style={{ accentColor: 'var(--color-primary)' }}
+                                                        />
+                                                        Día Completo
+                                                    </label>
+                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--color-text)' }}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={eventData.isHourly}
+                                                            onChange={() => setEventData({ ...eventData, isHourly: true })}
+                                                            style={{ accentColor: 'var(--color-primary)' }}
+                                                        />
+                                                        Por Horas
+                                                    </label>
+                                                </div>
+
+                                                <div style={{ display: 'grid', gridTemplateColumns: eventData.isHourly ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1rem' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                        <label style={{ color: 'var(--color-text-muted)' }}>{eventData.isHourly ? 'Precio por Hora' : 'Precio del Alquiler'}</label>
+                                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                            <input
+                                                                type="number"
+                                                                className="glass-panel input-field"
+                                                                style={{ padding: '0.75rem', fontSize: '1.1rem', flex: 1 }}
+                                                                value={eventData.venuePrice}
+                                                                onChange={(e) => setEventData({ ...eventData, venuePrice: parseFloat(e.target.value) || 0 })}
+                                                            />
+                                                            <span style={{ fontSize: '1.2rem', color: 'var(--color-text)' }}>€</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {eventData.isHourly && (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            <label style={{ color: 'var(--color-text-muted)' }}>Total Horas</label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                className="glass-panel input-field"
+                                                                style={{ padding: '0.75rem', fontSize: '1.1rem' }}
+                                                                value={eventData.rentHours}
+                                                                onChange={(e) => setEventData({ ...eventData, rentHours: parseInt(e.target.value) || 1 })}
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                        <label style={{ color: 'var(--color-text-muted)' }}>Hora de Inicio</label>
+                                                        <input
+                                                            type="time"
+                                                            className="glass-panel input-field"
+                                                            style={{ padding: '0.75rem', fontSize: '1.1rem' }}
+                                                            value={eventData.rentStartTime}
+                                                            onChange={(e) => setEventData({ ...eventData, rentStartTime: e.target.value })}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : null}
                                     </div>
 
-                                    <div className="surface-card" style={{ padding: '1.25rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
+                                    {/* Notas del evento */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Notas del Evento (peticiones especiales, detalles, etc.)</label>
+                                        <textarea
+                                            className="input-field"
+                                            rows="3"
+                                            placeholder="Detalles adicionales sobre el evento..."
+                                            style={{ padding: '1rem', fontSize: '1rem', resize: 'vertical' }}
+                                            value={eventData.notes}
+                                            onChange={(e) => setEventData({ ...eventData, notes: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="surface-card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                                             <h3 style={{ fontSize: '1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-primary)' }}>
                                                 <Users size={18} /> Datos Fiscales del Cliente
@@ -1107,6 +1247,7 @@ const ManaluEventos = () => {
                                                     type="text"
                                                     className="input-field"
                                                     placeholder="Ej: 12345678X"
+                                                    style={{ padding: '1rem', fontSize: '1.1rem' }}
                                                     value={eventData.clientNif}
                                                     onChange={(e) => setEventData({ ...eventData, clientNif: e.target.value })}
                                                 />
@@ -1116,7 +1257,7 @@ const ManaluEventos = () => {
                                                 <textarea
                                                     className="input-field"
                                                     placeholder="Calle, Número, CP, Ciudad..."
-                                                    style={{ resize: 'vertical', minHeight: '80px' }}
+                                                    style={{ resize: 'vertical', minHeight: '80px', padding: '1rem', fontSize: '1.1rem' }}
                                                     value={eventData.clientAddress}
                                                     onChange={(e) => setEventData({ ...eventData, clientAddress: e.target.value })}
                                                 />
@@ -1150,7 +1291,7 @@ const ManaluEventos = () => {
                                     </div>
                                 </div>
 
-                                <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                                <div className="glass-panel" style={{ padding: '1.5rem', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '16px', marginTop: '1.5rem', marginBottom: '1.5rem' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         <label style={{ color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                             <Wallet size={16} /> Fianza / Reserva (Cobro Adelantado)
@@ -1159,7 +1300,7 @@ const ManaluEventos = () => {
                                             <input
                                                 type="number"
                                                 className="glass-panel input-field"
-                                                style={{ padding: '0.75rem', flex: 1 }}
+                                                style={{ padding: '1rem', fontSize: '1.1rem', flex: 1 }}
                                                 placeholder="Ej: 200"
                                                 value={eventData.depositAmount}
                                                 onChange={(e) => setEventData({ ...eventData, depositAmount: parseFloat(e.target.value) || 0 })}
@@ -1226,7 +1367,7 @@ const ManaluEventos = () => {
                                                         type="number"
                                                         value={currentMenuQuantity}
                                                         onChange={e => setCurrentMenuQuantity(parseInt(e.target.value) || 0)}
-                                                        style={{ flex: 1, padding: '0.5rem', background: 'var(--color-bg)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', borderRadius: '6px' }}
+                                                        style={{ flex: 1, padding: '1rem', fontSize: '1.1rem', background: 'var(--color-bg)', border: '1px solid var(--border-strong)', color: 'var(--color-text)', borderRadius: '6px' }}
                                                         placeholder="Cantidad"
                                                     />
                                                     <button
@@ -1282,7 +1423,7 @@ const ManaluEventos = () => {
                                     </span>
                                 </div>
                                 <button className="btn-primary" style={{ width: '100%', padding: '1.25rem', fontSize: '1.1rem', justifyContent: 'center' }} onClick={handleSaveEvent}>
-                                    <Plus size={22} /> <span style={{ marginLeft: '0.5rem' }}>Guardar en Agenda</span>
+                                    {editingEventId ? <Save size={22} /> : <Plus size={22} />} <span style={{ marginLeft: '0.5rem' }}>{editingEventId ? 'Guardar Cambios' : 'Guardar en Agenda'}</span>
                                 </button>
                             </motion.div>
                         )}
@@ -1305,7 +1446,27 @@ const ManaluEventos = () => {
                                         <div key={ev.id} className="glass-panel" style={{ padding: '1.5rem', background: 'var(--color-surface)', border: '1px solid var(--border-strong)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                                                 <div>
-                                                    <h3 style={{ margin: 0, color: 'var(--color-text)' }}>{ev.name}</h3>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                        <h3 style={{ margin: 0, color: 'var(--color-text)' }}>{ev.name}</h3>
+                                                        <button
+                                                            onClick={() => openEditForm(ev)}
+                                                            style={{
+                                                                background: 'rgba(59, 130, 246, 0.1)',
+                                                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                                                color: '#3b82f6',
+                                                                borderRadius: '6px',
+                                                                padding: '0.2rem 0.5rem',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            title="Editar evento"
+                                                        >
+                                                            <Edit size={14} />
+                                                        </button>
+                                                    </div>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.5rem' }}>
                                                         <div style={{ display: 'flex', gap: '1rem', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><CalendarIcon size={14} /> {ev.date}</span>
@@ -1548,9 +1709,9 @@ const ManaluEventos = () => {
                                                                 left: '50%',
                                                                 transform: 'translateX(-50%)',
                                                                 width: '200px',
-                                                                background: 'rgba(15, 23, 42, 0.95)',
+                                                                background: 'var(--color-surface)',
                                                                 backdropFilter: 'blur(12px)',
-                                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                                border: '1px solid var(--border-strong)',
                                                                 borderRadius: '12px',
                                                                 padding: '1rem',
                                                                 boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
@@ -1564,9 +1725,9 @@ const ManaluEventos = () => {
                                                             </div>
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                                 {previewDay.events.map(ev => (
-                                                                    <div key={ev.id} style={{ padding: '0.5rem', background: 'var(--color-surface)', borderRadius: '6px', borderLeft: `3px solid ${getStatusColor(ev.status)} ` }}>
-                                                                        <div style={{ fontWeight: 'bold', fontSize: '0.75rem', marginBottom: '2px', color: 'white' }}>{ev.name}</div>
-                                                                        <div style={{ fontSize: '0.7rem', color: '#cbd5e1', display: 'flex', justifyContent: 'space-between' }}>
+                                                                    <div key={ev.id} style={{ padding: '0.5rem', background: 'var(--color-bg)', borderRadius: '6px', borderLeft: `3px solid ${getStatusColor(ev.status)} ` }}>
+                                                                        <div style={{ fontWeight: 'bold', fontSize: '0.75rem', marginBottom: '2px', color: 'var(--color-text)' }}>{ev.name}</div>
+                                                                        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', justifyContent: 'space-between' }}>
                                                                             <span>{ev.guests} pax</span>
                                                                             <span>{ev.total}€</span>
                                                                         </div>
