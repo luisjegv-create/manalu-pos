@@ -327,25 +327,112 @@ export const OrderProvider = ({ children }) => {
         ));
     };
 
-    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
+    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
         const finalBill = tableBills[tableId];
         if (finalBill && finalBill.length > 0) {
-            const billTotal = calculateOrderTotal(finalBill);
+            try {
+                const billTotal = calculateOrderTotal(finalBill);
+                const discountAmount = (billTotal * discountPercent) / 100;
+                const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+
+                // Assign sequential ticket number
+                const ticketNumber = await incrementTicketNumber();
+
+                // Save to Supabase
+                const { data, error } = await supabase.from('sales').insert([{
+                    total,
+                    payment_method: paymentMethod,
+                    items: JSON.stringify(finalBill),
+                    table_id: tableId,
+                    ticket_number: ticketNumber, // Added ticket_number persistence
+                    customer_info: customerData ? JSON.stringify(customerData) : null
+                }]).select();
+
+                if (error) {
+                    console.error("DEBUG - closeTable Supabase Error:", error);
+                    throw new Error(`Error en base de datos: ${error.message}`);
+                }
+
+                if (data && data.length > 0) {
+                    const newSale = {
+                        ...data[0],
+                        date: new Date(data[0].created_at),
+                        total: parseFloat(data[0].total),
+                        items: JSON.parse(data[0].items),
+                        paymentMethod: data[0].payment_method,
+                        tableId: data[0].table_id,
+                        ticket_number: data[0].ticket_number || ticketNumber
+                    };
+                    setSalesHistory(prev => [newSale, ...prev]);
+
+                    // Update customer loyalty if applicable
+                    if (customerData && customerData.id) {
+                        recordSale(customerData.id, total);
+                    }
+
+                    // Clear table
+                    setTableOrders(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
+                    setTableBills(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
+                    setTables(prev => prev.map(t =>
+                        t.id === tableId
+                            ? { ...t, status: 'free', lastActionAt: null }
+                            : t
+                    ));
+                    if (currentTable && currentTable.id === tableId) {
+                        setCurrentTable(null);
+                    }
+                    return newSale;
+                }
+            } catch (err) {
+                console.error("DEBUG - closeTable Failure:", err);
+                alert(`⚠️ Error al cerrar la mesa:\n${err.message}`);
+                return null;
+            }
+        }
+
+        // Cleanup if bill was empty
+        updateTableStatus(tableId, 'free');
+        if (currentTable && currentTable.id === tableId) {
+            setCurrentTable(null);
+        }
+        return null;
+    };
+
+    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
+        if (!itemsToPay || itemsToPay.length === 0) return null;
+
+        try {
+            const billTotal = calculateOrderTotal(itemsToPay);
             const discountAmount = (billTotal * discountPercent) / 100;
             const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
 
             // Assign sequential ticket number
             const ticketNumber = await incrementTicketNumber();
 
-            // Save to Supabase
+            // Save partial sale to Supabase
             const { data, error } = await supabase.from('sales').insert([{
                 total,
                 payment_method: paymentMethod,
-                items: JSON.stringify(finalBill),
-                table_id: tableId
+                items: JSON.stringify(itemsToPay),
+                table_id: tableId,
+                ticket_number: ticketNumber, // Added ticket_number persistence
+                customer_info: customerData ? JSON.stringify(customerData) : null
             }]).select();
 
-            if (!error && data) {
+            if (error) {
+                console.error("DEBUG - payPartialTable Supabase Error:", error);
+                throw new Error(`Error en base de datos: ${error.message}`);
+            }
+
+            if (data && data.length > 0) {
                 const newSale = {
                     ...data[0],
                     date: new Date(data[0].created_at),
@@ -353,171 +440,126 @@ export const OrderProvider = ({ children }) => {
                     items: JSON.parse(data[0].items),
                     paymentMethod: data[0].payment_method,
                     tableId: data[0].table_id,
-                    ticket_number: ticketNumber
+                    ticket_number: data[0].ticket_number || ticketNumber
                 };
                 setSalesHistory(prev => [newSale, ...prev]);
 
-                // Limpiar mesa
-                setTableOrders(prev => {
-                    const next = { ...prev };
-                    delete next[tableId];
-                    return next;
-                });
+                // Update customer loyalty if applicable
+                if (customerData && customerData.id) {
+                    recordSale(customerData.id, total);
+                }
+
+                // Update bill: deduct paid quantities
                 setTableBills(prev => {
-                    const next = { ...prev };
-                    delete next[tableId];
-                    return next;
-                });
-                setTables(prev => prev.map(t =>
-                    t.id === tableId
-                        ? { ...t, status: 'free', lastActionAt: null }
-                        : t
-                ));
-                if (currentTable && currentTable.id === tableId) {
-                    setCurrentTable(null);
-                }
-                return newSale; // Return the new sale object
-            }
-        }
+                    const currentBill = prev[tableId] || [];
+                    const nextBill = currentBill.map(item => {
+                        const paidItem = itemsToPay.find(p => p.uniqueId === item.uniqueId);
+                        if (paidItem) {
+                            return { ...item, quantity: item.quantity - paidItem.quantity };
+                        }
+                        return item;
+                    }).filter(item => item.quantity > 0);
 
-        // If there was an error or no bill to process, ensure table status is updated if it was the current table
-        if (currentTable && currentTable.id === tableId) {
-            setCurrentTable(null);
-        }
-        updateTableStatus(tableId, 'free'); // Ensure table is free even if no sale was recorded (e.g., empty bill)
-        return null; // Return null if no sale was recorded or an error occurred
-    };
-
-    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
-        if (!itemsToPay || itemsToPay.length === 0) return null;
-
-        const billTotal = calculateOrderTotal(itemsToPay);
-        const discountAmount = (billTotal * discountPercent) / 100;
-        const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
-
-        // Assign sequential ticket number
-        const ticketNumber = await incrementTicketNumber();
-
-        // Save partial sale to Supabase
-        const { data, error } = await supabase.from('sales').insert([{
-            total,
-            payment_method: paymentMethod,
-            items: JSON.stringify(itemsToPay),
-            table_id: tableId
-        }]).select();
-
-        if (error) {
-            console.error("DEBUG - payPartialTable Supabase Error:", error);
-            throw new Error(`Error en DB (Cobro Parcial): ${error.message || JSON.stringify(error)}`);
-        }
-
-        if (data && data.length > 0) {
-            const newSale = {
-                ...data[0],
-                date: new Date(data[0].created_at),
-                total: parseFloat(data[0].total),
-                items: JSON.parse(data[0].items),
-                paymentMethod: data[0].payment_method,
-                tableId: data[0].table_id,
-                ticket_number: ticketNumber
-            };
-            setSalesHistory(prev => [newSale, ...prev]);
-
-            // Update bill: deduct paid quantities
-            setTableBills(prev => {
-                const currentBill = prev[tableId] || [];
-                const nextBill = currentBill.map(item => {
-                    const paidItem = itemsToPay.find(p => p.uniqueId === item.uniqueId);
-                    if (paidItem) {
-                        return { ...item, quantity: item.quantity - paidItem.quantity };
+                    if (nextBill.length === 0) {
+                        updateTableStatus(tableId, 'free');
+                        if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
                     }
-                    return item;
-                }).filter(item => item.quantity > 0);
-
-                if (nextBill.length === 0) {
-                    updateTableStatus(tableId, 'free');
-                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
-                    const next = { ...prev };
-                    delete next[tableId];
-                    return next;
-                }
-                return { ...prev, [tableId]: nextBill };
-            });
-            return newSale;
+                    return { ...prev, [tableId]: nextBill };
+                });
+                return newSale;
+            }
+        } catch (err) {
+            console.error("DEBUG - payPartialTable Failure:", err);
+            alert(`⚠️ Error al cobrar:\n${err.message}`);
+            return null;
         }
         return null;
     };
 
-    const payValuePartialTable = async (tableId, amount, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, _customerData = null) => {
+    const payValuePartialTable = async (tableId, amount, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
         if (amount <= 0) return null;
 
-        const ticketNumber = await incrementTicketNumber();
-        const itemsToPay = [{
-            id: 'partial-payment',
-            uniqueId: `partial-${Date.now()}`,
-            name: 'PAGO PARCIAL (A CUENTA)',
-            price: amount,
-            quantity: 1
-        }];
+        try {
+            const ticketNumber = await incrementTicketNumber();
+            const itemsToPay = [{
+                id: 'partial-payment',
+                uniqueId: `partial-${Date.now()}`,
+                name: 'PAGO PARCIAL (A CUENTA)',
+                price: amount,
+                quantity: 1
+            }];
 
-        const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
-        const finalToPay = Math.max(0, amount - discountAmount);
+            const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
+            const finalToPay = Math.max(0, amount - discountAmount);
 
-        const { data, error } = await supabase.from('sales').insert([{
-            total: finalToPay,
-            payment_method: paymentMethod,
-            items: JSON.stringify(itemsToPay),
-            table_id: tableId
-        }]).select();
+            const { data, error } = await supabase.from('sales').insert([{
+                total: finalToPay,
+                payment_method: paymentMethod,
+                items: JSON.stringify(itemsToPay),
+                table_id: tableId,
+                ticket_number: ticketNumber,
+                customer_info: customerData ? JSON.stringify(customerData) : null
+            }]).select();
 
-        if (error) {
-            console.error("DEBUG - payValuePartialTable Supabase Error:", error);
-            throw new Error(`Error en DB (Pago Valor): ${error.message || JSON.stringify(error)}`);
-        }
+            if (error) {
+                console.error("DEBUG - payValuePartialTable Supabase Error:", error);
+                throw new Error(`Error en base de datos: ${error.message}`);
+            }
 
-        if (data && data.length > 0) {
-            const newSale = {
-                ...data[0],
-                date: new Date(data[0].created_at),
-                total: parseFloat(data[0].total),
-                items: JSON.parse(data[0].items),
-                paymentMethod: data[0].payment_method,
-                tableId: data[0].table_id,
-                ticket_number: ticketNumber
-            };
-            setSalesHistory(prev => [newSale, ...prev]);
-
-            // Update bill: represent this as a negative item to reduce the total
-            setTableBills(prev => {
-                const currentBill = prev[tableId] || [];
-                const creditItem = {
-                    id: 'payment-credit',
-                    uniqueId: `credit-${Date.now()}`,
-                    name: `ABONO PAGO ${paymentMethod}`,
-                    price: -amount,
-                    quantity: 1,
-                    category: 'Pagos'
+            if (data && data.length > 0) {
+                const newSale = {
+                    ...data[0],
+                    date: new Date(data[0].created_at),
+                    total: parseFloat(data[0].total),
+                    items: JSON.parse(data[0].items),
+                    paymentMethod: data[0].payment_method,
+                    tableId: data[0].table_id,
+                    ticket_number: data[0].ticket_number || ticketNumber
                 };
+                setSalesHistory(prev => [newSale, ...prev]);
 
-                const nextBill = [...currentBill, creditItem];
-
-                // If total reaches 0 or less, close the table
-                const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-                if (totalRemaining <= 0.01) {
-                    updateTableStatus(tableId, 'free');
-                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
-                    const next = { ...prev };
-                    delete next[tableId];
-                    return next;
+                // Update customer loyalty if applicable
+                if (customerData && customerData.id) {
+                    recordSale(customerData.id, finalToPay);
                 }
 
-                return { ...prev, [tableId]: nextBill };
-            });
-            return newSale;
+                // Update bill: represent this as a negative item to reduce the total
+                setTableBills(prev => {
+                    const currentBill = prev[tableId] || [];
+                    const creditItem = {
+                        id: 'payment-credit',
+                        uniqueId: `credit-${Date.now()}`,
+                        name: `ABONO PAGO ${paymentMethod}`,
+                        price: -amount,
+                        quantity: 1,
+                        category: 'Pagos'
+                    };
+
+                    const nextBill = [...currentBill, creditItem];
+
+                    // If total reaches 0 or less, close the table
+                    const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+                    if (totalRemaining <= 0.01) {
+                        updateTableStatus(tableId, 'free');
+                        if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    }
+                    return { ...prev, [tableId]: nextBill };
+                });
+                return newSale;
+            }
+        } catch (err) {
+            console.error("DEBUG - payValuePartialTable Failure:", err);
+            alert(`⚠️ Error al cobrar pago parcial:\n${err.message}`);
+            return null;
         }
         return null;
     };
-
     const { returnStockForItems } = useInventory(); // Ensure it's available
 
     const removeProductFromBill = (tableId, uniqueId, quantityToRemove) => {

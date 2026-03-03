@@ -515,7 +515,7 @@ export const InventoryProvider = ({ children }) => {
             const productRecipe = recipes[dbId];
             if (productRecipe) {
                 productRecipe.forEach(recipeItem => {
-                    const amount = recipeItem.quantity * item.quantity;
+                    const amount = parseFloat(recipeItem.quantity) * item.quantity;
                     const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
                     ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
                 });
@@ -524,18 +524,18 @@ export const InventoryProvider = ({ children }) => {
 
         // Apply Wine Stock Deductions
         for (const [id, deduction] of Object.entries(wineChanges)) {
-            const wine = wines.find(w => w.id === id || w.id === parseInt(id));
+            const wine = wines.find(w => String(w.id) === String(id));
             if (wine) {
-                const currentStock = parseInt(wine.stock) || 0;
+                const currentStock = parseFloat(wine.stock) || 0;
                 await updateWine(wine.id, { ...wine, stock: Math.max(0, currentStock - deduction) });
             }
         }
 
         // Apply Ingredient Stock Deductions
         for (const [id, deduction] of Object.entries(ingChanges)) {
-            const ing = ingredients.find(i => i.id === id || i.id === parseInt(id));
+            const ing = ingredients.find(i => String(i.id) === String(id));
             if (ing) {
-                const currentQty = ing.quantity || 0;
+                const currentQty = parseFloat(ing.quantity) || 0;
                 await updateIngredient(ing.id, { ...ing, quantity: Math.max(0, currentQty - deduction) });
             }
         }
@@ -556,7 +556,7 @@ export const InventoryProvider = ({ children }) => {
             const productRecipe = recipes[dbId];
             if (productRecipe) {
                 productRecipe.forEach(recipeItem => {
-                    const amount = recipeItem.quantity * item.quantity;
+                    const amount = parseFloat(recipeItem.quantity) * item.quantity;
                     const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
                     ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
                 });
@@ -565,18 +565,18 @@ export const InventoryProvider = ({ children }) => {
 
         // Apply Wine Stock Returns
         for (const [id, returnQty] of Object.entries(wineChanges)) {
-            const wine = wines.find(w => w.id === id || w.id === parseInt(id));
+            const wine = wines.find(w => String(w.id) === String(id));
             if (wine) {
-                const currentStock = parseInt(wine.stock) || 0;
+                const currentStock = parseFloat(wine.stock) || 0;
                 await updateWine(wine.id, { ...wine, stock: currentStock + returnQty });
             }
         }
 
         // Apply Ingredient Stock Returns
         for (const [id, returnQty] of Object.entries(ingChanges)) {
-            const ing = ingredients.find(i => i.id === id || i.id === parseInt(id));
+            const ing = ingredients.find(i => String(i.id) === String(id));
             if (ing) {
-                const currentQty = ing.quantity || 0;
+                const currentQty = parseFloat(ing.quantity) || 0;
                 await updateIngredient(ing.id, { ...ing, quantity: currentQty + returnQty });
             }
         }
@@ -639,9 +639,9 @@ export const InventoryProvider = ({ children }) => {
         const dbId = (isWinePrefixed || isProdPrefixed) ? productId.split('_')[1] : productId;
 
         // 1. Check if it's a wine
-        const wine = wines.find(w => w.id == dbId && (isWinePrefixed || !isProdPrefixed));
+        const wine = wines.find(w => String(w.id) === String(dbId) && (isWinePrefixed || !isProdPrefixed));
         if (wine) {
-            return (parseInt(wine.stock) || 0) > 0;
+            return (parseFloat(wine.stock) || 0) > 0;
         }
 
         // 2. Check if it has a recipe
@@ -652,11 +652,13 @@ export const InventoryProvider = ({ children }) => {
 
         // 3. Verify all ingredients in recipe
         for (const item of recipe) {
-            const ingredient = ingredients.find(ing => ing.id === (item.ingredient_id || item.ingredientId));
+            const ingId = item.ingredient_id || item.ingredientId;
+            const ingredient = ingredients.find(ing => String(ing.id) === String(ingId));
+
             if (!ingredient) continue;
 
-            const needed = item.quantity;
-            const available = ingredient.quantity || 0;
+            const needed = parseFloat(item.quantity) || 0;
+            const available = parseFloat(ingredient.quantity) || 0;
 
             if (available < needed) {
                 return false;
