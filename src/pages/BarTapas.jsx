@@ -69,6 +69,8 @@ const BarTapas = () => {
         removeProductFromBill,
         currentTable,
         tables, // Added tables from context
+        tableBills, // Added to fix the reference error
+        tableOrders, // Added to fix the reference error
         selectTable, // Added selectTable
         selectedCustomer,
         selectCustomer,
@@ -103,17 +105,66 @@ const BarTapas = () => {
     }, []);
 
     // Quick Mode Effect (Takeaway / Barra Rapida)
+    const [quickTabs, setQuickTabs] = useState(() => {
+        const saved = localStorage.getItem('manalu_quick_tabs');
+        return saved ? JSON.parse(saved) : [{ id: 'direct-sale-1', name: 'Pedido 1' }];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('manalu_quick_tabs', JSON.stringify(quickTabs));
+    }, [quickTabs]);
+
     useEffect(() => {
         const mode = searchParams.get('mode');
-        if (mode === 'quick' && (!currentTable || currentTable.id !== 'direct-sale')) {
+        if (mode === 'quick' && (!currentTable || !currentTable.id.startsWith('direct-sale'))) {
+            // Select the last active tab, or the first one
+            const activeTab = quickTabs[quickTabs.length - 1];
             selectTable({
-                id: 'direct-sale',
-                name: 'Ticket Directo (Takeaway)',
+                id: activeTab.id,
+                name: activeTab.name,
                 zone: 'direct',
                 status: 'occupied'
             });
         }
-    }, [searchParams, currentTable, selectTable]);
+    }, [searchParams, currentTable, selectTable, quickTabs]);
+
+    const handleCreateTab = () => {
+        const nextId = `direct-sale-${Date.now()}`;
+        const nextNumber = quickTabs.length + 1;
+        const newTab = { id: nextId, name: `Pedido ${nextNumber}` };
+        setQuickTabs([...quickTabs, newTab]);
+        selectTable({
+            id: newTab.id,
+            name: newTab.name,
+            zone: 'direct',
+            status: 'occupied'
+        });
+    };
+
+    const handleSwitchTab = (tab) => {
+        selectTable({
+            id: tab.id,
+            name: tab.name,
+            zone: 'direct',
+            status: 'occupied'
+        });
+    };
+
+    const closeTabFallback = (tabId) => {
+        // Find if it was a quick tab and we need to remove it
+        if (tabId.startsWith('direct-sale')) {
+            setQuickTabs(prev => {
+                const nextTabs = prev.filter(t => t.id !== tabId);
+                if (nextTabs.length === 0) {
+                    // Create a fresh one if all are closed
+                    const newId = `direct-sale-${Date.now()}`;
+                    return [{ id: newId, name: 'Pedido 1' }];
+                }
+                return nextTabs;
+            });
+            // Let the context effect auto-select the new/last tab
+        }
+    };
 
     // New Product Creator State
     const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -352,6 +403,7 @@ const BarTapas = () => {
             setIsFullInvoice(false);
 
             if (searchParams.get('mode') === 'quick') {
+                closeTabFallback(currentTable.id);
                 navigate('/bar-tapas?mode=quick');
             } else {
                 navigate('/bar-tapas');
@@ -443,6 +495,79 @@ const BarTapas = () => {
                             )}
                         </AnimatePresence>
 
+                        {/* Quick Order Tabs (Only visible in quick mode) */}
+                        {searchParams.get('mode') === 'quick' && (
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '1rem 1.5rem',
+                                background: 'rgba(255,255,255,0.02)',
+                                borderBottom: '1px solid var(--glass-border)',
+                                overflowX: 'auto',
+                                scrollbarWidth: 'none',
+                                whiteSpace: 'nowrap'
+                            }}>
+                                {quickTabs.map(tab => {
+                                    // Calculate total for this specific tab using context state
+                                    const tabBill = tableBills[tab.id] || [];
+                                    const tabOrder = tableOrders[tab.id] || [];
+                                    const tabTotal = calculateOrderTotal([...tabBill, ...tabOrder]);
+                                    const isActive = currentTable?.id === tab.id;
+
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => handleSwitchTab(tab)}
+                                            style={{
+                                                padding: '0.75rem 1.25rem',
+                                                borderRadius: '8px',
+                                                border: isActive ? '2px solid var(--color-primary)' : '1px solid var(--glass-border)',
+                                                background: isActive ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0,0,0,0.2)',
+                                                color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                minWidth: '120px',
+                                                transition: 'all 0.2s',
+                                                fontWeight: isActive ? 'bold' : 'normal'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.9rem' }}>{tab.name}</span>
+                                            {tabTotal > 0 && (
+                                                <span style={{ fontSize: '1.1rem', marginTop: '0.2rem', color: isActive ? 'var(--color-primary)' : 'var(--color-text)' }}>
+                                                    {tabTotal.toFixed(2)}€
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+
+                                <button
+                                    onClick={handleCreateTab}
+                                    style={{
+                                        padding: '0.75rem 1.25rem',
+                                        borderRadius: '8px',
+                                        border: '1px dashed var(--color-primary)',
+                                        background: 'transparent',
+                                        color: 'var(--color-primary)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        minWidth: '120px',
+                                        minHeight: '62px',
+                                        transition: 'all 0.2s',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    <Plus size={20} /> Nuevo
+                                </button>
+                            </div>
+                        )}
+
                         <header className="header-card" style={{
                             padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between'
                         }}>
@@ -460,7 +585,7 @@ const BarTapas = () => {
                                     </h1>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                            {searchParams.get('mode') === 'quick' ? 'Venta Directa' : (currentTable ? currentTable.name : 'Mesa no asignada')}
+                                            {searchParams.get('mode') === 'quick' ? currentTable?.name || 'Venta Directa' : (currentTable ? currentTable.name : 'Mesa no asignada')}
                                         </span>
                                         {currentTable && searchParams.get('mode') !== 'quick' && (() => {
                                             const todayStr = new Date().toISOString().split('T')[0];
