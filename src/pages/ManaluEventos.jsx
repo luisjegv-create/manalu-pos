@@ -1170,7 +1170,7 @@ const ManaluEventos = () => {
                                                     </label>
                                                 </div>
 
-                                                <div style={{ display: 'grid', gridTemplateColumns: eventData.isHourly ? '1fr 1fr 1fr' : '1fr 1fr', gap: '1rem' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: eventData.isHourly ? '1fr 1fr 1fr 1fr' : '1fr 1fr', gap: '1rem' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                         <label style={{ color: 'var(--color-text-muted)' }}>{eventData.isHourly ? 'Precio por Hora' : 'Precio del Alquiler'}</label>
                                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -1186,17 +1186,25 @@ const ManaluEventos = () => {
                                                     </div>
 
                                                     {eventData.isHourly && (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                            <label style={{ color: 'var(--color-text-muted)' }}>Total Horas</label>
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                className="glass-panel input-field"
-                                                                style={{ padding: '0.75rem', fontSize: '1.1rem' }}
-                                                                value={eventData.rentHours}
-                                                                onChange={(e) => setEventData({ ...eventData, rentHours: parseInt(e.target.value) || 1 })}
-                                                            />
-                                                        </div>
+                                                        <>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                <label style={{ color: 'var(--color-text-muted)' }}>Total Horas</label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    className="glass-panel input-field"
+                                                                    style={{ padding: '0.75rem', fontSize: '1.1rem' }}
+                                                                    value={eventData.rentHours}
+                                                                    onChange={(e) => setEventData({ ...eventData, rentHours: parseInt(e.target.value) || 1 })}
+                                                                />
+                                                            </div>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                <label style={{ color: 'var(--color-text-muted)' }}>Subtotal Alquiler</label>
+                                                                <div style={{ padding: '0.75rem', fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-primary)', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)', textAlign: 'center' }}>
+                                                                    {((parseFloat(eventData.venuePrice) || 0) * (parseInt(eventData.rentHours) || 1)).toFixed(2)}€
+                                                                </div>
+                                                            </div>
+                                                        </>
                                                     )}
 
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
