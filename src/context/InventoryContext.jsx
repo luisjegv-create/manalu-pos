@@ -644,27 +644,8 @@ export const InventoryProvider = ({ children }) => {
             return (parseFloat(wine.stock) || 0) > 0;
         }
 
-        // 2. Check if it has a recipe
-        const recipe = recipes[dbId];
-        if (!recipe || !Array.isArray(recipe) || recipe.length === 0) {
-            return true;
-        }
-
-        // 3. Verify all ingredients in recipe
-        for (const item of recipe) {
-            const ingId = item.ingredient_id || item.ingredientId;
-            const ingredient = ingredients.find(ing => String(ing.id) === String(ingId));
-
-            if (!ingredient) continue;
-
-            const needed = parseFloat(item.quantity) || 0;
-            const available = parseFloat(ingredient.quantity) || 0;
-
-            if (available < needed) {
-                return false;
-            }
-        }
-
+        // Return true for all non-wine products to prevent blocking sales
+        // due to theoretical ingredient stock issues.
         return true;
     };
 

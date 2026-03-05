@@ -18,10 +18,12 @@ const Settings = () => {
         setFormData(restaurantInfo);
     }, [restaurantInfo]);
 
-    // Custom QR State (Keep independent if preferred, or move to context too?)
-    // Let's keep QR independent for now as it's a big blob.
     const [customQR, setCustomQR] = useState(() => {
         return localStorage.getItem('manalu_custom_qr') || null;
+    });
+
+    const [geminiApiKey, setGeminiApiKey] = useState(() => {
+        return localStorage.getItem('manalu_gemini_api_key') || '';
     });
 
     const calculateStorage = () => {
@@ -41,6 +43,7 @@ const Settings = () => {
 
     const handleSave = () => {
         updateRestaurantInfo(formData);
+        localStorage.setItem('manalu_gemini_api_key', geminiApiKey);
         setSaved(true);
         calculateStorage();
         setTimeout(() => setSaved(false), 3000);
@@ -111,7 +114,7 @@ const Settings = () => {
 
                     {/* Restaurant Info */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
                             <Building size={20} /> Datos del Establecimiento
                         </h3>
 
@@ -153,14 +156,15 @@ const Settings = () => {
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label>Enlace a Asistente IA (Gem)</label>
+                                <label>API Key del Asistente (Google Gemini)</label>
                                 <input
-                                    placeholder="https://gemini.google.com/gems/..."
-                                    value={formData.gemUrl || ''}
-                                    onChange={e => setFormData({ ...formData, gemUrl: e.target.value })}
+                                    type="password"
+                                    placeholder="AIzaSy..."
+                                    value={geminiApiKey}
+                                    onChange={e => setGeminiApiKey(e.target.value)}
                                 />
                                 <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                                    Pega aquí el enlace directo a tu Gem personalizado para acceso rápido.
+                                    Introduce tu API Key de Gemini para activar el asistente en la Carta Digital.
                                 </p>
                             </div>
                             <button className="btn-primary" onClick={handleSave} style={{ marginTop: '1rem', justifyContent: 'center', background: saved ? '#10b981' : 'var(--color-primary)' }}>
@@ -171,7 +175,7 @@ const Settings = () => {
 
                     {/* Printers */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
                             <Printer size={20} /> Impresoras
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -191,7 +195,7 @@ const Settings = () => {
 
                     {/* Ticket Numbering */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
                             <Database size={20} /> Numeración de Tickets
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
@@ -226,7 +230,7 @@ const Settings = () => {
 
                     {/* Storage & System */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
                             <Database size={20} /> Almacenamiento Local
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
@@ -266,7 +270,7 @@ const Settings = () => {
 
                     {/* QR Config */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem' }}>
+                        <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
                             <Info size={20} /> Menú Digital (QR)
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>

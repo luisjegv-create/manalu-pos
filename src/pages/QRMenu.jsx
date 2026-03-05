@@ -19,6 +19,7 @@ import {
     Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomerAIAssistant from '../components/CustomerAIAssistant';
 
 const ALLERGEN_ICONS = {
     gluten: { icon: Wheat, label: 'Gluten', color: '#f59e0b' },
@@ -686,6 +687,8 @@ const QRMenu = () => {
                 <p>{restaurantInfo.name}</p>
                 <p style={{ marginTop: '0.5rem', opacity: 0.6 }}>Power by Qamarero Inspired System</p>
             </footer>
+
+            <CustomerAIAssistant />
         </div>
     );
 };
