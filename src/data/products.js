@@ -10,7 +10,7 @@ export const categories = [
         id: 'bebidas',
         name: 'Bebidas',
         icon: 'Beer',
-        subcategories: ['cervezas', 'copas de vino', 'refrescos', 'aguas', 'combinados']
+        subcategories: ['cervezas', 'copas de vino', 'refrescos', 'aguas', 'vermuts', 'combinados']
     },
     {
         id: 'vinos',

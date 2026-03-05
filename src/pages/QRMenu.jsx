@@ -38,6 +38,7 @@ const QRMenu = () => {
     const tableParam = searchParams.get('table');
 
     const [activeCategory, setActiveCategory] = useState(null);
+    const [activeSubcategory, setActiveSubcategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
@@ -63,17 +64,26 @@ const QRMenu = () => {
         { id: 'raciones', name: 'Raciones', icon: '🥘' },
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
         { id: 'vinos', name: 'Vinos', icon: '🍷' },
-        { id: 'bebidas', name: 'Bebidas', icon: '🥤' },
+        { id: 'bebidas', name: 'Bebidas', icon: '🥤', subcategories: ['cervezas', 'copas de vino', 'refrescos', 'aguas', 'vermuts', 'combinados'] },
         { id: 'cafes', name: 'Cafés', icon: '☕' },
         { id: 'postres', name: 'Postres', icon: '🍰' }
     ];
 
+    const activeCategoryData = categories.find(cat => cat.id === activeCategory);
+    const availableSubcategories = activeCategoryData?.subcategories || [];
+
     const filteredProducts = salesProducts.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
+        const matchesSubcategory = !activeSubcategory || p.subcategory === activeSubcategory;
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
         const isVisible = p.isDigitalMenuVisible !== false;
-        return matchesCategory && matchesSearch && isVisible;
+        return matchesCategory && matchesSubcategory && matchesSearch && isVisible;
     });
+
+    const handleCategoryChange = (catId) => {
+        setActiveCategory(catId);
+        setActiveSubcategory(null);
+    };
 
     // Helper to find wine details
     const getRecommendedWine = (wineId) => wines.find(w => w.id === wineId);
@@ -382,7 +392,7 @@ const QRMenu = () => {
                             {categories.map(cat => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => setActiveCategory(cat.id)}
+                                    onClick={() => handleCategoryChange(cat.id)}
                                     style={{
                                         padding: '1.2rem 1rem',
                                         borderRadius: '16px',
@@ -408,6 +418,56 @@ const QRMenu = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* Subcategories (if any) */}
+                    {availableSubcategories.length > 0 && (
+                        <div style={{
+                            display: 'flex',
+                            gap: '0.6rem',
+                            padding: '0 1rem 1.5rem 1rem',
+                            overflowX: 'auto',
+                            scrollbarWidth: 'none',
+                            whiteSpace: 'nowrap',
+                            WebkitOverflowScrolling: 'touch'
+                        }}>
+                            <button
+                                onClick={() => setActiveSubcategory(null)}
+                                style={{
+                                    padding: '0.6rem 1.2rem',
+                                    borderRadius: '20px',
+                                    border: !activeSubcategory ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                    background: !activeSubcategory ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
+                                    color: !activeSubcategory ? '#000' : '#e2e8f0',
+                                    fontWeight: 'bold',
+                                    boxShadow: !activeSubcategory ? '0 4px 10px rgba(217, 119, 6, 0.3)' : 'none',
+                                    cursor: 'pointer',
+                                    flexShrink: 0
+                                }}
+                            >
+                                Todos
+                            </button>
+                            {availableSubcategories.map(sub => (
+                                <button
+                                    key={sub}
+                                    onClick={() => setActiveSubcategory(sub)}
+                                    style={{
+                                        padding: '0.6rem 1.2rem',
+                                        borderRadius: '20px',
+                                        border: activeSubcategory === sub ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                        background: activeSubcategory === sub ? 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
+                                        color: activeSubcategory === sub ? '#000' : '#e2e8f0',
+                                        fontWeight: 'bold',
+                                        boxShadow: activeSubcategory === sub ? '0 4px 10px rgba(217, 119, 6, 0.3)' : 'none',
+                                        textTransform: 'capitalize',
+                                        cursor: 'pointer',
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    {sub}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Product List */}
                     <div style={{ padding: '0 1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
