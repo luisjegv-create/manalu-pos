@@ -40,7 +40,8 @@ const CustomerAIAssistant = () => {
             const restaurantData = {
                 name: restaurantInfo.name,
                 address: restaurantInfo.address,
-                products: salesProducts
+                products: salesProducts,
+                apiKey: restaurantInfo.gemUrl
             };
 
             // Only send the last 10 messages to save tokens

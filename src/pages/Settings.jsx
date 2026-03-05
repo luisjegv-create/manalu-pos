@@ -22,10 +22,6 @@ const Settings = () => {
         return localStorage.getItem('manalu_custom_qr') || null;
     });
 
-    const [geminiApiKey, setGeminiApiKey] = useState(() => {
-        return localStorage.getItem('manalu_gemini_api_key') || '';
-    });
-
     const calculateStorage = () => {
         let total = 0;
         for (let x in localStorage) {
@@ -43,7 +39,6 @@ const Settings = () => {
 
     const handleSave = () => {
         updateRestaurantInfo(formData);
-        localStorage.setItem('manalu_gemini_api_key', geminiApiKey);
         setSaved(true);
         calculateStorage();
         setTimeout(() => setSaved(false), 3000);
@@ -160,8 +155,8 @@ const Settings = () => {
                                 <input
                                     type="password"
                                     placeholder="AIzaSy..."
-                                    value={geminiApiKey}
-                                    onChange={e => setGeminiApiKey(e.target.value)}
+                                    value={formData.gemUrl && !formData.gemUrl.startsWith('http') ? formData.gemUrl : ''}
+                                    onChange={e => setFormData({ ...formData, gemUrl: e.target.value })}
                                 />
                                 <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
                                     Introduce tu API Key de Gemini para activar el asistente en la Carta Digital.

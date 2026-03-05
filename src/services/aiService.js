@@ -1,10 +1,9 @@
 export const askGemini = async (messages, restaurantData) => {
-    const apiKey = localStorage.getItem('manalu_gemini_api_key');
-    if (!apiKey) {
+    const { name, address, products, apiKey } = restaurantData;
+
+    if (!apiKey || apiKey.startsWith('http')) {
         throw new Error("API Key no configurada.");
     }
-
-    const { name, address, products } = restaurantData;
 
     // Simplify products string to save tokens
     const productList = products.filter(p => p.isDigitalMenuVisible !== false).map(p => ({
