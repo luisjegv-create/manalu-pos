@@ -708,12 +708,47 @@ const BarTapas = () => {
                                         ))}
                                     </div>
                                 )}
-                                <ProductGrid
-                                    products={filteredProducts}
-                                    onProductClick={handleProductClick}
-                                    getProductCost={getProductCost}
-                                    checkProductAvailability={checkProductAvailability}
-                                />
+                                {availableSubcategories.length > 0 && !activeSubcategory ? (
+                                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                                        {[...availableSubcategories, 'Otros'].map(subcat => {
+                                            const subcatProducts = filteredProducts.filter(p =>
+                                                subcat === 'Otros'
+                                                    ? !availableSubcategories.includes(p.subcategory)
+                                                    : p.subcategory === subcat
+                                            );
+
+                                            if (subcatProducts.length === 0) return null;
+
+                                            return (
+                                                <div key={subcat} style={{ marginBottom: '1.5rem' }}>
+                                                    <h3 style={{
+                                                        fontSize: '1.2rem',
+                                                        margin: '0 0 0.5rem 1rem',
+                                                        color: '#fbbf24',
+                                                        textTransform: 'uppercase',
+                                                        borderBottom: '1px solid rgba(251, 191, 36, 0.3)',
+                                                        paddingBottom: '0.2rem'
+                                                    }}>
+                                                        {subcat}
+                                                    </h3>
+                                                    <ProductGrid
+                                                        products={subcatProducts}
+                                                        onProductClick={handleProductClick}
+                                                        getProductCost={getProductCost}
+                                                        checkProductAvailability={checkProductAvailability}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <ProductGrid
+                                        products={filteredProducts}
+                                        onProductClick={handleProductClick}
+                                        getProductCost={getProductCost}
+                                        checkProductAvailability={checkProductAvailability}
+                                    />
+                                )}
                             </div>
 
                         </div>
