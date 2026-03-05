@@ -334,11 +334,27 @@ const QRMenu = () => {
                     <div style={{ padding: '1.5rem 1rem 0', background: '#0f172a' }}>
 
                         {/* Welcome Phrase */}
-                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: '0 0 0.2rem 0', color: 'white' }}>
-                                ¡Bienvenido a <span style={{ color: '#fbbf24' }}>{restaurantInfo.name}</span>!
+                        <div style={{ textAlign: 'center', marginBottom: '1.5rem', padding: '0 0.5rem' }}>
+                            <h2 style={{
+                                fontSize: '1.8rem',
+                                fontWeight: '900',
+                                margin: '0 0 0.5rem 0',
+                                color: '#fbbf24',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                lineHeight: '1.1'
+                            }}>
+                                SABORES QUE ENAMORAN
                             </h2>
-                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.95rem' }}>Explora nuestra carta o consulta a Luisje</p>
+                            <p style={{
+                                color: '#e2e8f0',
+                                margin: 0,
+                                fontSize: '1rem',
+                                fontWeight: '500',
+                                lineHeight: '1.4'
+                            }}>
+                                Bienvenido a Tapas y Bocatas, donde cada bocado es una experiencia
+                            </p>
                         </div>
 
                         <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
