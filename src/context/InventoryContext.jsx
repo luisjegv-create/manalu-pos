@@ -103,11 +103,24 @@ export const InventoryProvider = ({ children }) => {
                     })));
                 }
                 if (settingsData) {
+                    let finalGemUrl = settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d';
+
+                    // Migrate API Key from localStorage
+                    const localGeminiKey = localStorage.getItem('manalu_gemini_api_key');
+                    if (localGeminiKey && (!settingsData.gem_url || settingsData.gem_url.startsWith('http'))) {
+                        console.log("Migrando API Key local a Supabase...");
+                        finalGemUrl = localGeminiKey;
+                        // Fire and forget update to db
+                        supabase.from('restaurant_settings').update({ gem_url: localGeminiKey }).eq('id', 1).then();
+                        // Clear the local key once migrated
+                        localStorage.removeItem('manalu_gemini_api_key');
+                    }
+
                     setRestaurantInfo({
                         ...settingsData,
                         logo: settingsData.logo_url,
                         last_ticket_number: settingsData.last_ticket_number || 0,
-                        gemUrl: settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d'
+                        gemUrl: finalGemUrl
                     });
                 }
 
