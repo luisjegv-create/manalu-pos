@@ -37,7 +37,7 @@ const QRMenu = () => {
     const [searchParams] = useSearchParams();
     const tableParam = searchParams.get('table');
 
-    const [activeCategory, setActiveCategory] = useState('raciones');
+    const [activeCategory, setActiveCategory] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
@@ -353,7 +353,7 @@ const QRMenu = () => {
                                 fontWeight: '500',
                                 lineHeight: '1.4'
                             }}>
-                                Bienvenido a Tapas y Bocatas, donde cada bocado es una experiencia
+                                Bienvenido a <span style={{ color: '#fbbf24', fontSize: '1.15rem', fontWeight: 'bold' }}>Tapas y Bocatas</span>, donde cada bocado es una experiencia
                             </p>
                         </div>
 
@@ -384,7 +384,7 @@ const QRMenu = () => {
                                     key={cat.id}
                                     onClick={() => setActiveCategory(cat.id)}
                                     style={{
-                                        padding: '1rem 1.2rem',
+                                        padding: '1.2rem 1rem',
                                         borderRadius: '16px',
                                         border: activeCategory === cat.id ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.1)',
                                         background: activeCategory === cat.id ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255,255,255,0.03)',
@@ -395,15 +395,15 @@ const QRMenu = () => {
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        minWidth: '100px',
-                                        flex: '1 1 calc(33% - 1rem)',
-                                        maxWidth: '140px',
-                                        gap: '0.5rem',
+                                        minWidth: '120px',
+                                        flex: '1 1 calc(50% - 1rem)',
+                                        maxWidth: '200px',
+                                        gap: '0.6rem',
                                         boxShadow: activeCategory === cat.id ? '0 4px 15px rgba(251, 191, 36, 0.2)' : '0 2px 5px rgba(0,0,0,0.1)'
                                     }}
                                 >
-                                    <span style={{ fontSize: '2.5rem' }}>{cat.icon}</span>
-                                    <span style={{ fontSize: '0.9rem' }}>{cat.name}</span>
+                                    <span style={{ fontSize: '3rem' }}>{cat.icon}</span>
+                                    <span style={{ fontSize: '1rem' }}>{cat.name}</span>
                                 </button>
                             ))}
                         </div>
