@@ -37,7 +37,7 @@ const QRMenu = () => {
     const [searchParams] = useSearchParams();
     const tableParam = searchParams.get('table');
 
-    const [activeCategory, setActiveCategory] = useState('all');
+    const [activeCategory, setActiveCategory] = useState('raciones');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
@@ -60,7 +60,6 @@ const QRMenu = () => {
     };
 
     const categories = [
-        { id: 'all', name: 'Todo', icon: '🍽️' },
         { id: 'raciones', name: 'Raciones', icon: '🥘' },
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
         { id: 'vinos', name: 'Vinos', icon: '🍷' },
@@ -332,7 +331,16 @@ const QRMenu = () => {
             {viewMode === 'menu' && (
                 <>
                     {/* Search & Categories */}
-                    <div style={{ padding: '1.5rem 1rem 0', position: 'sticky', top: 0, zIndex: 10, background: '#0f172a' }}>
+                    <div style={{ padding: '1.5rem 1rem 0', background: '#0f172a' }}>
+
+                        {/* Welcome Phrase */}
+                        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: 'bold', margin: '0 0 0.2rem 0', color: 'white' }}>
+                                ¡Bienvenido a <span style={{ color: '#fbbf24' }}>{restaurantInfo.name}</span>!
+                            </h2>
+                            <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.95rem' }}>Explora nuestra carta o consulta a Luisje</p>
+                        </div>
+
                         <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
                             <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#fbbf24' }} size={20} />
                             <input
@@ -354,30 +362,32 @@ const QRMenu = () => {
                             />
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.8rem', overflowX: 'auto', paddingBottom: '1rem', scrollbarWidth: 'none' }}>
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center', paddingBottom: '1.5rem' }}>
                             {categories.map(cat => (
                                 <button
                                     key={cat.id}
                                     onClick={() => setActiveCategory(cat.id)}
                                     style={{
-                                        padding: '0.8rem 1.2rem',
-                                        borderRadius: '12px',
+                                        padding: '1rem 1.2rem',
+                                        borderRadius: '16px',
                                         border: activeCategory === cat.id ? '2px solid #fbbf24' : '1px solid rgba(255,255,255,0.1)',
                                         background: activeCategory === cat.id ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255,255,255,0.03)',
                                         color: activeCategory === cat.id ? '#fbbf24' : '#94a3b8',
-                                        whiteSpace: 'nowrap',
-                                        fontWeight: '600',
+                                        fontWeight: 'bold',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
-                                        minWidth: '80px',
-                                        gap: '0.25rem'
+                                        minWidth: '100px',
+                                        flex: '1 1 calc(33% - 1rem)',
+                                        maxWidth: '140px',
+                                        gap: '0.5rem',
+                                        boxShadow: activeCategory === cat.id ? '0 4px 15px rgba(251, 191, 36, 0.2)' : '0 2px 5px rgba(0,0,0,0.1)'
                                     }}
                                 >
-                                    <span style={{ fontSize: '1.5rem' }}>{cat.icon}</span>
-                                    <span style={{ fontSize: '0.8rem' }}>{cat.name}</span>
+                                    <span style={{ fontSize: '2.5rem' }}>{cat.icon}</span>
+                                    <span style={{ fontSize: '0.9rem' }}>{cat.name}</span>
                                 </button>
                             ))}
                         </div>

@@ -68,15 +68,15 @@ const CustomerAIAssistant = () => {
                 onClick={() => setIsOpen(true)}
                 style={{
                     position: 'fixed',
-                    bottom: '90px',
-                    right: '25px',
-                    width: '60px',
-                    height: '60px',
+                    bottom: '105px',
+                    left: 'calc(50% - 37.5px)',
+                    width: '75px',
+                    height: '75px',
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
                     color: 'white',
-                    border: 'none',
-                    boxShadow: '0 10px 25px rgba(109, 40, 217, 0.5)',
+                    border: '4px solid #0f172a',
+                    boxShadow: '0 10px 25px rgba(109, 40, 217, 0.6), 0 0 0 2px rgba(139, 92, 246, 0.4)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -84,23 +84,23 @@ const CustomerAIAssistant = () => {
                     cursor: 'pointer'
                 }}
             >
-                <Sparkles size={28} />
+                <Sparkles size={34} />
             </motion.button>
 
             {/* Chat Window */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                        initial={{ opacity: 0, y: 20, scale: 0.95, x: '-50%' }}
+                        animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+                        exit={{ opacity: 0, y: 20, scale: 0.95, x: '-50%' }}
                         transition={{ duration: 0.2 }}
                         style={{
                             position: 'fixed',
-                            bottom: '90px',
-                            right: '25px',
-                            width: 'calc(100% - 50px)',
-                            maxWidth: '380px',
+                            bottom: '110px',
+                            left: '50%',
+                            width: '92%',
+                            maxWidth: '400px',
                             height: '500px',
                             maxHeight: '70vh',
                             background: '#1e293b',
