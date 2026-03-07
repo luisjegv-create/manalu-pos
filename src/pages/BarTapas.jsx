@@ -106,11 +106,16 @@ const BarTapas = () => {
             const { tableId, tableName, items } = e.detail;
             setQrOrderAlert({ tableId, tableName, items });
 
-            // Auto-print only beverages for the bar
-            const drinks = items.filter(item => item.category === 'bebidas' || item.category === 'vinos');
-            if (drinks.length > 0) {
-                printKitchenTicket(tableName, drinks, "BARRA");
+            // 1. Ticket for Kitchen (ONLY food)
+            const foodItems = items.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
+            if (foodItems.length > 0) {
+                printKitchenTicket(tableName, foodItems, "COCINA");
             }
+
+            // 2. Ticket for Bar (FULL order: food + drinks for table service)
+            setTimeout(() => {
+                printKitchenTicket(tableName, items, "BARRA (PEDIDO COMPLETO)");
+            }, 500); // Slight delay for the second window to trigger correctly
         };
         window.addEventListener('new_qr_order', handleNewQrOrder);
 
