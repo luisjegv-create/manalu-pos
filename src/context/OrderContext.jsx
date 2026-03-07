@@ -114,7 +114,55 @@ export const OrderProvider = ({ children }) => {
                     .eq('status', 'pending')
                     .order('created_at', { ascending: false });
                 if (requestData) {
-                    setServiceRequests(requestData);
+                    const validRequests = [];
+                    for (const req of requestData) {
+                        if (req.type === 'new_order' && req.payload) {
+                            // Process automatic order insertion into tableBills for the POS
+                            try {
+                                const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
+
+                                // Broadcast to POS UI (BarTapas) for auto-printing and alerting
+                                window.dispatchEvent(new CustomEvent('new_qr_order', {
+                                    detail: {
+                                        tableId: req.table_id,
+                                        tableName: req.table_name,
+                                        items: cartItems
+                                    }
+                                }));
+
+                                setTableBills(prev => {
+                                    const currentBill = prev[req.table_id] || [];
+                                    const newBill = [...currentBill];
+                                    cartItems.forEach(newItem => {
+                                        const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                                        if (existingInBill) {
+                                            existingInBill.quantity += newItem.quantity;
+                                        } else {
+                                            newBill.push({ ...newItem });
+                                        }
+                                    });
+                                    return { ...prev, [req.table_id]: newBill };
+                                });
+                                // Mark table as occupied
+                                setTables(prev => prev.map(t =>
+                                    String(t.id) === String(req.table_id)
+                                        ? { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }
+                                        : t
+                                ));
+
+                                // Instead of clearing immediately here which causes a race condition between tabs,
+                                // we will mark it processed in a way that doesn't delete it for other clients during initial sync load.
+                                // Actually, clearing it is fine IF all active tabs received the postgres_changes INSERT event directly.
+                                await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id);
+                            } catch (err) {
+                                console.error("Error processing auto-order payload:", err);
+                                validRequests.push(req); // Keep as pending if failed
+                            }
+                        } else {
+                            validRequests.push(req);
+                        }
+                    }
+                    setServiceRequests(validRequests);
                 }
             } catch (err) {
                 console.error("Error crítico de sincronización:", err);
@@ -149,8 +197,49 @@ export const OrderProvider = ({ children }) => {
 
         const serviceSubscription = supabase
             .channel('service-updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'service_requests' }, () => {
-                syncWithCloud();
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_requests' }, (payload) => {
+                const req = payload.new;
+                if (req.type === 'new_order' && req.payload) {
+                    try {
+                        const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
+
+                        // Emit event for this specific insert so ALL tabs see it immediately
+                        window.dispatchEvent(new CustomEvent('new_qr_order', {
+                            detail: {
+                                tableId: req.table_id,
+                                tableName: req.table_name || `Mesa ${req.table_id}`,
+                                items: cartItems
+                            }
+                        }));
+
+                        setTableBills(prev => {
+                            const currentBill = prev[req.table_id] || [];
+                            const newBill = [...currentBill];
+                            cartItems.forEach(newItem => {
+                                const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                                if (existingInBill) {
+                                    existingInBill.quantity += newItem.quantity;
+                                } else {
+                                    newBill.push({ ...newItem });
+                                }
+                            });
+                            return { ...prev, [req.table_id]: newBill };
+                        });
+
+                        setTables(prev => prev.map(t =>
+                            String(t.id) === String(req.table_id)
+                                ? { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }
+                                : t
+                        ));
+
+                        // Let the first one to react clear it; the backend resolves conflicts.
+                        supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).then();
+                    } catch (err) {
+                        console.error("Error in real-time order parsing", err);
+                    }
+                } else {
+                    syncWithCloud();
+                }
             })
             .subscribe();
 
@@ -594,7 +683,9 @@ export const OrderProvider = ({ children }) => {
 
     const markOrderReady = async (orderId) => {
         try {
-            await supabase.from('kitchen_orders').update({ status: 'ready' }).eq('id', orderId);
+            const { error } = await supabase.from('kitchen_orders').update({ status: 'ready' }).eq('id', orderId);
+            if (error) throw error;
+
             setKitchenOrders(prev => prev.map(o =>
                 o.id === orderId ? { ...o, status: 'ready', items: (o.items || []).map(i => ({ ...i, itemStatus: 'ready' })) } : o
             ));
@@ -617,10 +708,12 @@ export const OrderProvider = ({ children }) => {
             const allItemsReady = updatedItems.every(item => item.itemStatus === 'ready');
             const newOrderStatus = allItemsReady ? 'ready' : targetOrder.status;
 
-            await supabase.from('kitchen_orders').update({
+            const { error } = await supabase.from('kitchen_orders').update({
                 items: JSON.stringify(updatedItems),
                 status: newOrderStatus
             }).eq('id', orderId);
+
+            if (error) throw error;
 
             setKitchenOrders(prev => prev.map(o =>
                 o.id === orderId ? { ...o, items: updatedItems, status: newOrderStatus } : o
@@ -632,7 +725,8 @@ export const OrderProvider = ({ children }) => {
 
     const removeOrder = async (orderId) => {
         try {
-            await supabase.from('kitchen_orders').update({ status: 'archived' }).eq('id', orderId);
+            const { error } = await supabase.from('kitchen_orders').update({ status: 'archived' }).eq('id', orderId);
+            if (error) throw error;
             setKitchenOrders(prev => prev.filter(o => o.id !== orderId));
         } catch (err) {
             console.error(err);
@@ -755,6 +849,66 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
+    const submitCustomerOrder = async (tableId, tableName, cartItems) => {
+        if (!cartItems || cartItems.length === 0) return false;
+
+        // Deduct stock
+        deductStockForOrder(cartItems);
+
+        // Filter items for kitchen: exclude drinks and wines
+        const kitchenItems = cartItems
+            .filter(item => item.category !== 'bebidas' && item.category !== 'vinos')
+            .map(item => ({
+                ...item,
+                itemStatus: 'pending',
+                startTime: new Date().toISOString()
+            }));
+
+        if (kitchenItems.length > 0) {
+            // Save to Supabase (KDS)
+            try {
+                const { data, error } = await supabase.from('kitchen_orders').insert([{
+                    table_name: tableName,
+                    items: JSON.stringify(kitchenItems),
+                    customer_info: null,
+                    status: 'pending'
+                }]).select();
+
+                if (!error && data) {
+                    const newKo = {
+                        ...data[0],
+                        items: kitchenItems,
+                        timestamp: new Date(data[0].created_at),
+                        table: data[0].table_name,
+                        customer: null
+                    };
+                    setKitchenOrders(prev => [...prev, newKo]);
+                }
+            } catch (err) {
+                console.error("Error sending customer order to kitchen:", err);
+                return false;
+            }
+        }
+
+        // Send order payload via service_requests so the real POS can add it to the bill
+        try {
+            await supabase.from('service_requests').insert([{
+                table_id: tableId,
+                table_name: tableName,
+                type: 'new_order',
+                payload: JSON.stringify(cartItems),
+                status: 'pending'
+            }]);
+        } catch (err) {
+            console.error("Error sending service request for new order:", err);
+        }
+
+        // Update table activity
+        updateTableStatus(tableId, 'occupied');
+
+        return true;
+    };
+
     return (
         <OrderContext.Provider value={{
             order,
@@ -776,6 +930,7 @@ export const OrderProvider = ({ children }) => {
             calculateTotal: () => calculateOrderTotal(order),
             calculateBillTotal: () => calculateOrderTotal(bill),
             sendToKitchen,
+            submitCustomerOrder,
             updateKitchenItemStatus,
             markOrderReady,
             closeTable,

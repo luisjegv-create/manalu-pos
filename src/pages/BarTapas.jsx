@@ -86,6 +86,7 @@ const BarTapas = () => {
     const [showTicket, setShowTicket] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [noteDraft, setNoteDraft] = useState('');
+    const [qrOrderAlert, setQrOrderAlert] = useState(null);
 
     // Mobile Responsiveness State
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -100,7 +101,23 @@ const BarTapas = () => {
             if (window.innerWidth >= 1024) setShowOrderMobile(false);
         };
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+
+        const handleNewQrOrder = (e) => {
+            const { tableId, tableName, items } = e.detail;
+            setQrOrderAlert({ tableId, tableName, items });
+
+            // Auto-print only beverages for the bar
+            const drinks = items.filter(item => item.category === 'bebidas' || item.category === 'vinos');
+            if (drinks.length > 0) {
+                printKitchenTicket(tableName, drinks, "BARRA");
+            }
+        };
+        window.addEventListener('new_qr_order', handleNewQrOrder);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('new_qr_order', handleNewQrOrder);
+        };
     }, []);
 
     // Quick Mode Effect (Takeaway / Barra Rapida)
@@ -1304,6 +1321,74 @@ const BarTapas = () => {
                             )}
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* QR Order Alert Modal */}
+            <AnimatePresence>
+                {qrOrderAlert && (
+                    <div style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1rem'
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{
+                                background: '#1e293b',
+                                border: '2px solid #fbbf24',
+                                borderRadius: '24px',
+                                padding: '2rem',
+                                maxWidth: '400px',
+                                width: '100%',
+                                textAlign: 'center',
+                                boxShadow: '0 20px 50px rgba(0,0,0,0.5), 0 0 0 4px rgba(251, 191, 36, 0.2)'
+                            }}
+                        >
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                background: 'rgba(251, 191, 36, 0.2)',
+                                color: '#fbbf24',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 1.5rem auto'
+                            }}>
+                                <Send size={32} />
+                            </div>
+                            <h2 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '1.5rem' }}>¡Nuevo Pedido Digital!</h2>
+                            <p style={{ color: '#94a3b8', marginBottom: '2rem', fontSize: '1.1rem' }}>
+                                La <strong style={{ color: '#fbbf24' }}>{qrOrderAlert.tableName}</strong> acaba de enviar una comanda desde su móvil.
+                            </p>
+                            <button
+                                onClick={() => setQrOrderAlert(null)}
+                                className="pulse-yellow"
+                                style={{
+                                    width: '100%',
+                                    padding: '1rem',
+                                    background: '#fbbf24',
+                                    color: 'black',
+                                    border: 'none',
+                                    borderRadius: '16px',
+                                    fontWeight: 'bold',
+                                    fontSize: '1.1rem',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Entendido
+                            </button>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

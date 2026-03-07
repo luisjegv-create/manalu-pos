@@ -1,21 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle, Users, UserPlus, X } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
+import { useAuth } from '../context/AuthContext';
 
 const Settings = () => {
     const navigate = useNavigate();
     const { restaurantInfo, updateRestaurantInfo } = useInventory();
+    const { employees, addEmployee, deleteEmployee, currentUser } = useAuth();
     const [saved, setSaved] = useState(false);
     const [storageUsage, setStorageUsage] = useState(0);
+
+    const [showAddEmployee, setShowAddEmployee] = useState(false);
+    const [newEmployee, setNewEmployee] = useState({ name: '', pin: '', role: 'staff' });
+
+    const handleAddEmployee = () => {
+        if (newEmployee.name && newEmployee.pin) {
+            addEmployee(newEmployee);
+            setNewEmployee({ name: '', pin: '', role: 'staff' });
+            setShowAddEmployee(false);
+        }
+    };
 
     // Temp state for form to avoid saving on every keystroke if preferred, 
     // but here we can just use the context data directly for simplicity if it's small.
     // Let's use local state for the form and save to context on handleSave.
-    const [formData, setFormData] = useState(restaurantInfo);
+    const [formData, setFormData] = useState({
+        ...restaurantInfo,
+        geminiApiKey: localStorage.getItem('manalu_gemini_api_key') || ''
+    });
 
     useEffect(() => {
-        setFormData(restaurantInfo);
+        setFormData({
+            ...restaurantInfo,
+            geminiApiKey: localStorage.getItem('manalu_gemini_api_key') || ''
+        });
     }, [restaurantInfo]);
 
     const [customQR, setCustomQR] = useState(() => {
@@ -38,7 +57,18 @@ const Settings = () => {
     }, []);
 
     const handleSave = () => {
-        updateRestaurantInfo(formData);
+        // Save API Key locally
+        if (formData.geminiApiKey) {
+            localStorage.setItem('manalu_gemini_api_key', formData.geminiApiKey);
+        } else {
+            localStorage.removeItem('manalu_gemini_api_key');
+        }
+
+        // Remove it from the object sent to updateRestaurantInfo to avoid sending to Supabase if it's not a column
+        const dataToSave = { ...formData };
+        delete dataToSave.geminiApiKey;
+
+        updateRestaurantInfo(dataToSave);
         setSaved(true);
         calculateStorage();
         setTimeout(() => setSaved(false), 3000);
@@ -151,15 +181,27 @@ const Settings = () => {
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label>API Key del Asistente (Google Gemini)</label>
+                                <label>URL Asistente de Negocio (Google Gem)</label>
                                 <input
-                                    type="password"
-                                    placeholder="AIzaSy..."
-                                    value={formData.gemUrl && !formData.gemUrl.startsWith('http') ? formData.gemUrl : ''}
+                                    type="text"
+                                    placeholder="https://gemini.google.com/gem/..."
+                                    value={formData.gemUrl || ''}
                                     onChange={e => setFormData({ ...formData, gemUrl: e.target.value })}
                                 />
                                 <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                                    Introduce tu API Key de Gemini para activar el asistente en la Carta Digital.
+                                    Enlace a tu Gem personalizado para el equipo (Dashboard).
+                                </p>
+                            </div>
+                            <div className="form-group">
+                                <label>API Key del Asistente (Carta Digital)</label>
+                                <input
+                                    type="password"
+                                    placeholder="AIzaSy..."
+                                    value={formData.geminiApiKey || ''}
+                                    onChange={e => setFormData({ ...formData, geminiApiKey: e.target.value })}
+                                />
+                                <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
+                                    Introduce tu API Key de Gemini para activar el asistente virtual para clientes.
                                 </p>
                             </div>
                             <button className="btn-primary" onClick={handleSave} style={{ marginTop: '1rem', justifyContent: 'center', background: saved ? '#10b981' : 'var(--color-primary)' }}>
@@ -286,10 +328,107 @@ const Settings = () => {
                         </div>
                     </div>
 
+                    {/* Employee PIN Management */}
+                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
+                                <Users size={20} /> Empleados y Accesos
+                            </h3>
+                            <button
+                                onClick={() => setShowAddEmployee(!showAddEmployee)}
+                                className="btn-primary"
+                                style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', gap: '0.5rem' }}
+                            >
+                                {showAddEmployee ? <X size={16} /> : <UserPlus size={16} />}
+                                {showAddEmployee ? 'Cancelar' : 'Añadir Empleado'}
+                            </button>
+                        </div>
+
+                        {showAddEmployee && (
+                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
+                                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#3b82f6' }}>Nuevo Empleado</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label>Nombre</label>
+                                        <input
+                                            value={newEmployee.name}
+                                            onChange={e => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                                            placeholder="Ej: Laura"
+                                        />
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) 1fr', gap: '1rem' }}>
+                                        <div className="form-group">
+                                            <label>PIN (Acceso)</label>
+                                            <input
+                                                type="text"
+                                                maxLength="8"
+                                                value={newEmployee.pin}
+                                                onChange={e => setNewEmployee({ ...newEmployee, pin: e.target.value.replace(/\D/g, '') })}
+                                                placeholder="1234"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Rol</label>
+                                            <select
+                                                value={newEmployee.role}
+                                                onChange={e => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                                                style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}
+                                            >
+                                                <option value="staff" style={{ background: '#1e293b' }}>Camarero/a (Staff)</option>
+                                                <option value="admin" style={{ background: '#1e293b' }}>Administrador (Total)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleAddEmployee}
+                                        className="btn-primary"
+                                        disabled={!newEmployee.name || !newEmployee.pin}
+                                        style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', opacity: (!newEmployee.name || !newEmployee.pin) ? 0.5 : 1 }}
+                                    >
+                                        Crear Empleado y Asignar PIN
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            {employees.map(emp => (
+                                <div key={emp.id} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    padding: '1rem', background: 'rgba(255,255,255,0.03)',
+                                    borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            {emp.name}
+                                            {emp.role === 'admin' && <span style={{ fontSize: '0.6rem', background: '#3b82f6', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', fontFamily: 'monospace', letterSpacing: '2px' }}>
+                                            PIN: {emp.pin}
+                                        </div>
+                                    </div>
+                                    {emp.id !== 'admin' && emp.id !== currentUser?.id && (
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm(`¿Seguro que quieres borrar a ${emp.name}? Perderá el acceso de inmediato.`)) {
+                                                    deleteEmployee(emp.id);
+                                                }
+                                            }}
+                                            className="btn-icon" style={{ padding: '0.5rem', color: '#ef4444' }}
+                                            title="Revocar Acceso"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
-        </div>
+        </div >
     );
 };
 

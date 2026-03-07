@@ -41,11 +41,15 @@ const CustomerAIAssistant = () => {
                 name: restaurantInfo.name,
                 address: restaurantInfo.address,
                 products: salesProducts,
-                apiKey: restaurantInfo.gemUrl
+                apiKey: localStorage.getItem('manalu_gemini_api_key')
             };
 
             // Only send the last 10 messages to save tokens
-            const historyToSend = newMessages.slice(-10);
+            let historyToSend = newMessages.slice(-10);
+            // Gemini API requires the first message to be from the user
+            if (historyToSend.length > 0 && historyToSend[0].role === 'assistant') {
+                historyToSend = historyToSend.slice(1);
+            }
             const responseText = await askGemini(historyToSend, restaurantData);
 
             setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);

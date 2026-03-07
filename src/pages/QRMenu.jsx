@@ -17,7 +17,9 @@ import {
     Leaf,
     Wine,
     GlassWater,
-    Menu
+    Menu,
+    ShoppingCart,
+    Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerAIAssistant from '../components/CustomerAIAssistant';
@@ -34,7 +36,7 @@ const ALLERGEN_ICONS = {
 const QRMenu = () => {
     const navigate = useNavigate();
     const { salesProducts, wines, restaurantInfo, checkProductAvailability } = useInventory();
-    const { requestService } = useOrder();
+    const { requestService, submitCustomerOrder } = useOrder();
     const { currentUser } = useAuth();
     const [searchParams] = useSearchParams();
     const tableParam = searchParams.get('table');
@@ -46,6 +48,69 @@ const QRMenu = () => {
     const [viewMode, setViewMode] = useState('menu'); // 'menu' or 'cellar'
     const [serviceFeedback, setServiceFeedback] = useState(null);
     const [isRequesting, setIsRequesting] = useState(false);
+
+    // --- Cart State & Logic ---
+    const [cart, setCart] = useState({}); // { productId: quantity }
+    const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+    const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+
+    const addToCart = (product, e) => {
+        if (e) e.stopPropagation();
+        setCart(prev => ({
+            ...prev,
+            [product.id]: (prev[product.id] || 0) + 1
+        }));
+    };
+
+    const removeFromCart = (product, e) => {
+        if (e) e.stopPropagation();
+        setCart(prev => {
+            const currentObj = { ...prev };
+            if (currentObj[product.id] > 1) {
+                currentObj[product.id] -= 1;
+            } else {
+                delete currentObj[product.id];
+            }
+            return currentObj;
+        });
+    };
+
+    const cartTotalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+    const cartTotalPrice = Object.entries(cart).reduce((total, [productId, qty]) => {
+        const product = [...salesProducts, ...wines].find(p => p.id === productId);
+        return total + (product ? product.price * qty : 0);
+    }, 0);
+
+    const handleSendOrder = async () => {
+        if (!tableParam || cartTotalQuantity === 0) return;
+        setIsSubmittingOrder(true);
+
+        // Build array of full product items for OrderContext
+        const cartItems = Object.entries(cart).reduce((acc, [productId, qty]) => {
+            const product = [...salesProducts, ...wines].find(p => p.id === productId);
+            if (product) {
+                acc.push({ ...product, quantity: qty, uniqueId: `${product.id}-${Date.now()}` });
+            }
+            return acc;
+        }, []);
+
+        const success = await submitCustomerOrder(tableParam, `Mesa ${tableParam}`, cartItems);
+        setIsSubmittingOrder(false);
+
+        if (success) {
+            setCart({});
+            setIsCartModalOpen(false);
+            setServiceFeedback({
+                type: 'order',
+                message: '¡Pedido enviado a cocina! 👨‍🍳',
+                id: Date.now()
+            });
+            setTimeout(() => setServiceFeedback(null), 5000);
+        } else {
+            alert("Hubo un error al enviar el pedido. Por favor, avisa a un camarero.");
+        }
+    };
+    // --------------------------
 
     const handleServiceRequest = async (type) => {
         if (!tableParam || isRequesting) return;
@@ -197,13 +262,31 @@ const QRMenu = () => {
                         </div>
                     </div>
 
-                    {/* Expansion Indicator */}
-                    <div style={{ alignSelf: 'center', color: '#64748b' }}>
+                    {/* Actions and Expansion Indicator */}
+                    <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: '1rem', color: '#64748b' }}>
+                        {/* Cart Controls */}
+                        {tableParam && isAvailable && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
+                                {cart[product.id] > 0 ? (
+                                    <>
+                                        <button
+                                            onClick={(e) => removeFromCart(product, e)}
+                                            style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', cursor: 'pointer' }}>-</button>
+                                        <span style={{ minWidth: '24px', textAlign: 'center', color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>{cart[product.id]}</span>
+                                    </>
+                                ) : null}
+                                <button
+                                    onClick={(e) => addToCart(product, e)}
+                                    style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#fbbf24', color: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(251, 191, 36, 0.3)' }}>+</button>
+                            </div>
+                        )}
+
                         <ChevronRight
                             size={20}
                             style={{
                                 transform: selectedProduct === product.id ? 'rotate(90deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s'
+                                transition: 'transform 0.2s',
+                                flexShrink: 0
                             }}
                         />
                     </div>
@@ -342,60 +425,95 @@ const QRMenu = () => {
                     transform: 'translateX(-50%)',
                     zIndex: 100,
                     display: 'flex',
-                    gap: '1rem',
+                    flexDirection: 'column',
+                    gap: '0.8rem',
                     width: '92%',
                     maxWidth: '450px'
                 }}>
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleServiceRequest('waiter')}
-                        className={isRequesting ? "" : "pulse-yellow"}
-                        style={{
-                            flex: 1,
-                            padding: '1.2rem',
-                            background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
-                            color: '#000',
-                            border: 'none',
-                            borderRadius: '20px',
-                            fontWeight: '800',
-                            boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.6rem',
-                            fontSize: '1rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            opacity: isRequesting ? 0.7 : 1
-                        }}
-                    >
-                        {isRequesting ? '...' : <><Menu size={20} /> Llamar</>}
-                    </motion.button>
-                    <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleServiceRequest('bill')}
-                        style={{
-                            flex: 1,
-                            padding: '1.2rem',
-                            background: 'rgba(30, 41, 59, 0.7)',
-                            backdropFilter: 'blur(10px)',
-                            color: 'white',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '20px',
-                            fontWeight: '800',
-                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.6rem',
-                            fontSize: '1rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            opacity: isRequesting ? 0.7 : 1
-                        }}
-                    >
-                        {isRequesting ? '...' : <><Wine size={20} /> La Cuenta</>}
-                    </motion.button>
+                    <AnimatePresence>
+                        {cartTotalQuantity > 0 && (
+                            <motion.button
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: 20, opacity: 0 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setIsCartModalOpen(true)}
+                                className="pulse-yellow"
+                                style={{
+                                    width: '100%',
+                                    padding: '1.2rem',
+                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '20px',
+                                    fontWeight: '800',
+                                    boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    fontSize: '1.1rem',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.05em'
+                                }}
+                            >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={22} /> Ver Pedido ({cartTotalQuantity})</span>
+                                <span>{cartTotalPrice.toFixed(2)}€</span>
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleServiceRequest('waiter')}
+                            className={isRequesting && cartTotalQuantity === 0 ? "pulse-yellow" : ""}
+                            style={{
+                                flex: 1,
+                                padding: '1.1rem',
+                                background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                                color: '#000',
+                                border: 'none',
+                                borderRadius: '20px',
+                                fontWeight: '800',
+                                boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.6rem',
+                                fontSize: '0.9rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                opacity: isRequesting ? 0.7 : 1
+                            }}
+                        >
+                            {isRequesting ? '...' : <><Menu size={18} /> Llamar</>}
+                        </motion.button>
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleServiceRequest('bill')}
+                            style={{
+                                flex: 1,
+                                padding: '1.1rem',
+                                background: 'rgba(30, 41, 59, 0.7)',
+                                backdropFilter: 'blur(10px)',
+                                color: 'white',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '20px',
+                                fontWeight: '800',
+                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.6rem',
+                                fontSize: '0.9rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                opacity: isRequesting ? 0.7 : 1
+                            }}
+                        >
+                            {isRequesting ? '...' : <><Wine size={18} /> La Cuenta</>}
+                        </motion.button>
+                    </div>
                 </div>
             )}
 
@@ -813,6 +931,124 @@ const QRMenu = () => {
                 <p>{restaurantInfo.name}</p>
                 <p style={{ marginTop: '0.5rem', opacity: 0.6 }}>Power by Qamarero Inspired System</p>
             </footer>
+
+            {/* Cart Modal */}
+            <AnimatePresence>
+                {isCartModalOpen && (
+                    <div style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        backdropFilter: 'blur(8px)',
+                        zIndex: 999,
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center'
+                    }} onClick={() => setIsCartModalOpen(false)}>
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                background: '#1e293b',
+                                width: '100%',
+                                maxWidth: '600px',
+                                borderTopLeftRadius: '32px',
+                                borderTopRightRadius: '32px',
+                                padding: '2rem 1.5rem',
+                                maxHeight: '85vh',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
+                                borderTop: '1px solid rgba(255,255,255,0.1)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0, color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <ShoppingCart size={24} color="#fbbf24" /> Tu Pedido
+                                </h3>
+                                <button
+                                    onClick={() => setIsCartModalOpen(false)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        color: 'white',
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '1rem' }}>
+                                {Object.entries(cart).map(([productId, qty]) => {
+                                    const product = [...salesProducts, ...wines].find(p => p.id === productId);
+                                    if (!product) return null;
+                                    return (
+                                        <div key={productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <h4 style={{ margin: '0 0 0.25rem 0', color: 'white', fontSize: '1.1rem' }}>{product.name}</h4>
+                                                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.9rem' }}>{product.price.toFixed(2)}€ / ud.</p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f172a', padding: '0.3rem', borderRadius: '12px' }}>
+                                                    <button onClick={() => removeFromCart(product)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: 'rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>-</button>
+                                                    <span style={{ minWidth: '24px', textAlign: 'center', color: 'white', fontWeight: 'bold' }}>{qty}</span>
+                                                    <button onClick={() => addToCart(product)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', background: '#fbbf24', color: 'black', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                                </div>
+                                                <div style={{ width: '70px', textAlign: 'right', color: '#fbbf24', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                                    {(product.price * qty).toFixed(2)}€
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                    <span style={{ color: '#94a3b8', fontSize: '1.2rem' }}>Total</span>
+                                    <span style={{ color: 'white', fontSize: '1.5rem', fontWeight: '900' }}>{cartTotalPrice.toFixed(2)}€</span>
+                                </div>
+                                <motion.button
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={handleSendOrder}
+                                    disabled={isSubmittingOrder || cartTotalQuantity === 0}
+                                    style={{
+                                        width: '100%',
+                                        padding: '1.25rem',
+                                        background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
+                                        color: '#000',
+                                        border: 'none',
+                                        borderRadius: '20px',
+                                        fontSize: '1.2rem',
+                                        fontWeight: 'bold',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        cursor: isSubmittingOrder || cartTotalQuantity === 0 ? 'not-allowed' : 'pointer',
+                                        opacity: isSubmittingOrder || cartTotalQuantity === 0 ? 0.7 : 1,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)'
+                                    }}
+                                >
+                                    {isSubmittingOrder ? 'Enviando...' : <><Check size={24} /> Enviar Pedido a Cocina</>}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <CustomerAIAssistant />
         </div>

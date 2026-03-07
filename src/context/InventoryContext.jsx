@@ -105,15 +105,16 @@ export const InventoryProvider = ({ children }) => {
                 if (settingsData) {
                     let finalGemUrl = settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d';
 
-                    // Migrate API Key from localStorage
-                    const localGeminiKey = localStorage.getItem('manalu_gemini_api_key');
-                    if (localGeminiKey && (!settingsData.gem_url || settingsData.gem_url.startsWith('http'))) {
-                        console.log("Migrando API Key local a Supabase...");
-                        finalGemUrl = localGeminiKey;
-                        // Fire and forget update to db
-                        supabase.from('restaurant_settings').update({ gem_url: localGeminiKey }).eq('id', 1).then();
-                        // Clear the local key once migrated
-                        localStorage.removeItem('manalu_gemini_api_key');
+                    // Auto-fix: if gem_url contains an API Key instead of a URL
+                    if (finalGemUrl && !finalGemUrl.startsWith('http')) {
+                        console.log("Detectada API Key en gem_url. Moviendo a localStorage y restaurando URL...");
+                        const existingLocalKey = localStorage.getItem('manalu_gemini_api_key');
+                        if (!existingLocalKey) {
+                            localStorage.setItem('manalu_gemini_api_key', finalGemUrl);
+                        }
+                        finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
+                        // Fix it in Supabase
+                        supabase.from('restaurant_settings').update({ gem_url: finalGemUrl }).eq('id', 1).then();
                     }
 
                     setRestaurantInfo({
