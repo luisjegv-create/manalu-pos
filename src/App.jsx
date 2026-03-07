@@ -21,6 +21,7 @@ import Settings from './pages/Settings';
 import QRMenu from './pages/QRMenu';
 import Bookings from './pages/Bookings';
 import ProtectedRoute from './components/ProtectedRoute';
+import GlobalQrAlert from './components/GlobalQrAlert';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
             <OrderProvider>
               <Router>
                 <div className="app-container">
+                  <GlobalQrAlert />
                   <Routes>
                     {/* Public Route */}
                     <Route path="/menu" element={<QRMenu />} />

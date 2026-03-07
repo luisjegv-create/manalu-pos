@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { printKitchenTicket } from '../utils/printHelpers';
 import { useInventory } from './InventoryContext';
 import { useCustomers } from './CustomerContext';
 import { tables as initialTables } from '../data/tables';
@@ -43,6 +44,7 @@ export const OrderProvider = ({ children }) => {
 
     // Local Loader state
     const [isLoading, setLoadingState] = useState(false);
+    const [activeQrAlert, setActiveQrAlert] = useState(null);
     const [syncStatus, setSyncStatus] = useState({
         sales: { count: 0, error: null },
         kitchen: { count: 0, error: null },
@@ -232,15 +234,20 @@ export const OrderProvider = ({ children }) => {
                 if (req.type === 'new_order' && req.payload) {
                     try {
                         const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
+                        const tableName = req.table_name || `Mesa ${req.table_id}`;
 
-                        // Emit event for this specific insert so ALL tabs see it immediately
-                        window.dispatchEvent(new CustomEvent('new_qr_order', {
-                            detail: {
-                                tableId: req.table_id,
-                                tableName: req.table_name || `Mesa ${req.table_id}`,
-                                items: cartItems
-                            }
-                        }));
+                        // 1. Ticket for Kitchen (ONLY food)
+                        const foodItems = cartItems.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
+                        if (foodItems.length > 0) {
+                            printKitchenTicket(tableName, foodItems, "COCINA");
+                        }
+
+                        // 2. Ticket for Bar (FULL order)
+                        setTimeout(() => {
+                            printKitchenTicket(tableName, cartItems, "BARRA (PEDIDO COMPLETO)");
+                        }, 500);
+
+                        setActiveQrAlert({ tableId: req.table_id, tableName, items: cartItems });
 
                         setTableBills(prev => {
                             const currentBill = prev[req.table_id] || [];
@@ -1000,7 +1007,9 @@ export const OrderProvider = ({ children }) => {
             serviceRequests,
             requestService,
             clearServiceRequest,
-            reservations // Also expose reservations here for convenience
+            reservations, // Also expose reservations here for convenience
+            activeQrAlert,
+            setActiveQrAlert
         }}>
             {children}
         </OrderContext.Provider>

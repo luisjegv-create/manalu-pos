@@ -86,7 +86,7 @@ const BarTapas = () => {
     const [showTicket, setShowTicket] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [noteDraft, setNoteDraft] = useState('');
-    const [qrOrderAlert, setQrOrderAlert] = useState(null);
+    const [noteDraft, setNoteDraft] = useState('');
 
     // Mobile Responsiveness State
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -102,26 +102,8 @@ const BarTapas = () => {
         };
         window.addEventListener('resize', handleResize);
 
-        const handleNewQrOrder = (e) => {
-            const { tableId, tableName, items } = e.detail;
-            setQrOrderAlert({ tableId, tableName, items });
-
-            // 1. Ticket for Kitchen (ONLY food)
-            const foodItems = items.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
-            if (foodItems.length > 0) {
-                printKitchenTicket(tableName, foodItems, "COCINA");
-            }
-
-            // 2. Ticket for Bar (FULL order: food + drinks for table service)
-            setTimeout(() => {
-                printKitchenTicket(tableName, items, "BARRA (PEDIDO COMPLETO)");
-            }, 500); // Slight delay for the second window to trigger correctly
-        };
-        window.addEventListener('new_qr_order', handleNewQrOrder);
-
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('new_qr_order', handleNewQrOrder);
         };
     }, []);
 
