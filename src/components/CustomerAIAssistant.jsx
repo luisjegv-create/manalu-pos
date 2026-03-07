@@ -72,7 +72,7 @@ const CustomerAIAssistant = () => {
                 onClick={() => setIsOpen(true)}
                 style={{
                     position: 'fixed',
-                    bottom: '105px',
+                    bottom: '200px',
                     left: 'calc(50% - 37.5px)',
                     width: '75px',
                     height: '75px',
@@ -101,7 +101,7 @@ const CustomerAIAssistant = () => {
                         transition={{ duration: 0.2 }}
                         style={{
                             position: 'fixed',
-                            bottom: '110px',
+                            bottom: '205px',
                             left: '50%',
                             width: '92%',
                             maxWidth: '400px',

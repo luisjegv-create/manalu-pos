@@ -151,9 +151,9 @@ export const OrderProvider = ({ children }) => {
                                 ));
 
                                 // Instead of clearing immediately here which causes a race condition between tabs,
-                                // we will mark it processed in a way that doesn't delete it for other clients during initial sync load.
+                                // marked it processed in a way that doesn't delete it for other clients during initial sync load.
                                 // Actually, clearing it is fine IF all active tabs received the postgres_changes INSERT event directly.
-                                await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id);
+                                await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).eq('status', 'pending');
                             } catch (err) {
                                 console.error("Error processing auto-order payload:", err);
                                 validRequests.push(req); // Keep as pending if failed
@@ -172,6 +172,36 @@ export const OrderProvider = ({ children }) => {
         };
         syncWithCloud();
 
+        // 5. Setup Cross-Tab Synchronization
+        const handleStorageChange = (e) => {
+            if (e.key === 'manalu_table_bills' && e.newValue) {
+                try {
+                    const nextBills = JSON.parse(e.newValue);
+                    setTableBills(prev => {
+                        // Only update if actually different to avoid infinite loops
+                        if (JSON.stringify(prev) === JSON.stringify(nextBills)) return prev;
+                        console.log("Syncing tableBills from other tab...");
+                        return nextBills;
+                    });
+                } catch (err) {
+                    console.error("Error syncing tableBills from storage:", err);
+                }
+            }
+            if (e.key === 'manalu_tables' && e.newValue) {
+                try {
+                    const nextTables = JSON.parse(e.newValue);
+                    setTables(prev => {
+                        if (JSON.stringify(prev) === JSON.stringify(nextTables)) return prev;
+                        return nextTables;
+                    });
+                } catch (err) {
+                    console.error("Error syncing tables from storage:", err);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+
         // Realtime subscriptions
         const kitchenSubscription = supabase
             .channel('kitchen-updates')
@@ -187,7 +217,7 @@ export const OrderProvider = ({ children }) => {
                     ...payload.new,
                     date: new Date(payload.new.created_at),
                     total: parseFloat(payload.new.total || payload.new.total_amount || 0),
-                    items: typeof payload.new.items === 'string' ? JSON.parse(payload.new.items) : (payload.new.items || []),
+                    items: typeof payload.new.items === 'string' ? (payload.new.items.startsWith('[') ? JSON.parse(payload.new.items) : []) : (payload.new.items || []),
                     paymentMethod: payload.new.payment_method || payload.new.paymentMethod || 'Efectivo',
                     tableId: payload.new.table_id || payload.new.tableId
                 };
@@ -215,15 +245,29 @@ export const OrderProvider = ({ children }) => {
                         setTableBills(prev => {
                             const currentBill = prev[req.table_id] || [];
                             const newBill = [...currentBill];
+                            let modified = false;
+
                             cartItems.forEach(newItem => {
-                                const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
-                                if (existingInBill) {
-                                    existingInBill.quantity += newItem.quantity;
-                                } else {
-                                    newBill.push({ ...newItem });
+                                // IMPORTANT IDEMPOTENCY CHECK: 
+                                // Avoid re-adding the same items if this request was already processed 
+                                // (e.g., if syncWithCloud just ran or multiple events fired)
+                                const alreadyExists = newBill.some(b =>
+                                    b.id === newItem.id &&
+                                    b.quantity === newItem.quantity &&
+                                    (b.timestamp === newItem.timestamp || (new Date() - new Date(req.created_at) < 5000))
+                                );
+
+                                if (!alreadyExists) {
+                                    const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                                    if (existingInBill) {
+                                        existingInBill.quantity += newItem.quantity;
+                                    } else {
+                                        newBill.push({ ...newItem });
+                                    }
+                                    modified = true;
                                 }
                             });
-                            return { ...prev, [req.table_id]: newBill };
+                            return modified ? { ...prev, [req.table_id]: newBill } : prev;
                         });
 
                         setTables(prev => prev.map(t =>
@@ -232,8 +276,12 @@ export const OrderProvider = ({ children }) => {
                                 : t
                         ));
 
-                        // Let the first one to react clear it; the backend resolves conflicts.
-                        supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).then();
+                        // Only the "primary" tab (the one that sees it first) should clear it
+                        // but since multiple tabs might see it at the same time, we'll let Supabase handle the concurrency.
+                        // We add a tiny delay to ensure all listeners had a chance to see it.
+                        setTimeout(() => {
+                            supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).eq('status', 'pending').then();
+                        }, 1000);
                     } catch (err) {
                         console.error("Error in real-time order parsing", err);
                     }
@@ -244,6 +292,7 @@ export const OrderProvider = ({ children }) => {
             .subscribe();
 
         return () => {
+            window.removeEventListener('storage', handleStorageChange);
             supabase.removeChannel(kitchenSubscription);
             supabase.removeChannel(salesSubscription);
             supabase.removeChannel(serviceSubscription);

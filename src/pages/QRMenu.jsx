@@ -420,14 +420,14 @@ const QRMenu = () => {
             {tableParam && (
                 <div style={{
                     position: 'fixed',
-                    bottom: '25px',
+                    bottom: '20px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     zIndex: 100,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.8rem',
-                    width: '92%',
+                    gap: '0.6rem',
+                    width: '90%',
                     maxWidth: '450px'
                 }}>
                     <AnimatePresence>
@@ -441,22 +441,22 @@ const QRMenu = () => {
                                 className="pulse-yellow"
                                 style={{
                                     width: '100%',
-                                    padding: '1.2rem',
+                                    padding: '0.9rem 1.2rem',
                                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                     color: 'white',
                                     border: 'none',
-                                    borderRadius: '20px',
+                                    borderRadius: '16px',
                                     fontWeight: '800',
-                                    boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)',
+                                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.4)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
-                                    fontSize: '1.1rem',
+                                    fontSize: '1rem',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.05em'
                                 }}
                             >
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={22} /> Ver Pedido ({cartTotalQuantity})</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={20} /> Ver Pedido ({cartTotalQuantity})</span>
                                 <span>{cartTotalPrice.toFixed(2)}€</span>
                             </motion.button>
                         )}
@@ -469,49 +469,49 @@ const QRMenu = () => {
                             className={isRequesting && cartTotalQuantity === 0 ? "pulse-yellow" : ""}
                             style={{
                                 flex: 1,
-                                padding: '1.1rem',
+                                padding: '0.9rem',
                                 background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                                 color: '#000',
                                 border: 'none',
-                                borderRadius: '20px',
+                                borderRadius: '16px',
                                 fontWeight: '800',
-                                boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)',
+                                boxShadow: '0 8px 20px rgba(217, 119, 6, 0.4)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '0.6rem',
-                                fontSize: '0.9rem',
+                                gap: '0.5rem',
+                                fontSize: '0.8rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                                 opacity: isRequesting ? 0.7 : 1
                             }}
                         >
-                            {isRequesting ? '...' : <><Menu size={18} /> Llamar</>}
+                            {isRequesting ? '...' : <><Menu size={16} /> Llamar</>}
                         </motion.button>
                         <motion.button
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleServiceRequest('bill')}
                             style={{
                                 flex: 1,
-                                padding: '1.1rem',
+                                padding: '0.9rem',
                                 background: 'rgba(30, 41, 59, 0.7)',
                                 backdropFilter: 'blur(10px)',
                                 color: 'white',
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                                borderRadius: '20px',
+                                borderRadius: '16px',
                                 fontWeight: '800',
-                                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                                boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '0.6rem',
-                                fontSize: '0.9rem',
+                                gap: '0.5rem',
+                                fontSize: '0.8rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em',
                                 opacity: isRequesting ? 0.7 : 1
                             }}
                         >
-                            {isRequesting ? '...' : <><Wine size={18} /> La Cuenta</>}
+                            {isRequesting ? '...' : <><Wine size={16} /> La Cuenta</>}
                         </motion.button>
                     </div>
                 </div>
@@ -957,8 +957,8 @@ const QRMenu = () => {
                                 maxWidth: '600px',
                                 borderTopLeftRadius: '32px',
                                 borderTopRightRadius: '32px',
-                                padding: '2rem 1.5rem',
-                                maxHeight: '85vh',
+                                padding: '1.5rem 1.25rem',
+                                maxHeight: '75vh',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 boxShadow: '0 -10px 40px rgba(0,0,0,0.5)',
@@ -1024,12 +1024,12 @@ const QRMenu = () => {
                                     disabled={isSubmittingOrder || cartTotalQuantity === 0}
                                     style={{
                                         width: '100%',
-                                        padding: '1.25rem',
+                                        padding: '1rem',
                                         background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                                         color: '#000',
                                         border: 'none',
-                                        borderRadius: '20px',
-                                        fontSize: '1.2rem',
+                                        borderRadius: '16px',
+                                        fontSize: '1.1rem',
                                         fontWeight: 'bold',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
@@ -1039,10 +1039,10 @@ const QRMenu = () => {
                                         justifyContent: 'center',
                                         alignItems: 'center',
                                         gap: '0.75rem',
-                                        boxShadow: '0 10px 25px rgba(217, 119, 6, 0.4)'
+                                        boxShadow: '0 8px 20px rgba(217, 119, 6, 0.4)'
                                     }}
                                 >
-                                    {isSubmittingOrder ? 'Enviando...' : <><Check size={24} /> Enviar Pedido a Cocina</>}
+                                    {isSubmittingOrder ? 'Enviando...' : <><Check size={22} /> Enviar Pedido a Cocina</>}
                                 </motion.button>
                             </div>
                         </motion.div>
