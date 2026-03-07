@@ -27,8 +27,6 @@ const PaymentModal = ({
     if (!isOpen) return null;
 
     const totalBill = calculateBillTotal();
-    const subtotal = totalBill / 1.1;
-    const iva = totalBill - subtotal;
     const discountAmount = isInvitation ? totalBill : (totalBill * discountPercent / 100);
     const finalTotal = Math.max(0, totalBill - discountAmount);
 

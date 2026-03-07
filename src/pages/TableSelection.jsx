@@ -49,7 +49,7 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, serviceRequests, kitchenOrders, tableBills } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingTable, setEditingTable] = useState(null); // For modal

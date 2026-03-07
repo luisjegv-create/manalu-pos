@@ -24,8 +24,7 @@ const Inventory = () => {
     const {
         ingredients, addIngredient, updateIngredient, deleteIngredient,
         suppliers, addSupplier, updateSupplier, deleteSupplier,
-        invoices, addInvoice, deleteInvoice,
-        expenses, addExpense, deleteExpense
+        invoices, addInvoice, deleteInvoice
     } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('alimentos');

@@ -876,6 +876,7 @@ const ManaluEventos = () => {
             });
             const pendingCobro = agenda.filter(ev => ev.status === 'confirmed').reduce((acc, ev) => acc + (parseFloat(ev.total) || 0), 0);
             return { currentMonthEvents: currentMonthEvents.length, pendingCobro };
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [agenda]);
 
         const upcomingEvents = useMemo(() => {
@@ -885,6 +886,7 @@ const ManaluEventos = () => {
                 .filter(ev => ev.date && new Date(ev.date) >= now)
                 .sort((a, b) => new Date(a.date) - new Date(b.date))
                 .slice(0, 5);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [agenda]);
 
         return (

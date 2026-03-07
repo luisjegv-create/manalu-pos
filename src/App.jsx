@@ -20,6 +20,7 @@ import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import QRMenu from './pages/QRMenu';
 import Bookings from './pages/Bookings';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -31,21 +32,26 @@ function App() {
               <Router>
                 <div className="app-container">
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/tables" element={<TableSelection />} />
-                    <Route path="/bar-tapas" element={<BarTapas />} />
-                    <Route path="/manalu-eventos" element={<ManaluEventos />} />
-                    <Route path="/kds" element={<KitchenDisplay />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/inventory" element={<Inventory />} />
-                    <Route path="/recipes" element={<Recipes />} />
-                    <Route path="/bodega" element={<Bodega />} />
-                    <Route path="/manual" element={<Manual />} />
-                    <Route path="/staff" element={<Staff />} />
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/settings" element={<Settings />} />
+                    {/* Public Route */}
                     <Route path="/menu" element={<QRMenu />} />
-                    <Route path="/bookings" element={<Bookings />} />
+
+                    {/* Protected Routes */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/tables" element={<TableSelection />} />
+                      <Route path="/bar-tapas" element={<BarTapas />} />
+                      <Route path="/manalu-eventos" element={<ManaluEventos />} />
+                      <Route path="/kds" element={<KitchenDisplay />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/inventory" element={<Inventory />} />
+                      <Route path="/recipes" element={<Recipes />} />
+                      <Route path="/bodega" element={<Bodega />} />
+                      <Route path="/manual" element={<Manual />} />
+                      <Route path="/staff" element={<Staff />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/bookings" element={<Bookings />} />
+                    </Route>
                   </Routes>
                 </div>
               </Router>

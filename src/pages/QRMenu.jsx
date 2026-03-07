@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
 import { useOrder } from '../context/OrderContext';
+import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -34,6 +35,7 @@ const QRMenu = () => {
     const navigate = useNavigate();
     const { salesProducts, wines, restaurantInfo, checkProductAvailability } = useInventory();
     const { requestService } = useOrder();
+    const { currentUser } = useAuth();
     const [searchParams] = useSearchParams();
     const tableParam = searchParams.get('table');
 
@@ -452,28 +454,30 @@ const QRMenu = () => {
                     background: 'linear-gradient(to bottom, transparent 0%, #0f172a 100%)'
                 }} />
 
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        position: 'absolute',
-                        top: '1.5rem',
-                        left: '1.5rem',
-                        background: 'rgba(255,255,255,0.2)',
-                        backdropFilter: 'blur(10px)',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '45px',
-                        height: '45px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        cursor: 'pointer',
-                        zIndex: 20
-                    }}
-                >
-                    <ArrowLeft size={24} />
-                </button>
+                {currentUser && (
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            position: 'absolute',
+                            top: '1.5rem',
+                            left: '1.5rem',
+                            background: 'rgba(255,255,255,0.2)',
+                            backdropFilter: 'blur(10px)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '45px',
+                            height: '45px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            cursor: 'pointer',
+                            zIndex: 20
+                        }}
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
+                )}
 
                 <div style={{ position: 'relative', zIndex: 10, textAlign: 'center' }}>
                     {/* 

@@ -68,7 +68,6 @@ const BarTapas = () => {
         calculateOrderTotal,
         removeProductFromBill,
         currentTable,
-        tables, // Added tables from context
         tableBills, // Added to fix the reference error
         tableOrders, // Added to fix the reference error
         selectTable, // Added selectTable
@@ -414,8 +413,6 @@ const BarTapas = () => {
     };
 
     const totalBill = calculateBillTotal();
-    const iva = totalBill * 0.10;
-    const subtotal = totalBill - iva;
 
     // Mobile Search Logic
     const mobileFilteredProducts = mobileSearchQuery.trim() === ''

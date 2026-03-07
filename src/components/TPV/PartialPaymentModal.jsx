@@ -19,9 +19,7 @@ const PartialPaymentModal = ({
     setIsFullInvoice,
     customerTaxData,
     setCustomerTaxData,
-    handleConfirmPartialPayment,
-    payValuePartialTable,
-    currentTable
+    handleConfirmPartialPayment
 }) => {
     const [mode, setMode] = React.useState('products'); // 'products', 'equal', 'custom'
     const [numPeople, setNumPeople] = React.useState(2);
