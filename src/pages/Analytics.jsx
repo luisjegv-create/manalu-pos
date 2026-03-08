@@ -194,6 +194,7 @@ const Analytics = () => {
         // Payment Split
         const cashRaw = filteredSales.filter(s => s.paymentMethod === 'Efectivo').reduce((acc, s) => acc + (parseFloat(s.total) || 0), 0);
         const cardRaw = filteredSales.filter(s => s.paymentMethod === 'Tarjeta').reduce((acc, s) => acc + (parseFloat(s.total) || 0), 0);
+        const cardTipsRaw = filteredSales.reduce((acc, s) => acc + (parseFloat(s.card_tips) || 0), 0);
 
         // Hourly Heatmap Data (0-23h)
         const hours = new Array(24).fill(0);
@@ -208,7 +209,7 @@ const Analytics = () => {
             netProfit, netChange,
             ticketCount, ticketChange,
             avgTicket, avgChange,
-            cashRaw, cardRaw,
+            cashRaw, cardRaw, cardTipsRaw,
             totalDiscounts: currentStats.totalDiscounts,
             hours, maxHour
         };
@@ -300,8 +301,10 @@ const Analytics = () => {
                                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
                                 </div>
                                 <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Tarjeta</div>
                                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{dashboardStats.cardRaw.toFixed(2)}€</div>
+                                    {dashboardStats.cardTipsRaw > 0 && (
+                                        <div style={{ fontSize: '0.7rem', color: '#fbbf24', marginTop: '0.25rem' }}>Inc. {dashboardStats.cardTipsRaw.toFixed(2)}€ propina</div>
+                                    )}
                                 </div>
                             </div>
 
@@ -353,6 +356,7 @@ const Analytics = () => {
                                             const finalClose = {
                                                 efectivo: parseFloat(countedCash || 0),
                                                 tarjeta: dashboardStats.cardRaw,
+                                                cardTips: dashboardStats.cardTipsRaw,
                                                 total: dashboardStats.totalRevenue,
                                                 notes: closeNotes,
                                                 salesCount: dashboardStats.ticketCount

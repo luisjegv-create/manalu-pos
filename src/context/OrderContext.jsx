@@ -472,8 +472,10 @@ export const OrderProvider = ({ children }) => {
         ));
     };
 
-    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
+    const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null, tips = 0) => {
         const finalBill = tableBills[tableId];
+        const cardTips = parseFloat(tips) || 0;
+
         if (finalBill && finalBill.length > 0) {
             try {
                 const billTotal = calculateOrderTotal(finalBill);
@@ -483,15 +485,32 @@ export const OrderProvider = ({ children }) => {
                 // Assign sequential ticket number
                 const ticketNumber = await incrementTicketNumber();
 
-                // Save to Supabase
-                const { data, error } = await supabase.from('sales').insert([{
+                // Build sale record
+                const saleRecord = {
                     total,
                     payment_method: paymentMethod,
                     items: JSON.stringify(finalBill),
                     table_id: tableId,
-                    ticket_number: ticketNumber, // Added ticket_number persistence
-                    customer_info: customerData ? JSON.stringify(customerData) : null
-                }]).select();
+                    ticket_number: ticketNumber,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: cardTips // Attempt to use column
+                };
+
+                // Save to Supabase
+                let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+
+                // If column card_tips doesn't exist, retry without it but store it in items or customer_info
+                if (error && error.message.includes('card_tips') && error.message.includes('does not exist')) {
+                    console.log("Fallback: card_tips column not found, storing in items...");
+                    const fallbackBill = [...finalBill, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
+                    const { data: retryData, error: retryError } = await supabase.from('sales').insert([{
+                        ...saleRecord,
+                        items: JSON.stringify(fallbackBill),
+                        card_tips: undefined // Remove invalid column
+                    }]).select();
+                    data = retryData;
+                    error = retryError;
+                }
 
                 if (error) {
                     console.error("DEBUG - closeTable Supabase Error:", error);
@@ -506,7 +525,8 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.parse(data[0].items),
                         paymentMethod: data[0].payment_method,
                         tableId: data[0].table_id,
-                        ticket_number: data[0].ticket_number || ticketNumber
+                        ticket_number: data[0].ticket_number || ticketNumber,
+                        card_tips: parseFloat(data[0].card_tips) || cardTips // Use returned value or local value
                     };
                     setSalesHistory(prev => [newSale, ...prev]);
 
@@ -551,26 +571,40 @@ export const OrderProvider = ({ children }) => {
         return null;
     };
 
-    const payPartialTable = async (tableId, itemsToPay, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
-        if (!itemsToPay || itemsToPay.length === 0) return null;
+    const payPartialTable = async (tableId, partialItems, paymentMethod = 'Efectivo', tips = 0) => {
+        const cardTips = parseFloat(tips) || 0;
+        if (!partialItems || partialItems.length === 0) return null;
 
         try {
-            const billTotal = calculateOrderTotal(itemsToPay);
-            const discountAmount = (billTotal * discountPercent) / 100;
-            const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+            const total = calculateOrderTotal(partialItems);
 
             // Assign sequential ticket number
             const ticketNumber = await incrementTicketNumber();
 
-            // Save partial sale to Supabase
-            const { data, error } = await supabase.from('sales').insert([{
+            // Build sale record
+            const saleRecord = {
                 total,
                 payment_method: paymentMethod,
-                items: JSON.stringify(itemsToPay),
+                items: JSON.stringify(partialItems),
                 table_id: tableId,
-                ticket_number: ticketNumber, // Added ticket_number persistence
-                customer_info: customerData ? JSON.stringify(customerData) : null
-            }]).select();
+                ticket_number: ticketNumber,
+                card_tips: cardTips
+            };
+
+            // Save to Supabase
+            let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+
+            // Fallback for missing column
+            if (error && error.message.includes('card_tips') && error.message.includes('does not exist')) {
+                const fallbackBill = [...partialItems, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
+                const { data: retryData, error: retryError } = await supabase.from('sales').insert([{
+                    ...saleRecord,
+                    items: JSON.stringify(fallbackBill),
+                    card_tips: undefined
+                }]).select();
+                data = retryData;
+                error = retryError;
+            }
 
             if (error) {
                 console.error("DEBUG - payPartialTable Supabase Error:", error);

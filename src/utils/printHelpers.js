@@ -242,7 +242,7 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
     printWindow.document.close();
 };
 
-export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null) => {
+export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null, amountReceived = 0, cardTips = 0) => {
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -254,6 +254,10 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const discountAmount = (total * discountPercent) / 100;
     const finalTotal = isInvitation ? 0 : Math.max(0, total - discountAmount);
+
+    const received = parseFloat(amountReceived) || 0;
+    const change = received > finalTotal ? received - finalTotal : 0;
+    const tips = parseFloat(cardTips) || 0;
 
     // Tax Breakdown (Spain standard for hospitality: 10%, Rental: 21%)
     const taxRate = taxRateOverride !== null ? taxRateOverride : 0.10;
@@ -404,10 +408,30 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                     <span>IVA (${(taxRate * 100).toFixed(0)}%):</span>
                     <span>${taxAmount.toFixed(2)}€</span>
                 </div>
+
                 <div class="total-row grand-total">
                     <span>TOTAL:</span>
                     <span>${finalTotal.toFixed(2)}€</span>
                 </div>
+
+                ${tips > 0 ? `
+                    <div class="total-row" style="margin-top: 5px; font-style: italic; color: #444;">
+                        <span>Propina Tarjeta:</span>
+                        <span>${tips.toFixed(2)}€</span>
+                    </div>
+                ` : ''}
+
+                ${received > 0 ? `
+                    <div class="separator"></div>
+                    <div class="total-row">
+                        <span>Entregado:</span>
+                        <span>${received.toFixed(2)}€</span>
+                    </div>
+                    <div class="total-row" style="font-weight: bold;">
+                        <span>Cambio:</span>
+                        <span>${change.toFixed(2)}€</span>
+                    </div>
+                ` : ''}
             </div>
 
             <div class="footer">
@@ -836,6 +860,12 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
                     <span class="label">Total Tarjeta:</span>
                     <span class="value">${(closeData.tarjeta || 0).toFixed(2)}€</span>
                 </div>
+                ${closeData.cardTips > 0 ? `
+                    <div class="row" style="padding-left: 10px; font-style: italic;">
+                        <span class="label"> (de las cuales Propina):</span>
+                        <span class="value">${(closeData.cardTips || 0).toFixed(2)}€</span>
+                    </div>
+                ` : ''}
                 <div class="row">
                     <span class="label">Total Efectivo:</span>
                     <span class="value">${(closeData.efectivo || 0).toFixed(2)}€</span>

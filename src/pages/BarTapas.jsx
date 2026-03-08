@@ -86,7 +86,7 @@ const BarTapas = () => {
     const [showTicket, setShowTicket] = useState(false);
     const [editingNoteId, setEditingNoteId] = useState(null);
     const [noteDraft, setNoteDraft] = useState('');
-    const [noteDraft, setNoteDraft] = useState('');
+    const [qrOrderAlert, setQrOrderAlert] = useState(null);
 
     // Mobile Responsiveness State
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -382,12 +382,12 @@ const BarTapas = () => {
         }
     };
 
-    const handleCloseTable = async (method = 'Efectivo') => {
+    const handleCloseTable = async (method = 'Efectivo', received = 0, tips = 0) => {
         if (!currentTable) return;
         const currentBill = [...bill]; // Snapshot for printing
         const total = totalBill;
 
-        const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null);
+        const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null, tips);
         if (saleData) {
             // Print final ticket with ID
             printBillTicket(
@@ -398,7 +398,10 @@ const BarTapas = () => {
                 discountPercent,
                 isInvitation,
                 saleData.ticket_number || saleData.id.slice(-8),
-                isFullInvoice ? customerTaxData : null
+                isFullInvoice ? customerTaxData : null,
+                null,
+                received,
+                tips
             );
             setShowTicket(false);
             setDiscountPercent(0);
