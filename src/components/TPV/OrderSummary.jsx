@@ -383,56 +383,80 @@ const OrderSummary = ({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {order.length > 0 ? (
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button
-                                className="btn-primary"
-                                style={{
-                                    flex: 1,
-                                    padding: '1.5rem',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    fontSize: '1.25rem',
-                                    fontWeight: '800',
-                                    borderRadius: '16px',
-                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                                    border: 'none',
-                                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
-                                    color: 'white',
-                                    cursor: 'pointer'
-                                }}
-                                onClick={() => handleSendOrder(false)}
-                            >
-                                <Send size={24} /> ENVIAR COMANDA
-                            </button>
-                            <button
-                                onClick={() => {
-                                    handleSendOrder(true);
-                                    setIsPaymentModalOpen(true);
-                                }}
-                                style={{
-                                    width: '90px',
-                                    padding: '1rem',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    gap: '0.35rem',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 'bold',
-                                    borderRadius: '16px',
-                                    background: 'rgba(16, 185, 129, 0.1)',
-                                    color: '#10b981',
-                                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                                    cursor: 'pointer'
-                                }}
-                                title="Cobro Directo Rápido"
-                            >
-                                <Wine size={20} />
-                                Cobrar
-                            </button>
-                        </div>
+                        <>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button
+                                    className="btn-primary"
+                                    style={{
+                                        flex: 2,
+                                        padding: '1.25rem 0.5rem',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '1rem',
+                                        fontWeight: '800',
+                                        borderRadius: '16px',
+                                        background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                        border: 'none',
+                                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                                        color: 'white',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => handleSendOrder(false, false)}
+                                >
+                                    <Printer size={20} /> <span>IMPRIMIR<br />Y ENVIAR</span>
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    style={{
+                                        flex: 2,
+                                        padding: '1.25rem 0.5rem',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        fontSize: '1rem',
+                                        fontWeight: '800',
+                                        borderRadius: '16px',
+                                        background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                                        border: 'none',
+                                        boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)',
+                                        color: 'white',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => handleSendOrder(false, true)}
+                                >
+                                    <Send size={20} /> <span>SOLO<br />GUARDAR</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleSendOrder(true, false);
+                                        setIsPaymentModalOpen(true);
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '1rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '0.35rem',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 'bold',
+                                        borderRadius: '16px',
+                                        background: 'rgba(16, 185, 129, 0.1)',
+                                        color: '#10b981',
+                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                        cursor: 'pointer'
+                                    }}
+                                    title="Cobro Directo Rápido"
+                                >
+                                    <Wine size={20} />
+                                    Cobrar
+                                </button>
+                            </div>
+                        </>
                     ) : (bill && bill.length > 0) ? (
                         <>
                             <button

@@ -27,7 +27,7 @@ import {
     LayoutGrid
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { printKitchenTicket, printBillTicket } from '../utils/printHelpers';
+import { printBillTicket, printServiceTickets } from '../utils/printHelpers';
 
 // Modular Components
 import CategoryTabs from '../components/TPV/CategoryTabs';
@@ -370,15 +370,23 @@ const BarTapas = () => {
     };
 
 
-    const handleSendOrder = (isSilent = false) => {
+    const handleSendOrder = (isSilent = false, withoutPrinting = false) => {
         if (order.length === 0) return;
 
-        // Automatically print ticket for kitchen
-        printKitchenTicket(currentTable ? currentTable.name : 'Barra', order);
+        // Filter items
+        const foodItems = order.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
+        const drinkItems = order.filter(item => item.category === 'bebidas' || item.category === 'vinos');
+
+        const tableName = currentTable ? currentTable.name : 'Barra';
+
+        if (!withoutPrinting) {
+            // Print combined tickets
+            printServiceTickets(tableName, foodItems, drinkItems);
+        }
 
         sendToKitchen();
         if (!isSilent) {
-            alert('¡Pedido enviado a cocina e impreso! 👨‍🍳');
+            alert(withoutPrinting ? '¡Pedido guardado en la cuenta de la mesa! 💾' : '¡Pedido enviado a cocina e impreso! 👨‍🍳');
         }
     };
 
@@ -412,7 +420,7 @@ const BarTapas = () => {
                 closeTabFallback(currentTable.id);
                 navigate('/bar-tapas?mode=quick');
             } else {
-                navigate('/bar-tapas');
+                navigate('/tables');
             }
         } else {
             alert('Error al cerrar la mesa.');

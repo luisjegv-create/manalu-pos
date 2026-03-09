@@ -1,5 +1,5 @@
 
-export const printKitchenTicket = (tableName, items, note = '') => {
+export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'ORDEN COCINA') => {
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -14,7 +14,7 @@ export const printKitchenTicket = (tableName, items, note = '') => {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Ticket Cocina - ${tableName}</title>
+            <title>${headerTitle} - ${tableName}</title>
             <style>
                 body {
                     font-family: 'Courier New', Courier, monospace;
@@ -81,7 +81,7 @@ export const printKitchenTicket = (tableName, items, note = '') => {
         </head>
         <body>
             <div class="header">
-                <h1 class="title">ORDEN COCINA</h1>
+                <h1 class="title">${headerTitle}</h1>
                 <div class="meta">${date} - ${time}</div>
             </div>
             
@@ -105,6 +105,136 @@ export const printKitchenTicket = (tableName, items, note = '') => {
 
             ${note ? `<div class="note">NOTA: ${note}</div>` : ''}
 
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
+
+export const printServiceTickets = (tableName, foodItems, drinkItems) => {
+    const printWindow = window.open('', '', 'width=400,height=600');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir.');
+        return;
+    }
+
+    const date = new Date().toLocaleDateString();
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const generateTicketHtml = (title, items) => {
+        if (!items || items.length === 0) return '';
+
+        return `
+            <div class="ticket-section">
+                <div class="header">
+                    <h1 class="title">${title}</h1>
+                    <div class="meta">${date} - ${time}</div>
+                </div>
+                
+                <div class="table-name">
+                    ${tableName}
+                </div>
+
+                <table class="items">
+                    ${items.map(item => `
+                        <tr class="item-row">
+                            <td class="qty">${item.quantity}</td>
+                            <td class="name">
+                                ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
+                                ${item.name}
+                                ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
+                                ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </div>
+        `;
+    };
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Comanda - ${tableName}</title>
+            <style>
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    width: 300px; /* Ancho típico térmica */
+                    margin: 0 auto;
+                    padding: 10px;
+                    color: black;
+                }
+                .ticket-section {
+                    page-break-after: always;
+                    margin-bottom: 20px;
+                }
+                /* Do not page break after the last section */
+                .ticket-section:last-child {
+                    page-break-after: auto;
+                    margin-bottom: 0;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px dashed black;
+                    padding-bottom: 10px;
+                    margin-bottom: 10px;
+                }
+                .title {
+                    font-size: 1.2rem;
+                    font-weight: bold;
+                    margin: 0;
+                }
+                .meta {
+                    font-size: 0.9rem;
+                    margin-top: 5px;
+                }
+                .table-name {
+                    font-size: 1.5rem;
+                    font-weight: 900;
+                    margin: 10px 0;
+                    text-align: center;
+                    border: 2px solid black;
+                    padding: 5px;
+                }
+                .items {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 15px;
+                }
+                .item-row {
+                    border-bottom: 1px dashed #ccc;
+                }
+                .qty {
+                    font-weight: bold;
+                    font-size: 1.2rem;
+                    width: 40px;
+                    text-align: center;
+                    vertical-align: top;
+                }
+                .name {
+                    font-size: 1.1rem;
+                    padding-left: 10px;
+                    font-weight: bold;
+                }
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { margin: 10px; }
+                }
+            </style>
+        </head>
+        <body>
+            ${generateTicketHtml('ORDEN COCINA', foodItems)}
+            ${generateTicketHtml('ORDEN BARRA', drinkItems)}
             <script>
                 window.onload = function() {
                     window.print();

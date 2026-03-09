@@ -644,6 +644,15 @@ const Analytics = () => {
                                             <div style={{ width: `${(dashboardStats.cashRaw / (dashboardStats.totalRevenue || 1)) * 100}%`, height: '100%', background: '#10b981' }} />
                                         </div>
                                     </div>
+                                    <div style={{ marginTop: '0.25rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#fbbf24' }}>
+                                            <span>Propina Tarjeta</span>
+                                            <span style={{ fontWeight: 'bold' }}>{dashboardStats.cardTipsRaw.toFixed(2)}€</span>
+                                        </div>
+                                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                                            <div style={{ width: `${(dashboardStats.cardTipsRaw / ((dashboardStats.totalRevenue + dashboardStats.cardTipsRaw) || 1)) * 100}%`, height: '100%', background: '#fbbf24' }} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

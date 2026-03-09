@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { printKitchenTicket } from '../utils/printHelpers';
+import { printServiceTickets } from '../utils/printHelpers';
 import { useInventory } from './InventoryContext';
 import { useCustomers } from './CustomerContext';
 import { tables as initialTables } from '../data/tables';
@@ -236,16 +236,14 @@ export const OrderProvider = ({ children }) => {
                         const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
                         const tableName = req.table_name || `Mesa ${req.table_id}`;
 
-                        // 1. Ticket for Kitchen (ONLY food)
+                        // Print combined tickets (Kitchen and Bar)
                         const foodItems = cartItems.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
-                        if (foodItems.length > 0) {
-                            printKitchenTicket(tableName, foodItems, "COCINA");
-                        }
+                        const drinkItems = cartItems.filter(item => item.category === 'bebidas' || item.category === 'vinos');
 
-                        // 2. Ticket for Bar (FULL order)
-                        setTimeout(() => {
-                            printKitchenTicket(tableName, cartItems, "BARRA (PEDIDO COMPLETO)");
-                        }, 500);
+                        // We only print if there's actually something to print
+                        if (foodItems.length > 0 || drinkItems.length > 0) {
+                            printServiceTickets(tableName, foodItems, drinkItems);
+                        }
 
                         setActiveQrAlert({ tableId: req.table_id, tableName, items: cartItems });
 
@@ -431,7 +429,9 @@ export const OrderProvider = ({ children }) => {
             }));
 
         if (kitchenItems.length > 0) {
+            // [MODIFIED: Disabled KDS sending to fix race condition when clearing tables]
             // Save to Supabase (KDS)
+            /*
             try {
                 const { data, error } = await supabase.from('kitchen_orders').insert([{
                     table_name: currentTable.name,
@@ -453,6 +453,7 @@ export const OrderProvider = ({ children }) => {
             } catch (err) {
                 console.error("Error sending to kitchen:", err);
             }
+            */
         }
 
         try {
@@ -512,7 +513,7 @@ export const OrderProvider = ({ children }) => {
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
                 // Fallback for missing columns (card_tips or customer_info)
-                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                     console.log("Fallback: missing column detected, retrying...");
                     const fallbackBill = [...finalBill];
                     if (cardTips > 0) {
@@ -524,6 +525,7 @@ export const OrderProvider = ({ children }) => {
                     const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
                     delete retryRecord.card_tips;
                     delete retryRecord.customer_info;
+                    delete retryRecord.ticket_number;
                     const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                     error = retryError;
@@ -612,7 +614,7 @@ export const OrderProvider = ({ children }) => {
             let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
             // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                 const fallbackBill = [...partialItems];
                 if (cardTips > 0) {
                     fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
@@ -620,6 +622,7 @@ export const OrderProvider = ({ children }) => {
                 const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
                 delete retryRecord.card_tips;
                 delete retryRecord.customer_info;
+                delete retryRecord.ticket_number;
                 const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                 data = retryData;
                 error = retryError;
@@ -700,7 +703,7 @@ export const OrderProvider = ({ children }) => {
             }]).select();
 
             // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                 const fallbackBill = [...itemsToPay];
                 if (customerData) {
                     fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
@@ -712,6 +715,9 @@ export const OrderProvider = ({ children }) => {
                     table_id: tableId,
                     ticket_number: ticketNumber
                 };
+                delete retryRecord.card_tips;
+                delete retryRecord.customer_info;
+                delete retryRecord.ticket_number;
                 const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                 data = retryData;
                 error = retryError;

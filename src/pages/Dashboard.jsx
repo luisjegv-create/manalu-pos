@@ -37,6 +37,7 @@ const Dashboard = () => {
             color: "pink",
             path: "/manalu-eventos" // Added path
         },
+        /*
         {
             title: "Cocina (KDS)",
             icon: ChefHat,
@@ -44,6 +45,7 @@ const Dashboard = () => {
             color: "orange",
             path: "/kds"
         },
+        */
         {
             title: "Almacén",
             icon: Box,
