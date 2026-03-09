@@ -72,10 +72,11 @@ const CustomerAIAssistant = () => {
                 onClick={() => setIsOpen(true)}
                 style={{
                     position: 'fixed',
-                    bottom: '200px',
-                    left: 'calc(50% - 37.5px)',
-                    width: '75px',
-                    height: '75px',
+                    bottom: '130px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '90px',
+                    height: '90px',
                     borderRadius: '50%',
                     background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
                     color: 'white',
@@ -88,7 +89,7 @@ const CustomerAIAssistant = () => {
                     cursor: 'pointer'
                 }}
             >
-                <Sparkles size={34} />
+                <Sparkles size={40} />
             </motion.button>
 
             {/* Chat Window */}
@@ -101,7 +102,7 @@ const CustomerAIAssistant = () => {
                         transition={{ duration: 0.2 }}
                         style={{
                             position: 'fixed',
-                            bottom: '205px',
+                            bottom: '135px',
                             left: '50%',
                             width: '92%',
                             maxWidth: '400px',

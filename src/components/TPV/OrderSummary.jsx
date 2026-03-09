@@ -380,112 +380,148 @@ const OrderSummary = ({
                     <span style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--color-text)', lineHeight: '1' }}>{(order.length > 0 ? calculateTotal() : calculateBillTotal()).toFixed(2)}€</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
-                    <button
-                        className="btn-primary"
-                        style={{
-                            gridColumn: 'span 2',
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {order.length > 0 ? (
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                className="btn-primary"
+                                style={{
+                                    flex: 1,
+                                    padding: '1.5rem',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    fontSize: '1.25rem',
+                                    fontWeight: '800',
+                                    borderRadius: '16px',
+                                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                                    border: 'none',
+                                    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                                    color: 'white',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => handleSendOrder(false)}
+                            >
+                                <Send size={24} /> ENVIAR COMANDA
+                            </button>
+                            <button
+                                onClick={() => {
+                                    handleSendOrder(true);
+                                    setIsPaymentModalOpen(true);
+                                }}
+                                style={{
+                                    width: '90px',
+                                    padding: '1rem',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 'bold',
+                                    borderRadius: '16px',
+                                    background: 'rgba(16, 185, 129, 0.1)',
+                                    color: '#10b981',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    cursor: 'pointer'
+                                }}
+                                title="Cobro Directo Rápido"
+                            >
+                                <Wine size={20} />
+                                Cobrar
+                            </button>
+                        </div>
+                    ) : (bill && bill.length > 0) ? (
+                        <>
+                            <button
+                                className="btn-primary"
+                                onClick={() => setIsPaymentModalOpen(true)}
+                                style={{
+                                    width: '100%',
+                                    padding: '1.5rem',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    fontSize: '1.35rem',
+                                    fontWeight: '900',
+                                    borderRadius: '16px',
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+                                    color: 'white',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <Wine size={28} /> COBRAR ({calculateBillTotal().toFixed(2)}€)
+                            </button>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <button
+                                    onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
+                                    style={{
+                                        padding: '1rem',
+                                        fontSize: '0.95rem',
+                                        borderRadius: '12px',
+                                        background: 'rgba(59, 130, 246, 0.25)',
+                                        border: '1px solid rgba(59, 130, 246, 0.8)',
+                                        color: '#eff6ff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.4)'}
+                                    onMouseLeave={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.25)'}
+                                >
+                                    <CreditCard size={18} /> Cobro Dividido
+                                </button>
+                                <button
+                                    style={{
+                                        padding: '1rem',
+                                        fontSize: '0.95rem',
+                                        borderRadius: '12px',
+                                        background: 'rgba(251, 191, 36, 0.25)',
+                                        color: '#fffbeb',
+                                        border: '1px solid rgba(251, 191, 36, 0.8)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.background = 'rgba(251, 191, 36, 0.4)'}
+                                    onMouseLeave={(e) => e.target.style.background = 'rgba(251, 191, 36, 0.25)'}
+                                    title="Imprimir ticket pre-cuenta"
+                                >
+                                    <Printer size={18} /> Pre-Ticket
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{
                             padding: '1.25rem',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            fontSize: '1.1rem',
+                            textAlign: 'center',
+                            color: 'var(--color-text-muted)',
+                            background: 'rgba(255,255,255,0.02)',
                             borderRadius: '16px',
-                            background: 'linear-gradient(135deg, #6366f1, #3b82f6)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-                            opacity: order.length === 0 ? 0.5 : 1
-                        }}
-                        onClick={handleSendOrder}
-                        disabled={order.length === 0}
-                    >
-                        <Send size={20} /> ENVIAR
-                    </button>
-
-                    <button
-                        className="btn-icon-circle"
-                        style={{
-                            width: '100%',
-                            height: 'auto',
-                            borderRadius: '16px',
-                            background: '#fbbf24',
-                            color: '#000',
-                            border: '1px solid rgba(255,255,255,0.3)',
+                            border: '1px dashed rgba(255,255,255,0.05)',
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                        title="Imprimir ticket pre-cuenta"
-                    >
-                        <Printer size={24} />
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (order.length > 0) handleSendOrder(true);
-                            setIsPaymentModalOpen(true);
-                        }}
-                        disabled={order.length === 0 && (!bill || bill.length === 0)}
-                        className="btn-icon-circle"
-                        style={{
-                            width: '100%',
-                            height: 'auto',
-                            borderRadius: '16px',
-                            background: '#10b981',
-                            color: 'white',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            opacity: (order.length === 0 && (!bill || bill.length === 0)) ? 0.5 : 1
-                        }}
-                        title="Cobrar Mesa"
-                    >
-                        <Wine size={24} />
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (order.length > 0) handleSendOrder(true);
-                            setPartialPaymentModal({ isOpen: true, itemsToPay: [] });
-                        }}
-                        style={{
-                            gridColumn: 'span 2',
-                            padding: '0.75rem',
-                            fontSize: '0.9rem',
-                            borderRadius: '12px',
-                            background: 'var(--color-primary)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        <CreditCard size={18} /> Cobrar Partes
-                    </button>
-
-                    <button
-                        style={{
-                            gridColumn: 'span 2',
-                            padding: '0.75rem',
-                            fontSize: '0.9rem',
-                            borderRadius: '12px',
-                            background: '#475569',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        <Receipt size={18} /> Cuenta (0.00€)
-                    </button>
+                            gap: '0.5rem'
+                        }}>
+                            <Utensils size={24} style={{ opacity: 0.5 }} />
+                            <span>La mesa está libre</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div >

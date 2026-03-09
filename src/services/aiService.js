@@ -21,15 +21,18 @@ Regla de oro: Limítate ÚNICA Y EXCLUSIVAMENTE a la información del menú prop
 MENÚ ACTUAL (n: nombre, p: precio, d: descripción, a: alérgenos):
 ${JSON.stringify(productList)}`;
 
-    const contents = messages.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-    }));
+    const contents = [
+        {
+            role: 'user',
+            parts: [{ text: `INSTRUCCIONES DE SISTEMA: ${systemPrompt}\n\nPOR FAVOR, RESPONDE A LA SIGUIENTE CONVERSACIÓN SIGUIENDO LAS INSTRUCCIONES ANTERIORES.` }]
+        },
+        ...messages.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        }))
+    ];
 
     const body = {
-        systemInstruction: {
-            parts: [{ text: systemPrompt }]
-        },
         contents: contents,
         generationConfig: {
             temperature: 0.7,
@@ -38,7 +41,7 @@ ${JSON.stringify(productList)}`;
     };
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)

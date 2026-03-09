@@ -407,10 +407,18 @@ export const OrderProvider = ({ children }) => {
     const sendToKitchen = async () => {
         if (!currentTable || order.length === 0) return;
 
-        // Ensure stock is deducted and sale is optionally recorded
-        deductStockForOrder(order);
-        if (selectedCustomer) {
-            recordSale(selectedCustomer.id, calculateOrderTotal(order), order);
+        try {
+            deductStockForOrder(order);
+        } catch (e) {
+            console.error("Error deducting stock:", e);
+        }
+
+        try {
+            if (selectedCustomer) {
+                recordSale(selectedCustomer.id, calculateOrderTotal(order), order);
+            }
+        } catch (e) {
+            console.error("Error recording sale for customer:", e);
         }
 
         // Filter items for kitchen: exclude drinks and wines
@@ -447,22 +455,26 @@ export const OrderProvider = ({ children }) => {
             }
         }
 
-        // Always update bill and clear order (even if only drinks/wines)
-        setTableBills(prev => {
-            const currentBill = prev[currentTable.id] || [];
-            const newBill = [...currentBill];
-            order.forEach(newItem => {
-                const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
-                if (existingInBill) {
-                    existingInBill.quantity += newItem.quantity;
-                } else {
-                    newBill.push({ ...newItem });
-                }
+        try {
+            // Always update bill and clear order (even if only drinks/wines)
+            setTableBills(prev => {
+                const currentBill = prev[currentTable.id] || [];
+                const newBill = [...currentBill];
+                order.forEach(newItem => {
+                    const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                    if (existingInBill) {
+                        existingInBill.quantity += newItem.quantity;
+                    } else {
+                        newBill.push({ ...newItem });
+                    }
+                });
+                return { ...prev, [currentTable.id]: newBill };
             });
-            return { ...prev, [currentTable.id]: newBill };
-        });
-        clearOrder();
-        setSelectedCustomer(null);
+            clearOrder();
+            setSelectedCustomer(null);
+        } catch (e) {
+            console.error("Error updating table bills:", e);
+        }
 
         // Update table activity
         setTables(prev => prev.map(t =>
@@ -500,14 +512,12 @@ export const OrderProvider = ({ children }) => {
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
                 // If column card_tips doesn't exist, retry without it but store it in items or customer_info
-                if (error && error.message.includes('card_tips') && error.message.includes('does not exist')) {
+                if (error && error.message.includes('card_tips') && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                     console.log("Fallback: card_tips column not found, storing in items...");
                     const fallbackBill = [...finalBill, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
-                    const { data: retryData, error: retryError } = await supabase.from('sales').insert([{
-                        ...saleRecord,
-                        items: JSON.stringify(fallbackBill),
-                        card_tips: undefined // Remove invalid column
-                    }]).select();
+                    const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
+                    delete retryRecord.card_tips;
+                    const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                     error = retryError;
                 }
@@ -595,13 +605,11 @@ export const OrderProvider = ({ children }) => {
             let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
             // Fallback for missing column
-            if (error && error.message.includes('card_tips') && error.message.includes('does not exist')) {
+            if (error && error.message.includes('card_tips') && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                 const fallbackBill = [...partialItems, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
-                const { data: retryData, error: retryError } = await supabase.from('sales').insert([{
-                    ...saleRecord,
-                    items: JSON.stringify(fallbackBill),
-                    card_tips: undefined
-                }]).select();
+                const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
+                delete retryRecord.card_tips;
+                const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                 data = retryData;
                 error = retryError;
             }
@@ -623,16 +631,13 @@ export const OrderProvider = ({ children }) => {
                 };
                 setSalesHistory(prev => [newSale, ...prev]);
 
-                // Update customer loyalty if applicable
-                if (customerData && customerData.id) {
-                    recordSale(customerData.id, total);
-                }
+                // No customer loyality update for partial payments at this time
 
                 // Update bill: deduct paid quantities
                 setTableBills(prev => {
                     const currentBill = prev[tableId] || [];
                     const nextBill = currentBill.map(item => {
-                        const paidItem = itemsToPay.find(p => p.uniqueId === item.uniqueId);
+                        const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
                         if (paidItem) {
                             return { ...item, quantity: item.quantity - paidItem.quantity };
                         }
