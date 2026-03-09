@@ -511,12 +511,19 @@ export const OrderProvider = ({ children }) => {
                 // Save to Supabase
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
-                // If column card_tips doesn't exist, retry without it but store it in items or customer_info
-                if (error && error.message.includes('card_tips') && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
-                    console.log("Fallback: card_tips column not found, storing in items...");
-                    const fallbackBill = [...finalBill, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
+                // Fallback for missing columns (card_tips or customer_info)
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                    console.log("Fallback: missing column detected, retrying...");
+                    const fallbackBill = [...finalBill];
+                    if (cardTips > 0) {
+                        fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
+                    }
+                    if (customerData) {
+                        fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
+                    }
                     const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
                     delete retryRecord.card_tips;
+                    delete retryRecord.customer_info;
                     const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                     error = retryError;
@@ -604,11 +611,15 @@ export const OrderProvider = ({ children }) => {
             // Save to Supabase
             let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
-            // Fallback for missing column
-            if (error && error.message.includes('card_tips') && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
-                const fallbackBill = [...partialItems, { id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true }];
+            // Fallback for missing columns
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                const fallbackBill = [...partialItems];
+                if (cardTips > 0) {
+                    fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
+                }
                 const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
                 delete retryRecord.card_tips;
+                delete retryRecord.customer_info;
                 const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                 data = retryData;
                 error = retryError;
@@ -679,7 +690,7 @@ export const OrderProvider = ({ children }) => {
             const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
             const finalToPay = Math.max(0, amount - discountAmount);
 
-            const { data, error } = await supabase.from('sales').insert([{
+            let { data, error } = await supabase.from('sales').insert([{
                 total: finalToPay,
                 payment_method: paymentMethod,
                 items: JSON.stringify(itemsToPay),
@@ -687,6 +698,24 @@ export const OrderProvider = ({ children }) => {
                 ticket_number: ticketNumber,
                 customer_info: customerData ? JSON.stringify(customerData) : null
             }]).select();
+
+            // Fallback for missing columns
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                const fallbackBill = [...itemsToPay];
+                if (customerData) {
+                    fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
+                }
+                const retryRecord = {
+                    total: finalToPay,
+                    payment_method: paymentMethod,
+                    items: JSON.stringify(fallbackBill),
+                    table_id: tableId,
+                    ticket_number: ticketNumber
+                };
+                const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
+                data = retryData;
+                error = retryError;
+            }
 
             if (error) {
                 console.error("DEBUG - payValuePartialTable Supabase Error:", error);

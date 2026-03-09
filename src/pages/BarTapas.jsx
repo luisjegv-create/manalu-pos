@@ -419,6 +419,19 @@ const BarTapas = () => {
         }
     };
 
+    const handlePrintPreTicket = () => {
+        if (!currentTable || !bill || bill.length === 0) return;
+        printBillTicket(
+            currentTable.name || 'Mesa',
+            bill,
+            totalBill,
+            restaurantInfo,
+            0,
+            false,
+            'PRE-CUENTA'
+        );
+    };
+
     const totalBill = calculateBillTotal();
 
     // Mobile Search Logic
@@ -789,6 +802,7 @@ const BarTapas = () => {
                         handleSendOrder={handleSendOrder}
                         setIsPaymentModalOpen={setShowTicket}
                         setPartialPaymentModal={setPartialPaymentModal}
+                        handlePrintPreTicket={handlePrintPreTicket}
                         currentTable={currentTable}
                     />
                 )}

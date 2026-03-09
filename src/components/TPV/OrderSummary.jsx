@@ -32,6 +32,7 @@ const OrderSummary = ({
     handleSendOrder,
     setIsPaymentModalOpen,
     setPartialPaymentModal,
+    handlePrintPreTicket,
     currentTable
 }) => {
     return (
@@ -481,6 +482,7 @@ const OrderSummary = ({
                                     <CreditCard size={18} /> Cobro Dividido
                                 </button>
                                 <button
+                                    onClick={handlePrintPreTicket}
                                     style={{
                                         padding: '1rem',
                                         fontSize: '0.95rem',
