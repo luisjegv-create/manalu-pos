@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -434,6 +434,13 @@ const ManaluEventos = () => {
     const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
     const [editingEventId, setEditingEventId] = useState(null);
 
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const [eventData, setEventData] = useState({
         name: '',
@@ -799,72 +806,118 @@ const ManaluEventos = () => {
 
     const getStatusColor = (statusId) => eventStatuses.find(s => s.id === statusId)?.color || '#64748b';
 
-    const renderSidebar = () => (
-        <div style={{
-            width: '260px',
-            background: 'var(--color-surface)',
-            borderRight: '1px solid var(--border-strong)',
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
-            <div style={{ padding: '2rem 1.5rem', borderBottom: '1px solid var(--border-strong)' }}>
-                <button
-                    onClick={() => navigate('/')}
-                    style={{
-                        background: 'none', border: 'none', color: 'var(--color-text-muted)',
-                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        cursor: 'pointer', marginBottom: '1.5rem', fontSize: '0.9rem',
-                        padding: 0
-                    }}
-                >
-                    <ArrowLeft size={16} /> Volver al TPV
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                    <div style={{
-                        width: '40px', height: '40px', borderRadius: '8px',
-                        background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        <CalendarIcon size={20} color="white" />
-                    </div>
-                    <div>
-                        <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text)' }}>Manalú Eventos</h1>
-                    </div>
+    const renderSidebar = () => {
+        if (isMobile) {
+            return (
+                <div style={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'var(--color-surface)',
+                    borderTop: '1px solid var(--border-strong)',
+                    display: 'flex',
+                    justifyContent: 'space-around',
+                    padding: '0.5rem',
+                    zIndex: 1000,
+                    overflowX: 'auto',
+                    scrollbarWidth: 'none'
+                }}>
+                    {[
+                        { id: 'dashboard', icon: LayoutDashboard },
+                        { id: 'calendar', icon: CalendarIcon },
+                        { id: 'list', icon: List },
+                        { id: 'analytics', icon: BarChart2 },
+                        { id: 'finances', icon: DollarSign },
+                        { id: 'inventory', icon: Box },
+                        { id: 'customers', icon: Users }
+                    ].map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setView(item.id)}
+                            style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem',
+                                padding: '0.5rem',
+                                background: 'transparent',
+                                color: view === item.id ? 'var(--color-primary)' : '#475569',
+                                border: 'none', cursor: 'pointer',
+                                minWidth: '60px'
+                            }}
+                        >
+                            <item.icon size={24} />
+                        </button>
+                    ))}
                 </div>
-            </div>
+            );
+        }
 
-            <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Navegación</div>
-
-                {[
-                    { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
-                    { id: 'calendar', label: 'Calendario', icon: CalendarIcon },
-                    { id: 'list', label: 'Lista de Eventos', icon: List },
-                    { id: 'analytics', label: 'Estadísticas', icon: BarChart2 },
-                    { id: 'finances', label: 'Finanzas', icon: DollarSign },
-                    { id: 'inventory', label: 'Inventario Local', icon: Box }, // Nueva opción
-                    { id: 'customers', label: 'Registro de Clientes', icon: Users }
-                ].map(item => (
+        return (
+            <div style={{
+                width: '260px',
+                background: 'var(--color-surface)',
+                borderRight: '1px solid var(--border-strong)',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <div style={{ padding: '2rem 1.5rem', borderBottom: '1px solid var(--border-strong)' }}>
                     <button
-                        key={item.id}
-                        onClick={() => setView(item.id)}
+                        onClick={() => navigate('/')}
                         style={{
-                            display: 'flex', alignItems: 'center', gap: '0.75rem',
-                            padding: '0.75rem 1rem', borderRadius: '10px',
-                            background: view === item.id ? 'var(--color-primary)' : 'transparent',
-                            color: view === item.id ? '#0f172a' : '#475569',
-                            border: 'none', cursor: 'pointer', transition: 'all 0.2s',
-                            fontWeight: view === item.id ? '800' : '600',
-                            fontSize: '1.05rem',
-                            textAlign: 'left'
+                            background: 'none', border: 'none', color: 'var(--color-text-muted)',
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            cursor: 'pointer', marginBottom: '1.5rem', fontSize: '0.9rem',
+                            padding: 0
                         }}
                     >
-                        <item.icon size={20} /> {item.label}
+                        <ArrowLeft size={16} /> Volver al TPV
                     </button>
-                ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                        <div style={{
+                            width: '40px', height: '40px', borderRadius: '8px',
+                            background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <CalendarIcon size={20} color="white" />
+                        </div>
+                        <div>
+                            <h1 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text)' }}>Manalú Eventos</h1>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Navegación</div>
+
+                    {[
+                        { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
+                        { id: 'calendar', label: 'Calendario', icon: CalendarIcon },
+                        { id: 'list', label: 'Lista de Eventos', icon: List },
+                        { id: 'analytics', label: 'Estadísticas', icon: BarChart2 },
+                        { id: 'finances', label: 'Finanzas', icon: DollarSign },
+                        { id: 'inventory', label: 'Inventario Local', icon: Box }, // Nueva opción
+                        { id: 'customers', label: 'Registro de Clientes', icon: Users }
+                    ].map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => setView(item.id)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                padding: '0.75rem 1rem', borderRadius: '10px',
+                                background: view === item.id ? 'var(--color-primary)' : 'transparent',
+                                color: view === item.id ? '#0f172a' : '#475569',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                                fontWeight: view === item.id ? '800' : '600',
+                                fontSize: '1.05rem',
+                                textAlign: 'left'
+                            }}
+                        >
+                            <item.icon size={20} /> {item.label}
+                        </button>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const EventDashboard = () => {
         const stats = useMemo(() => {
@@ -961,13 +1014,26 @@ const ManaluEventos = () => {
     };
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--color-text)', maxWidth: '100vw', overflowX: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--color-text)', maxWidth: '100vw', overflowX: 'hidden' }}>
             {renderSidebar()}
 
-            <div style={{ flex: 1, padding: '2rem 3rem', maxWidth: '1600px', overflowY: 'auto' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ flex: 1, padding: isMobile ? '1rem' : '2rem 3rem', maxWidth: '1600px', overflowY: 'auto', paddingBottom: isMobile ? '5rem' : '2rem' }}>
+                <header style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '2rem', gap: isMobile ? '1rem' : '0' }}>
                     <div>
-                        <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: '800' }}>
+                        {isMobile && (
+                            <button
+                                onClick={() => navigate('/')}
+                                style={{
+                                    background: 'none', border: 'none', color: 'var(--color-text-muted)',
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    cursor: 'pointer', marginBottom: '1rem', fontSize: '0.9rem',
+                                    padding: 0
+                                }}
+                            >
+                                <ArrowLeft size={16} /> Volver al TPV
+                            </button>
+                        )}
+                        <h2 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: '800' }}>
                             {view === 'dashboard' && 'Panel de Control'}
                             {view === 'calendar' && 'Calendario de Ocupación'}
                             {view === 'list' && 'Listado de Eventos'}
@@ -1012,7 +1078,7 @@ const ManaluEventos = () => {
                     )}
                 </header>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isFormOpen && view !== 'dashboard' && view !== 'customers' && view !== 'inventory' ? '1fr 1fr' : '1fr', gap: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isFormOpen && view !== 'dashboard' && view !== 'customers' && view !== 'inventory' ? (isMobile ? '1fr' : '1fr 1fr') : '1fr', gap: isMobile ? '1rem' : '2rem' }}>
                     {/* Form Section */}
 
                     <AnimatePresence>
@@ -1114,7 +1180,7 @@ const ManaluEventos = () => {
                                         />
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                             <label style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>Fecha</label>
                                             <input
@@ -1172,7 +1238,7 @@ const ManaluEventos = () => {
                                                     </label>
                                                 </div>
 
-                                                <div style={{ display: 'grid', gridTemplateColumns: eventData.isHourly ? '1fr 1fr 1fr 1fr' : '1fr 1fr', gap: '1rem' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : (eventData.isHourly ? '1fr 1fr 1fr 1fr' : '1fr 1fr'), gap: '1rem' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                                         <label style={{ color: 'var(--color-text-muted)' }}>{eventData.isHourly ? 'Precio por Hora' : 'Precio del Alquiler'}</label>
                                                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
