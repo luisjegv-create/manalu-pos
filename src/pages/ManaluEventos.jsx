@@ -1388,11 +1388,33 @@ const ManaluEventos = () => {
                                                 type="number"
                                                 className="glass-panel input-field"
                                                 style={{ padding: '1rem', fontSize: '1.1rem', flex: 1 }}
-                                                placeholder="Ej: 200"
+                                                placeholder="Ej: 200 o usa los botones"
                                                 value={eventData.depositAmount}
                                                 onChange={(e) => setEventData({ ...eventData, depositAmount: parseFloat(e.target.value) || 0 })}
                                             />
                                             <span style={{ fontSize: '1.2rem', color: 'var(--color-text)' }}>€</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                            <button
+                                                className="btn-secondary"
+                                                onClick={() => {
+                                                    const total = calculateTotalWithTax(calculateBudget(), eventData.hasVat, eventData.taxRate);
+                                                    setEventData({ ...eventData, depositAmount: parseFloat((total * 0.5).toFixed(2)) });
+                                                }}
+                                                style={{ padding: '0.5rem', fontSize: '0.85rem', flex: 1, justifyContent: 'center' }}
+                                            >
+                                                Pagar 50%
+                                            </button>
+                                            <button
+                                                className="btn-secondary"
+                                                onClick={() => {
+                                                    const total = calculateTotalWithTax(calculateBudget(), eventData.hasVat, eventData.taxRate);
+                                                    setEventData({ ...eventData, depositAmount: parseFloat(total.toFixed(2)) });
+                                                }}
+                                                style={{ padding: '0.5rem', fontSize: '0.85rem', flex: 1, justifyContent: 'center' }}
+                                            >
+                                                Pagar Total
+                                            </button>
                                         </div>
                                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0.25rem 0 0 0' }}>Este importe se marcará como pendiente hasta que se cobre en la lista.</p>
                                     </div>
