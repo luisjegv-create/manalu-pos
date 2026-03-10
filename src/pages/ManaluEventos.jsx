@@ -680,9 +680,12 @@ const ManaluEventos = () => {
             rentStartTime: '12:00'
         });
         setSelectedMenus([]);
-        setEditingEventId(null);
         setSelectedMenus([]);
         setIsFormOpen(false); // Close form after saving
+        if (isMobile) {
+            const container = document.getElementById('manalu-main-scroll');
+            if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
     const openEditForm = (ev) => {
@@ -708,6 +711,10 @@ const ManaluEventos = () => {
         });
         setSelectedMenus(ev.selectedMenus || []);
         setIsFormOpen(true);
+        setTimeout(() => {
+            const container = document.getElementById('manalu-main-scroll');
+            if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
     };
 
     const EventAnalytics = () => {
@@ -1017,7 +1024,7 @@ const ManaluEventos = () => {
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--color-text)', maxWidth: '100vw', overflowX: 'hidden' }}>
             {renderSidebar()}
 
-            <div style={{ flex: 1, padding: isMobile ? '1rem' : '2rem 3rem', maxWidth: '1600px', overflowY: 'auto', paddingBottom: isMobile ? '5rem' : '2rem' }}>
+            <div id="manalu-main-scroll" style={{ flex: 1, padding: isMobile ? '1rem' : '2rem 3rem', maxWidth: '1600px', overflowY: 'auto', paddingBottom: isMobile ? '5rem' : '2rem' }}>
                 <header style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '2rem', gap: isMobile ? '1rem' : '0' }}>
                     <div>
                         {isMobile && (
@@ -1064,6 +1071,10 @@ const ManaluEventos = () => {
                                 });
                                 setSelectedMenus([]);
                                 setIsFormOpen(true);
+                                setTimeout(() => {
+                                    const container = document.getElementById('manalu-main-scroll');
+                                    if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+                                }, 100);
                             }}
                             style={{
                                 padding: '1rem 2rem',
