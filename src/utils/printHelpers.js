@@ -509,10 +509,10 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                     <tr class="item-row">
                         <td class="qty">${item.quantity}</td>
                         <td class="name">
-                            ${item.name}
+                            ${item.name} ${item.isInvitation ? '<span style="font-size:0.7rem; font-weight:bold;">(Invitación)</span>' : ''}
                             ${item.notes ? `<div style="font-size:0.7rem; font-style:italic;">(${item.notes})</div>` : ''}
                         </td>
-                        <td class="price">${(item.price * item.quantity).toFixed(2)}€</td>
+                        <td class="price">${(item.isInvitation ? 0 : (item.price * item.quantity)).toFixed(2)}€</td>
                     </tr>
                 `).join('')}
             </table>

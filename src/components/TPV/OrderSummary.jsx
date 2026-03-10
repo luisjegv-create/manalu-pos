@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    User, Plus, Star, Utensils, MessageSquare,
+    User, Plus, Star, Utensils, MessageSquare, Gift,
     Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,8 @@ const OrderSummary = ({
     updateQuantity,
     updateItemNote,
     toggleItemPriority,
+    toggleItemInvitation,
+    toggleItemInvitationInBill,
     editingNoteId,
     setEditingNoteId,
     noteDraft,
@@ -242,13 +244,17 @@ const OrderSummary = ({
                                                     {item.isPriority && <span style={{ marginRight: '4px' }}>⚡</span>}
                                                     {item.name}
                                                 </div>
-                                                <div style={{ fontSize: '1rem', color: '#93c5fd', fontWeight: 'bold', marginTop: '4px' }}>{item.price.toFixed(2)}€</div>
+                                                <div style={{ fontSize: '1rem', color: item.isInvitation ? '#8b5cf6' : '#93c5fd', fontWeight: 'bold', marginTop: '4px' }}>
+                                                    {item.isInvitation ? 'Invitación (0.00€)' : `${item.price.toFixed(2)}€`}
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Action Column for item */}
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--color-text-on-dark)' }}>{(item.price * item.quantity).toFixed(2)}€</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: item.isInvitation ? '#a78bfa' : 'var(--color-text-on-dark)' }}>
+                                                {item.isInvitation ? '0.00€' : `${(item.price * item.quantity).toFixed(2)}€`}
+                                            </div>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
@@ -329,6 +335,21 @@ const OrderSummary = ({
                                         >
                                             ⚡ Marcha Rápida
                                         </button>
+                                        <button
+                                            onClick={() => toggleItemInvitation(item.uniqueId || item.id)}
+                                            style={{
+                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isInvitation ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
+                                                background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                                                color: item.isInvitation ? '#a78bfa' : '#94a3b8',
+                                                cursor: 'pointer',
+                                                fontWeight: item.isInvitation ? 'bold' : 'normal',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            <Gift size={14} /> Invitación
+                                        </button>
                                         {['Poco hecho', 'Muy hecho', 'Celiaco', 'Vegano', 'Sin cebolla'].map(qn => (
                                             <button
                                                 key={qn}
@@ -355,9 +376,35 @@ const OrderSummary = ({
                                         ENVIADO A COCINA / CUENTA ACTIVA
                                     </div>
                                     {bill.map(item => (
-                                        <div key={item.uniqueId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface-dark)', color: 'var(--color-text-on-dark)', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', marginBottom: '0.5rem', opacity: 0.9 }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{item.quantity}x {item.name}</span>
-                                            <span style={{ fontWeight: 'bold' }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                        <div key={item.uniqueId} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface-dark)', color: 'var(--color-text-on-dark)', borderRadius: '12px', border: item.isInvitation ? '1px solid #8b5cf6' : '1px solid rgba(0,0,0,0.1)', marginBottom: '0.5rem', opacity: 0.9 }}>
+                                            <div style={{ flex: 1 }}>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: '500', color: item.isInvitation ? '#a78bfa' : 'inherit' }}>
+                                                    {item.quantity}x {item.name}
+                                                </span>
+                                                {item.isInvitation && <div style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: 'bold' }}>Invitación (0.00€)</div>}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                <span style={{ fontWeight: 'bold', color: item.isInvitation ? '#8b5cf6' : 'inherit', textDecoration: item.isInvitation ? 'line-through' : 'none', opacity: item.isInvitation ? 0.7 : 1 }}>
+                                                    {(item.price * item.quantity).toFixed(2)}€
+                                                </span>
+                                                <button
+                                                    onClick={() => toggleItemInvitationInBill(item.uniqueId)}
+                                                    style={{
+                                                        background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                                                        border: item.isInvitation ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
+                                                        color: item.isInvitation ? '#a78bfa' : '#94a3b8',
+                                                        padding: '4px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                    title={item.isInvitation ? "Quitar Invitación" : "Marcar como Invitación"}
+                                                >
+                                                    <Gift size={16} />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

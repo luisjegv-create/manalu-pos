@@ -885,8 +885,30 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
+    const toggleItemInvitation = (uniqueId) => {
+        if (!currentTable) return;
+        setTableOrders(prev => {
+            const currentOrder = prev[currentTable.id] || [];
+            const nextOrder = currentOrder.map(item =>
+                item.uniqueId === uniqueId ? { ...item, isInvitation: !item.isInvitation } : item
+            );
+            return { ...prev, [currentTable.id]: nextOrder };
+        });
+    };
+
+    const toggleItemInvitationInBill = (uniqueId) => {
+        if (!currentTable) return;
+        setTableBills(prev => {
+            const currentBill = prev[currentTable.id] || [];
+            const nextBill = currentBill.map(item =>
+                item.uniqueId === uniqueId ? { ...item, isInvitation: !item.isInvitation } : item
+            );
+            return { ...prev, [currentTable.id]: nextBill };
+        });
+    };
+
     const calculateOrderTotal = (items) => {
-        return items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        return items.reduce((total, item) => total + (item.isInvitation ? 0 : (item.price * item.quantity)), 0);
     };
 
     const addTable = (zoneId, name) => {
@@ -1056,6 +1078,8 @@ export const OrderProvider = ({ children }) => {
             updateQuantity,
             updateItemNote,
             toggleItemPriority,
+            toggleItemInvitation,
+            toggleItemInvitationInBill,
             clearOrder,
             calculateTotal: () => calculateOrderTotal(order),
             calculateBillTotal: () => calculateOrderTotal(bill),

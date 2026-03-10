@@ -59,6 +59,8 @@ const BarTapas = () => {
         updateQuantity,
         updateItemNote,
         toggleItemPriority,
+        toggleItemInvitation,
+        toggleItemInvitationInBill,
         calculateTotal,
         calculateBillTotal,
         sendToKitchen,
@@ -803,6 +805,8 @@ const BarTapas = () => {
                         updateQuantity={updateQuantity}
                         updateItemNote={updateItemNote}
                         toggleItemPriority={toggleItemPriority}
+                        toggleItemInvitation={toggleItemInvitation}
+                        toggleItemInvitationInBill={toggleItemInvitationInBill}
                         editingNoteId={editingNoteId}
                         setEditingNoteId={setEditingNoteId}
                         noteDraft={noteDraft}
