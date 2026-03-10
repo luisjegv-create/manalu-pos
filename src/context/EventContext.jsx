@@ -181,7 +181,9 @@ export const EventProvider = ({ children }) => {
             if (error) throw error;
             if (data && data[0]) {
                 setAgenda(prev => [...prev, {
-                    ...data[0],
+                    ...event,
+                    id: data[0].id,
+                    created_at: data[0].created_at,
                     tasks: event.tasks || [],
                     selectedMenus: event.selectedMenus || [],
                     eventExpenses: event.eventExpenses || [],
@@ -224,7 +226,8 @@ export const EventProvider = ({ children }) => {
             if (error) throw error;
             if (data && data[0]) {
                 setAgenda(prev => prev.map(ev => ev.id === eventId ? {
-                    ...data[0],
+                    ...ev,
+                    ...updates,
                     tasks: updates.tasks !== undefined ? updates.tasks : ev.tasks,
                     selectedMenus: updates.selectedMenus !== undefined ? updates.selectedMenus : ev.selectedMenus,
                     eventExpenses: ev.eventExpenses,
