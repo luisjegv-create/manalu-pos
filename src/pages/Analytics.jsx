@@ -19,11 +19,13 @@ import {
     Menu,
     Trash2,
     Printer,
+    Receipt,
     X as CloseIcon
 } from 'lucide-react';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
 import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
+import ExpenseManagement from '../components/Inventory/ExpenseManagement';
 
 const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection }) => (
     <button
@@ -445,6 +447,7 @@ const Analytics = () => {
                     <SidebarItem id="sales" icon={FileText} label="Ventas" activeSection={activeSection} setActiveSection={setActiveSection} />
                     <SidebarItem id="menu" icon={UtensilsCrossed} label="Menú Mix" activeSection={activeSection} setActiveSection={setActiveSection} />
                     <SidebarItem id="cash" icon={Wallet} label="Cierre de Caja" activeSection={activeSection} setActiveSection={setActiveSection} />
+                    <SidebarItem id="expenses" icon={Receipt} label="Gastos Generales" activeSection={activeSection} setActiveSection={setActiveSection} />
                 </div>
 
                 <button
@@ -484,6 +487,7 @@ const Analytics = () => {
                             {activeSection === 'sales' && 'Reporte de Ventas'}
                             {activeSection === 'menu' && 'Ingeniería de Menú'}
                             {activeSection === 'cash' && 'Gestión de Efectivo'}
+                            {activeSection === 'expenses' && 'Gastos Generales (Taberna)'}
                         </h1>
                         <p style={{ color: '#94a3b8', marginTop: '0.25rem', fontSize: isMobile ? '0.8rem' : '1rem' }}>
                             {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -986,6 +990,11 @@ const Analytics = () => {
                         </div>
                     </div>
                 )}
+
+                {/* --- EXPENSES VIEW --- */}
+                {activeSection === 'expenses' && (
+                    <ExpenseManagement />
+                )}
             </div>
 
             {/* --- INVOICE DATA MODAL --- */}
@@ -1076,7 +1085,7 @@ const Analytics = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

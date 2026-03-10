@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     User, Plus, Star, Utensils, MessageSquare, Gift,
-    Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt
+    Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,6 +25,7 @@ const OrderSummary = ({
     updateQuantity,
     updateItemNote,
     toggleItemPriority,
+    toggleItemToShare,
     toggleItemInvitation,
     toggleItemInvitationInBill,
     editingNoteId,
@@ -334,6 +335,21 @@ const OrderSummary = ({
                                             }}
                                         >
                                             ⚡ Marcha Rápida
+                                        </button>
+                                        <button
+                                            onClick={() => toggleItemToShare(item.uniqueId || item.id)}
+                                            style={{
+                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isShared ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.1)',
+                                                background: item.isShared ? 'rgba(249, 115, 22, 0.2)' : 'transparent',
+                                                color: item.isShared ? '#fdba74' : '#94a3b8',
+                                                cursor: 'pointer',
+                                                fontWeight: item.isShared ? 'bold' : 'normal',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            <Users size={14} /> Compartir
                                         </button>
                                         <button
                                             onClick={() => toggleItemInvitation(item.uniqueId || item.id)}

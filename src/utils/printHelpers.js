@@ -96,6 +96,7 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
                         <td class="name">
                             ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
                             ${item.name}
+                            ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
                             ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
                             ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}
                         </td>
@@ -151,6 +152,7 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
                             <td class="name">
                                 ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
                                 ${item.name}
+                                ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
                                 ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
                                 ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}
                             </td>

@@ -17,7 +17,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { printRestockList } from '../utils/printHelpers';
 import MermasManagement from '../components/Inventory/MermasManagement';
-import ExpenseManagement from '../components/Inventory/ExpenseManagement';
 
 const Inventory = () => {
     const navigate = useNavigate();
@@ -140,36 +139,6 @@ const Inventory = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button
-                        onClick={() => setActiveTab('gastos')}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.6rem',
-                            padding: '0.6rem 1.4rem',
-                            borderRadius: '4px',
-                            background: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)',
-                            border: '1px solid #0f172a',
-                            color: 'white',
-                            fontWeight: '600',
-                            fontSize: '1rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease-in-out',
-                            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.6)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.4)';
-                        }}
-                    >
-                        <span style={{ fontSize: '1.2rem', fontWeight: '400', opacity: 0.9 }}>$</span>
-                        Añadir Gasto
-                    </button>
-
                     <button
                         onClick={() => {
                             const lowStockItems = ingredients.filter(i => i.quantity <= (i.critical || 5));
@@ -658,10 +627,6 @@ const Inventory = () => {
                         </table>
                     </div>
                 </div>
-            )}
-            {/* --- GASTOS GENERALES TAB --- */}
-            {activeTab === 'gastos' && (
-                <ExpenseManagement />
             )}
         </div>
     );

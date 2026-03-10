@@ -885,6 +885,17 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
+    const toggleItemToShare = (uniqueId) => {
+        if (!currentTable) return;
+        setTableOrders(prev => {
+            const currentOrder = prev[currentTable.id] || [];
+            const nextOrder = currentOrder.map(item =>
+                item.uniqueId === uniqueId ? { ...item, isShared: !item.isShared } : item
+            );
+            return { ...prev, [currentTable.id]: nextOrder };
+        });
+    };
+
     const toggleItemInvitation = (uniqueId) => {
         if (!currentTable) return;
         setTableOrders(prev => {
@@ -1078,6 +1089,7 @@ export const OrderProvider = ({ children }) => {
             updateQuantity,
             updateItemNote,
             toggleItemPriority,
+            toggleItemToShare,
             toggleItemInvitation,
             toggleItemInvitationInBill,
             clearOrder,
