@@ -60,6 +60,7 @@ const BarTapas = () => {
         updateItemNote,
         toggleItemPriority,
         toggleItemToShare,
+        toggleItemIndividual,
         toggleItemInvitation,
         toggleItemInvitationInBill,
         calculateTotal,
@@ -807,6 +808,7 @@ const BarTapas = () => {
                         updateItemNote={updateItemNote}
                         toggleItemPriority={toggleItemPriority}
                         toggleItemToShare={toggleItemToShare}
+                        toggleItemIndividual={toggleItemIndividual}
                         toggleItemInvitation={toggleItemInvitation}
                         toggleItemInvitationInBill={toggleItemInvitationInBill}
                         editingNoteId={editingNoteId}

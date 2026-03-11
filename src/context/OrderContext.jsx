@@ -429,14 +429,12 @@ export const OrderProvider = ({ children }) => {
             }));
 
         if (kitchenItems.length > 0) {
-            // [MODIFIED: Disabled KDS sending to fix race condition when clearing tables]
             // Save to Supabase (KDS)
-            /*
             try {
                 const { data, error } = await supabase.from('kitchen_orders').insert([{
                     table_name: currentTable.name,
                     items: JSON.stringify(kitchenItems),
-                    customer_info: JSON.stringify(selectedCustomer),
+                    customer_info: selectedCustomer ? JSON.stringify(selectedCustomer) : null,
                     status: 'pending'
                 }]).select();
 
@@ -453,7 +451,6 @@ export const OrderProvider = ({ children }) => {
             } catch (err) {
                 console.error("Error sending to kitchen:", err);
             }
-            */
         }
 
         try {
@@ -890,7 +887,18 @@ export const OrderProvider = ({ children }) => {
         setTableOrders(prev => {
             const currentOrder = prev[currentTable.id] || [];
             const nextOrder = currentOrder.map(item =>
-                item.uniqueId === uniqueId ? { ...item, isShared: !item.isShared } : item
+                item.uniqueId === uniqueId ? { ...item, isShared: !item.isShared, isIndividual: false } : item
+            );
+            return { ...prev, [currentTable.id]: nextOrder };
+        });
+    };
+
+    const toggleItemIndividual = (uniqueId) => {
+        if (!currentTable) return;
+        setTableOrders(prev => {
+            const currentOrder = prev[currentTable.id] || [];
+            const nextOrder = currentOrder.map(item =>
+                item.uniqueId === uniqueId ? { ...item, isIndividual: !item.isIndividual, isShared: false } : item
             );
             return { ...prev, [currentTable.id]: nextOrder };
         });
@@ -1090,6 +1098,7 @@ export const OrderProvider = ({ children }) => {
             updateItemNote,
             toggleItemPriority,
             toggleItemToShare,
+            toggleItemIndividual,
             toggleItemInvitation,
             toggleItemInvitationInBill,
             clearOrder,

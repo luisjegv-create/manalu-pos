@@ -564,7 +564,9 @@ const ManaluEventos = () => {
                 menuId: menuPicking.id,
                 name: menuPicking.name,
                 price: menuPicking.price,
-                quantity: currentMenuQuantity
+                quantity: currentMenuQuantity,
+                isShared: false,
+                isIndividual: false
             }]);
         }
         setMenuPicking(null);
@@ -1437,9 +1439,43 @@ const ManaluEventos = () => {
                                                             <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{m.quantity}x</span> <span style={{ color: 'var(--color-text)' }}>{m.name}</span>
                                                             <div style={{ fontSize: '1rem', color: 'var(--color-text-muted)' }}>{m.price}€ / pax</div>
                                                         </div>
-                                                        <button onClick={() => handleRemoveSelectedMenu(m.menuId)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedMenus(selectedMenus.map(sm =>
+                                                                            sm.menuId === m.menuId ? { ...sm, isShared: !sm.isShared, isIndividual: false } : sm
+                                                                        ));
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer',
+                                                                        border: m.isShared ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.1)',
+                                                                        background: m.isShared ? 'rgba(249, 115, 22, 0.2)' : 'transparent',
+                                                                        color: m.isShared ? '#fdba74' : '#94a3b8'
+                                                                    }}
+                                                                >
+                                                                    <Users size={12} /> {m.isShared ? 'Compartir' : 'Comp.'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedMenus(selectedMenus.map(sm =>
+                                                                            sm.menuId === m.menuId ? { ...sm, isIndividual: !sm.isIndividual, isShared: false } : sm
+                                                                        ));
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '4px 8px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer',
+                                                                        border: m.isIndividual ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                                                                        background: m.isIndividual ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                                                        color: m.isIndividual ? '#93c5fd' : '#94a3b8'
+                                                                    }}
+                                                                >
+                                                                    <User size={12} /> {m.isIndividual ? 'Individual' : 'Indiv.'}
+                                                                </button>
+                                                            </div>
+                                                            <button onClick={() => handleRemoveSelectedMenu(m.menuId)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

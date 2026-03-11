@@ -184,6 +184,16 @@ const KitchenDisplay = () => {
                                                                             ⚡ MARCHA RÁPIDA
                                                                         </span>
                                                                     )}
+                                                                    {item.isShared && (
+                                                                        <span style={{ color: '#000', background: '#f97316', padding: '2px 8px', borderRadius: '4px', fontWeight: '900', fontSize: '0.85rem', marginTop: '4px', width: 'fit-content', border: '1px solid black' }}>
+                                                                            🍽️ PARA COMPARTIR
+                                                                        </span>
+                                                                    )}
+                                                                    {item.isIndividual && (
+                                                                        <span style={{ color: '#fff', background: '#3b82f6', padding: '2px 8px', borderRadius: '4px', fontWeight: '900', fontSize: '0.85rem', marginTop: '4px', width: 'fit-content' }}>
+                                                                            👤 INDIVIDUAL
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                             <button

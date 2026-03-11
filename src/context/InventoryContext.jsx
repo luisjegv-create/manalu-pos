@@ -682,14 +682,79 @@ export const InventoryProvider = ({ children }) => {
         try {
             const { data, error } = await supabase.from('suppliers').insert([{
                 name: supplier.name,
-                phone: supplier.phone,
-                email: supplier.email,
-                category: supplier.category
+                phone: supplier.phone || '',
+                email: supplier.email || '',
+                category: supplier.category || 'Varios',
+                cif: supplier.cif || '',
+                address: supplier.address || '',
+                payment_terms: supplier.paymentTerms || '',
+                delivery_days: supplier.deliveryDays || []
             }]).select();
             if (error) throw error;
             if (data) setSuppliers(prev => [...prev, data[0]]);
         } catch (error) {
             console.error("Error al añadir proveedor:", error);
+        }
+    };
+
+    const receiveInventory = async (items, invoiceInfo) => {
+        try {
+            // 1. Create Invoice record
+            const { data: invData, error: invError } = await supabase.from('invoices').insert([{
+                supplier_id: invoiceInfo.supplierId,
+                number: invoiceInfo.number,
+                date: invoiceInfo.date || new Date().toISOString().split('T')[0],
+                amount: invoiceInfo.totalAmount,
+                status: invoiceInfo.status || 'Pendiente',
+                image_url: invoiceInfo.imageUrl || ''
+            }]).select();
+
+            if (invError) throw invError;
+            if (invData) setInvoices(prev => [...prev, invData[0]]);
+
+            // 2. Process items (Ingredients or Event Inventory)
+            for (const item of items) {
+                if (item.type === 'ingredient') {
+                    const existing = ingredients.find(i => i.id === item.id);
+                    if (existing) {
+                        const newQty = (parseFloat(existing.quantity) || 0) + (parseFloat(item.receivedQuantity) || 0);
+                        const newCost = item.currentCost || existing.cost;
+
+                        await updateIngredient(item.id, {
+                            ...existing,
+                            quantity: newQty,
+                            cost: newCost
+                        });
+                    }
+                } else if (item.type === 'event_inventory') {
+                    // We update the DB directly. EventContext real-time sub will pick it up.
+                    const { data: currentItem } = await supabase.from('event_inventory').select('*').eq('id', item.id).single();
+                    if (currentItem) {
+                        const newQty = (parseFloat(currentItem.quantity) || 0) + (parseFloat(item.receivedQuantity) || 0);
+                        await supabase.from('event_inventory').update({
+                            quantity: newQty
+                        }).eq('id', item.id);
+                    }
+                }
+            }
+
+            // 3. Optional: Create Expense if marked as paid
+            if (invoiceInfo.status === 'Pagado') {
+                await addExpense({
+                    concept: `Factura ${invoiceInfo.number} - ${invoiceInfo.supplierName || 'Proveedor'}`,
+                    amount: invoiceInfo.totalAmount,
+                    category: 'Suministros',
+                    date: invoiceInfo.date,
+                    paymentMethod: invoiceInfo.paymentMethod || 'Banco',
+                    status: 'Pagado'
+                });
+            }
+
+            return true;
+        } catch (error) {
+            console.error("Error en recepción de inventario:", error);
+            alert("Error al procesar la recepción: " + error.message);
+            return false;
         }
     };
 
@@ -836,6 +901,8 @@ export const InventoryProvider = ({ children }) => {
             addMerma,
             deleteMerma,
             addPhysicalInventory,
+            // New professional Bodega functions
+            receiveInventory,
             incrementTicketNumber,
             checkProductAvailability
             // ... (rest of simple delete actions)

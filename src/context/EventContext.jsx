@@ -25,16 +25,14 @@ export const EventProvider = ({ children }) => {
     const [reservations, setReservations] = useState([]);
     const [eventMenus, setEventMenus] = useState([]);
     const [venueExpenses, setVenueExpenses] = useState(() => safeParse('manalu_venue_expenses', []));
-    const [eventInventory, setEventInventory] = useState(() => safeParse('manalu_event_inventory', [])); // Nuevo estado de inventario
+    const [eventInventory, setEventInventory] = useState([]); // Cloud sync version
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         localStorage.setItem('manalu_venue_expenses', JSON.stringify(venueExpenses));
     }, [venueExpenses]);
 
-    useEffect(() => {
-        localStorage.setItem('manalu_event_inventory', JSON.stringify(eventInventory));
-    }, [eventInventory]);
+
 
     useEffect(() => {
         const syncEvents = async () => {
@@ -131,6 +129,14 @@ export const EventProvider = ({ children }) => {
                     })));
                 }
 
+                // Inventory for events sync
+                const { data: invData, error: invError } = await supabase.from('event_inventory').select('*').order('category', { ascending: true });
+                if (invError) {
+                    console.warn("Event Inventory Fetch Error (might not exist yet):", invError);
+                } else if (invData) {
+                    setEventInventory(invData);
+                }
+
             } catch (err) {
                 console.error("Event Sync Error:", err);
             } finally {
@@ -139,10 +145,13 @@ export const EventProvider = ({ children }) => {
         };
         syncEvents();
 
-        // Real-time subscription for reservations
+        // Real-time subscription for reservations and inventory
         const resSubscription = supabase
-            .channel('reservations-changes')
+            .channel('event-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'reservations' }, () => {
+                syncEvents();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'event_inventory' }, () => {
                 syncEvents();
             })
             .subscribe();
@@ -464,18 +473,49 @@ export const EventProvider = ({ children }) => {
         setVenueExpenses(prev => prev.filter(exp => exp.id !== id));
     };
 
-    // --- Funciones para Inventario de Eventos ---
-    const addInventoryItem = (item) => {
-        const newItem = { ...item, id: `inv-${Date.now()}` };
-        setEventInventory(prev => [...prev, newItem].sort((a, b) => a.category.localeCompare(b.category)));
+    // --- Funciones para Inventario de Eventos (Supabase Sync) ---
+    const addInventoryItem = async (item) => {
+        try {
+            const { data, error } = await supabase.from('event_inventory').insert([{
+                name: item.name,
+                category: item.category,
+                quantity: item.quantity,
+                notes: item.notes || ''
+            }]).select();
+
+            if (error) throw error;
+            if (data && data[0]) {
+                setEventInventory(prev => [...prev, data[0]].sort((a, b) => a.category.localeCompare(b.category)));
+            }
+        } catch (err) {
+            console.error("Error adding inventory item:", err);
+        }
     };
 
-    const updateInventoryItem = (id, updatedItem) => {
-        setEventInventory(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } : item));
+    const updateInventoryItem = async (id, updatedItem) => {
+        try {
+            const { error } = await supabase.from('event_inventory').update({
+                name: updatedItem.name,
+                category: updatedItem.category,
+                quantity: updatedItem.quantity,
+                notes: updatedItem.notes
+            }).eq('id', id);
+
+            if (error) throw error;
+            setEventInventory(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } : item));
+        } catch (err) {
+            console.error("Error updating inventory item:", err);
+        }
     };
 
-    const deleteInventoryItem = (id) => {
-        setEventInventory(prev => prev.filter(item => item.id !== id));
+    const deleteInventoryItem = async (id) => {
+        try {
+            const { error } = await supabase.from('event_inventory').delete().eq('id', id);
+            if (error) throw error;
+            setEventInventory(prev => prev.filter(item => item.id !== id));
+        } catch (err) {
+            console.error("Error deleting inventory item:", err);
+        }
     };
 
     return (

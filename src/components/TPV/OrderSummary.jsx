@@ -26,6 +26,7 @@ const OrderSummary = ({
     updateItemNote,
     toggleItemPriority,
     toggleItemToShare,
+    toggleItemIndividual,
     toggleItemInvitation,
     toggleItemInvitationInBill,
     editingNoteId,
@@ -350,6 +351,21 @@ const OrderSummary = ({
                                             }}
                                         >
                                             <Users size={14} /> Compartir
+                                        </button>
+                                        <button
+                                            onClick={() => toggleItemIndividual(item.uniqueId || item.id)}
+                                            style={{
+                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isIndividual ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                                                background: item.isIndividual ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                                                color: item.isIndividual ? '#93c5fd' : '#94a3b8',
+                                                cursor: 'pointer',
+                                                fontWeight: item.isIndividual ? 'bold' : 'normal',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            <User size={14} /> Individual
                                         </button>
                                         <button
                                             onClick={() => toggleItemInvitation(item.uniqueId || item.id)}

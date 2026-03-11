@@ -12,11 +12,15 @@ import {
     Save,
     X,
     Camera,
-    Printer
+    Printer,
+    Truck,
+    ShoppingCart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printRestockList } from '../utils/printHelpers';
 import MermasManagement from '../components/Inventory/MermasManagement';
+import QuickReception from '../components/Inventory/QuickReception';
+import PurchaseOrderModule from '../components/Inventory/PurchaseOrderModule';
 
 const Inventory = () => {
     const navigate = useNavigate();
@@ -43,9 +47,13 @@ const Inventory = () => {
 
     // Supplier Mode State
     const [selectedSupplierId, setSelectedSupplierId] = useState(null);
-    const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
+    const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', notes: '', cif: '', paymentTerms: '', deliveryDays: [] });
     const [isAddingInvoice, setIsAddingInvoice] = useState(false);
     const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
+
+    // Professional Modules State
+    const [showReception, setShowReception] = useState(false);
+    const [showOrderModule, setShowOrderModule] = useState(false);
 
 
     const categories = [
@@ -212,215 +220,227 @@ const Inventory = () => {
                 <MermasManagement />
             )}
 
-            {/* SUPPLIER MANAGEMENT MODE */}
+            {/* SUPPLIER MANAGEMENT DASHBOARD */}
             {activeTab === 'distribuidores' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', minHeight: '600px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                    {/* Left: Supplier List */}
-                    <div className="surface-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column' }}>
-                        <button
-                            className="btn-primary"
-                            style={{ marginBottom: '1rem', width: '100%', justifyContent: 'center' }}
-                            onClick={() => {
-                                setSelectedSupplierId('new');
-                                setSupplierForm({ name: '', phone: '', email: '', address: '', notes: '' });
-                            }}
+                    {/* Action Bar */}
+                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={() => setShowReception(true)}
+                            className="surface-card"
+                            style={{ flex: 1, minWidth: '250px', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid var(--color-primary)', background: 'rgba(59, 130, 246, 0.1)', cursor: 'pointer' }}
                         >
-                            <Plus size={16} /> Nuevo Distribuidor
-                        </button>
+                            <div style={{ background: 'var(--color-primary)', padding: '0.75rem', borderRadius: '12px' }}>
+                                <Truck size={24} style={{ color: 'white' }} />
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Recibir Mercancía</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Procesa albaranes y actualiza stock</div>
+                            </div>
+                        </motion.button>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto' }}>
-                            {suppliers.map(sup => (
-                                <div
-                                    key={sup.id}
-                                    onClick={() => {
-                                        setSelectedSupplierId(sup.id);
-                                        setSupplierForm(sup);
-                                    }}
-                                    style={{
-                                        padding: '1rem',
-                                        borderRadius: '8px',
-                                        background: selectedSupplierId === sup.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                                        border: selectedSupplierId === sup.id ? '1px solid var(--color-primary)' : '1px solid transparent',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <div style={{ fontWeight: 'bold' }}>{sup.name}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{sup.phone}</div>
-                                </div>
-                            ))}
-                        </div>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={() => setShowOrderModule(true)}
+                            className="surface-card"
+                            style={{ flex: 1, minWidth: '250px', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid #10b981', background: 'rgba(16, 185, 129, 0.1)', cursor: 'pointer' }}
+                        >
+                            <div style={{ background: '#10b981', padding: '0.75rem', borderRadius: '12px' }}>
+                                <ShoppingCart size={24} style={{ color: 'white' }} />
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Generar Pedido</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Sugerencias inteligentes de compra</div>
+                            </div>
+                        </motion.button>
+
+                        <div style={{ flex: 1.5, minWidth: '300px' }} /> {/* Spacer */}
                     </div>
 
-                    {/* Right: Details & Invoices */}
-                    <div className="surface-card" style={{ padding: '2rem' }}>
-                        {selectedSupplierId ? (
-                            <div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-                                    <h2 style={{ margin: 0 }}>{selectedSupplierId === 'new' ? 'Nuevo Distribuidor' : 'Editar Distribuidor'}</h2>
-                                    {selectedSupplierId !== 'new' && (
-                                        <button
-                                            onClick={() => { deleteSupplier(selectedSupplierId); setSelectedSupplierId(null); }}
-                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 />
+                    <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', minHeight: '500px' }}>
+                        {/* Left: Supplier List */}
+                        <div className="surface-card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: 'fit-content' }}>
+                            <h3 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Mis Distribuidores</h3>
+                            <button
+                                className="btn-primary"
+                                style={{ marginBottom: '1rem', width: '100%', justifyContent: 'center', borderRadius: '10px' }}
+                                onClick={() => {
+                                    setSelectedSupplierId('new');
+                                    setSupplierForm({ name: '', phone: '', email: '', address: '', notes: '', cif: '', paymentTerms: '', deliveryDays: [] });
+                                }}
+                            >
+                                <Plus size={16} /> Añadir Empresa
+                            </button>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '450px', overflowY: 'auto' }}>
+                                {suppliers.map(sup => (
+                                    <div
+                                        key={sup.id}
+                                        onClick={() => {
+                                            setSelectedSupplierId(sup.id);
+                                            setSupplierForm(sup);
+                                        }}
+                                        style={{
+                                            padding: '1rem',
+                                            borderRadius: '12px',
+                                            background: selectedSupplierId === sup.id ? 'var(--color-surface)' : 'transparent',
+                                            border: selectedSupplierId === sup.id ? '1px solid var(--color-primary)' : '1px solid var(--border-strong)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: 'bold' }}>{sup.name}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>{sup.phone}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right: Supplier Details Box */}
+                        <div className="surface-card" style={{ padding: '2rem', border: '1px solid var(--border-strong)' }}>
+                            {selectedSupplierId ? (
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                                        <div>
+                                            <h2 style={{ margin: 0 }}>{selectedSupplierId === 'new' ? 'Nuevo Distribuidor' : supplierForm.name}</h2>
+                                            <p style={{ margin: '0.2rem 0 0 0', color: 'var(--color-text-muted)' }}>{selectedSupplierId === 'new' ? 'Empieza a profesionalizar tus compras' : `ID Proveedor: ${selectedSupplierId}`}</p>
+                                        </div>
+                                        {selectedSupplierId !== 'new' && (
+                                            <button
+                                                onClick={() => { if (window.confirm('¿Eliminar proveedor?')) { deleteSupplier(selectedSupplierId); setSelectedSupplierId(null); } }}
+                                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                                            >
+                                                <Trash2 />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Enhanced Supplier Form */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                                        <div className="form-group">
+                                            <label>Nombre Empresa *</label>
+                                            <input
+                                                value={supplierForm.name}
+                                                onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                                                className="input-field"
+                                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>CIF / NIF</label>
+                                            <input
+                                                value={supplierForm.cif || ''}
+                                                onChange={(e) => setSupplierForm({ ...supplierForm, cif: e.target.value })}
+                                                className="input-field"
+                                                placeholder="B12345678"
+                                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Teléfono de Contacto</label>
+                                            <input
+                                                value={supplierForm.phone}
+                                                onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                                                className="input-field"
+                                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Email Pedidos</label>
+                                            <input
+                                                value={supplierForm.email}
+                                                onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                                                className="input-field"
+                                                style={{ width: '100%', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Condiciones de Pago</label>
+                                            <select
+                                                className="input-field"
+                                                style={{ width: '100%' }}
+                                                value={supplierForm.payment_terms || ''}
+                                                onChange={(e) => setSupplierForm({ ...supplierForm, payment_terms: e.target.value })}
+                                            >
+                                                <option value="Contado">Al Contado</option>
+                                                <option value="7d">7 Días</option>
+                                                <option value="15d">15 Días</option>
+                                                <option value="30d">30 Días</option>
+                                                <option value="60d">60 Días</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-group">
+                                            <label>Días de Reparto</label>
+                                            <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem' }}>
+                                                {['L', 'M', 'X', 'J', 'V', 'S'].map(day => (
+                                                    <div
+                                                        key={day}
+                                                        style={{
+                                                            width: '30px', height: '30px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            fontSize: '0.8rem', background: (supplierForm.delivery_days || []).includes(day) ? 'var(--color-primary)' : 'rgba(0,0,0,0.1)',
+                                                            color: (supplierForm.delivery_days || []).includes(day) ? 'white' : 'inherit', cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => {
+                                                            const current = supplierForm.delivery_days || [];
+                                                            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+                                                            setSupplierForm({ ...supplierForm, delivery_days: next });
+                                                        }}
+                                                    >
+                                                        {day}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <button className="btn-primary" onClick={handleSaveSupplier} style={{ borderRadius: '10px' }}>
+                                            <Save size={16} /> Guardar Ficha Distribuidor
                                         </button>
+                                        <button className="btn-secondary" onClick={() => setSelectedSupplierId(null)}>Cerrar</button>
+                                    </div>
+
+                                    {/* History Summary (Placeholders for now) */}
+                                    {selectedSupplierId !== 'new' && (
+                                        <div style={{ marginTop: '3rem', borderTop: '1px solid var(--border-strong)', paddingTop: '2rem' }}>
+                                            <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Resumen de Actividad</h3>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                                <div className="surface-card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Facturas totales</div>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{invoices.filter(i => i.supplier_id === selectedSupplierId).length}</div>
+                                                </div>
+                                                <div className="surface-card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Gasto acumulado</div>
+                                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                                        {invoices.filter(i => i.supplier_id === selectedSupplierId).reduce((acc, curr) => acc + (curr.amount || 0), 0).toFixed(2)}€
+                                                    </div>
+                                                </div>
+                                                <div className="surface-card" style={{ padding: '1rem', textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Último pedido</div>
+                                                    <div style={{ fontSize: '1rem', fontWeight: 'bold' }}>Reciente</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-
-                                {/* Supplier Form */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-                                    <div>
-                                        <label>Nombre Empresa</label>
-                                        <input
-                                            value={supplierForm.name}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                                            className="surface-card"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'var(--color-text)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Teléfono</label>
-                                        <input
-                                            value={supplierForm.phone}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
-                                            className="surface-card"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'var(--color-text)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Email</label>
-                                        <input
-                                            value={supplierForm.email}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
-                                            className="surface-card"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'var(--color-text)' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label>Dirección</label>
-                                        <input
-                                            value={supplierForm.address}
-                                            onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })}
-                                            className="surface-card"
-                                            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'var(--color-text)' }}
-                                        />
-                                    </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', opacity: 0.5 }}>
+                                    <Box size={64} style={{ marginBottom: '1rem' }} />
+                                    <p>Selecciona un distribuidor para gestionar sus datos y facturas</p>
                                 </div>
-
-                                <button className="btn-primary" onClick={handleSaveSupplier} style={{ marginBottom: '3rem' }}>
-                                    <Save size={16} style={{ marginRight: '0.5rem' }} /> Guardar Datos
-                                </button>
-
-                                {/* Invoice Section (Only if not new) */}
-                                {selectedSupplierId !== 'new' && (
-                                    <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '2rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h3 style={{ margin: 0 }}>Facturas Guardadas</h3>
-                                            <button
-                                                className="surface-card"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem 1rem' }}
-                                                onClick={() => setIsAddingInvoice(true)}
-                                            >
-                                                <Camera size={16} /> Subir Factura
-                                            </button>
-                                        </div>
-
-                                        {/* Invoice List */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
-                                            {invoices.filter(i => i.supplierId === selectedSupplierId).map(inv => (
-                                                <div key={inv.id} className="surface-card" style={{ padding: '0.5rem', position: 'relative' }}>
-                                                    <div style={{ height: '100px', background: '#000', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
-                                                        {inv.image ? (
-                                                            <img src={inv.image} alt="Factura" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        ) : (
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#666' }}>No img</div>
-                                                        )}
-                                                    </div>
-                                                    <div style={{ fontWeight: 'bold' }}>{inv.amount.toFixed(2)}€</div>
-                                                    <div style={{ fontSize: '0.8rem', color: 'gray' }}>{inv.date}</div>
-                                                    <button
-                                                        onClick={() => deleteInvoice(inv.id)}
-                                                        style={{ position: 'absolute', top: '5px', right: '5px', background: 'rgba(0,0,0,0.7)', border: 'none', color: 'var(--color-text)', borderRadius: '50%', padding: '2px', cursor: 'pointer' }}
-                                                    >
-                                                        <X size={12} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Add Invoice Modal */}
-                                        <AnimatePresence>
-                                            {isAddingInvoice && (
-                                                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                                                    <motion.div
-                                                        initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                                                        className="surface-card"
-                                                        style={{ padding: '2rem', width: '90%', maxWidth: '400px', border: '1px solid var(--color-primary)' }}
-                                                    >
-                                                        <h3 style={{ marginTop: 0 }}>Nueva Factura</h3>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                                            <div>
-                                                                <label>Importe Total (€)</label>
-                                                                <input
-                                                                    type="number" step="0.01"
-                                                                    value={invoiceForm.amount}
-                                                                    onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                                                                    className="surface-card" style={{ width: '100%', padding: '0.5rem', color: 'var(--color-text)', marginTop: '0.5rem' }}
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label>Fecha</label>
-                                                                <input
-                                                                    type="date"
-                                                                    value={invoiceForm.date}
-                                                                    onChange={(e) => setInvoiceForm({ ...invoiceForm, date: e.target.value })}
-                                                                    className="surface-card" style={{ width: '100%', padding: '0.5rem', color: 'var(--color-text)', marginTop: '0.5rem' }}
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label>Foto de Factura</label>
-                                                                <div style={{ marginTop: '0.5rem', border: '2px dashed #666', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        capture="environment"
-                                                                        onChange={handleImageUpload}
-                                                                        style={{ display: 'none' }}
-                                                                        id="invoice-upload"
-                                                                    />
-                                                                    <label htmlFor="invoice-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                                                        <Camera size={32} />
-                                                                        <span>Tocar para hacer foto</span>
-                                                                    </label>
-                                                                    {invoiceForm.image && (
-                                                                        <div style={{ marginTop: '1rem' }}>
-                                                                            <img src={invoiceForm.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '4px' }} />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
-                                                                <button onClick={() => setIsAddingInvoice(false)} style={{ background: 'none', border: 'none', color: 'gray', cursor: 'pointer' }}>Cancelar</button>
-                                                                <button onClick={handleSaveInvoice} className="btn-primary">Guardar</button>
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-muted)', opacity: 0.5 }}>
-                                <Box size={64} />
-                                <p>Selecciona un distribuidor o crea uno nuevo</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
+
+            {/* MODALS */}
+            <AnimatePresence>
+                {showReception && <QuickReception onClose={() => setShowReception(false)} />}
+                {showOrderModule && <PurchaseOrderModule onClose={() => setShowOrderModule(false)} />}
+            </AnimatePresence>
 
             {['alimentos', 'bebidas', 'menaje', 'limpieza'].includes(activeTab) && (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
