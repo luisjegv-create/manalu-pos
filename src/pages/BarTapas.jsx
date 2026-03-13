@@ -701,29 +701,7 @@ const BarTapas = () => {
                                     </div>
                                 )}
 
-                                {/* Mobile Search Button */}
-                                {isMobile && (
-                                    <button
-                                        onClick={() => setShowMobileSearch(true)}
-                                        className="btn-primary"
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            padding: '0.75rem 1rem',
-                                            borderRadius: '12px',
-                                            background: 'var(--color-primary)',
-                                            color: 'white',
-                                            border: 'none',
-                                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-                                            fontWeight: 'bold',
-                                            fontSize: '1rem'
-                                        }}
-                                    >
-                                        <Search size={22} />
-                                        <span>Buscar</span>
-                                    </button>
-                                )}
+                                {/* Removed Mobile Search Button from here */}
                                 <button
                                     onClick={() => setIsAddingProduct(true)}
                                     className="btn-primary"
@@ -744,6 +722,34 @@ const BarTapas = () => {
                                 </button>
                             </div>
                         </header>
+
+                        {/* Full Width Mobile Search Button */}
+                        {isMobile && (
+                            <div style={{ padding: '0.75rem 1.5rem', background: 'var(--color-bg)', borderBottom: '1px solid var(--glass-border)' }}>
+                                <button
+                                    onClick={() => setShowMobileSearch(true)}
+                                    className="btn-primary"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.75rem',
+                                        padding: '1rem',
+                                        width: '100%',
+                                        borderRadius: '12px',
+                                        background: 'var(--color-primary)',
+                                        color: 'white',
+                                        border: 'none',
+                                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
+                                        fontWeight: 'bold',
+                                        fontSize: '1.1rem'
+                                    }}
+                                >
+                                    <Search size={24} />
+                                    <span>Buscar Producto...</span>
+                                </button>
+                            </div>
+                        )}
 
                         {/* LEFT SECTION: Categories & Products */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
