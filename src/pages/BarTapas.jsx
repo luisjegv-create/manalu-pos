@@ -97,7 +97,7 @@ const BarTapas = () => {
     const [showOrderMobile, setShowOrderMobile] = useState(false);
     const [mobileActiveTab, setMobileActiveTab] = useState('menu'); // 'tables', 'menu', 'order'
     const [showMobileSearch, setShowMobileSearch] = useState(false);
-    const [mobileSearchQuery, setMobileSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const handleResize = () => {
@@ -446,10 +446,10 @@ const BarTapas = () => {
 
     const totalBill = calculateBillTotal();
 
-    // Mobile Search Logic
-    const mobileFilteredProducts = mobileSearchQuery.trim() === ''
+    // Search Logic (Unified for Mobile Fullscreen and Desktop)
+    const filteredProductsBySearch = searchQuery.trim() === ''
         ? []
-        : salesProducts.filter(p => p.name.toLowerCase().includes(mobileSearchQuery.toLowerCase()));
+        : salesProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
         <div style={{
@@ -651,7 +651,57 @@ const BarTapas = () => {
                             </div>
 
                             {/* Quick Mode Button (Added) */}
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                {/* Desktop Search Bar */}
+                                {!isMobile && (
+                                    <div style={{ position: 'relative', marginRight: '0.5rem' }}>
+                                        <Search size={22} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-primary)' }} />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder="Buscar producto..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            style={{
+                                                padding: '0.75rem 2.5rem 0.75rem 3rem',
+                                                borderRadius: '12px',
+                                                border: '2px solid var(--color-primary)',
+                                                background: 'rgba(255,255,255,0.1)',
+                                                color: 'white',
+                                                fontSize: '1.1rem',
+                                                width: '280px',
+                                                outline: 'none',
+                                                boxShadow: '0 0 10px rgba(59, 130, 246, 0.3)',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery('')}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '0.75rem',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    background: 'rgba(255,255,255,0.1)',
+                                                    border: 'none',
+                                                    color: 'white',
+                                                    cursor: 'pointer',
+                                                    padding: '0.4rem',
+                                                    borderRadius: '50%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                            >
+                                                <X size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Mobile Search Button */}
                                 {isMobile && (
                                     <button
                                         onClick={() => setShowMobileSearch(true)}
@@ -694,8 +744,43 @@ const BarTapas = () => {
                             </div>
 
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                {availableSubcategories.length > 0 && (
-                                    <div style={{
+                                {searchQuery.trim() !== '' && !isMobile ? (
+                                    // SEARCH RESULTS VIEW (Desktop)
+                                    <div style={{ padding: '1rem', flex: 1, overflowY: 'auto' }}>
+                                        <h3 style={{
+                                            fontSize: '1.2rem',
+                                            margin: '0 0 1rem 0.5rem',
+                                            color: 'var(--color-primary)',
+                                            borderBottom: '1px solid var(--glass-border)',
+                                            paddingBottom: '0.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem'
+                                        }}>
+                                            <Search size={20} /> Resultados para "{searchQuery}"
+                                        </h3>
+                                        {filteredProductsBySearch.length > 0 ? (
+                                            <ProductGrid
+                                                products={filteredProductsBySearch}
+                                                onProductClick={(p) => {
+                                                    handleProductClick(p);
+                                                    setSearchQuery(''); // Optional: clear search after adding
+                                                }}
+                                                getProductCost={getProductCost}
+                                                checkProductAvailability={checkProductAvailability}
+                                            />
+                                        ) : (
+                                            <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem 1rem' }}>
+                                                <Search size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
+                                                <p>No se encontraron productos que coincidan con "{searchQuery}"</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    // NORMAL CATEGORY VIEW
+                                    <>
+                                        {availableSubcategories.length > 0 && (
+                                            <div style={{
                                         display: 'flex',
                                         gap: '0.4rem',
                                         padding: '0.75rem',
@@ -777,12 +862,14 @@ const BarTapas = () => {
                                         })}
                                     </div>
                                 ) : (
-                                    <ProductGrid
-                                        products={filteredProducts}
-                                        onProductClick={handleProductClick}
-                                        getProductCost={getProductCost}
-                                        checkProductAvailability={checkProductAvailability}
-                                    />
+                                            <ProductGrid
+                                                products={filteredProducts}
+                                                onProductClick={handleProductClick}
+                                                getProductCost={getProductCost}
+                                                checkProductAvailability={checkProductAvailability}
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -1271,8 +1358,8 @@ const BarTapas = () => {
                                 <input
                                     autoFocus
                                     placeholder="¿Qué busca el cliente?..."
-                                    value={mobileSearchQuery}
-                                    onChange={(e) => setMobileSearchQuery(e.target.value)}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '1rem 1rem 1rem 3rem',
@@ -1288,7 +1375,7 @@ const BarTapas = () => {
                             <button
                                 onClick={() => {
                                     setShowMobileSearch(false);
-                                    setMobileSearchQuery('');
+                                    setSearchQuery('');
                                 }}
                                 style={{
                                     padding: '0.75rem',
@@ -1304,15 +1391,15 @@ const BarTapas = () => {
                         </div>
 
                         <div style={{ flex: 1, overflowY: 'auto' }}>
-                            {mobileSearchQuery.trim() !== '' && (
+                            {searchQuery.trim() !== '' && (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                                    {mobileFilteredProducts.map(product => (
+                                    {filteredProductsBySearch.map(product => (
                                         <div
                                             key={product.id}
                                             onClick={() => {
                                                 handleProductClick(product);
                                                 setShowMobileSearch(false);
-                                                setMobileSearchQuery('');
+                                                setSearchQuery('');
                                                 setMobileActiveTab('menu');
                                             }}
                                             style={{
@@ -1332,14 +1419,14 @@ const BarTapas = () => {
                                             <div style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>{product.price.toFixed(2)}€</div>
                                         </div>
                                     ))}
-                                    {mobileFilteredProducts.length === 0 && (
+                                    {filteredProductsBySearch.length === 0 && (
                                         <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '2rem' }}>
                                             No se han encontrado productos
                                         </div>
                                     )}
                                 </div>
                             )}
-                            {mobileSearchQuery.trim() === '' && (
+                            {searchQuery.trim() === '' && (
                                 <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: '4rem' }}>
                                     <Search size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                                     <p>Escribe el nombre de un artículo para buscarlo rápidamente</p>
