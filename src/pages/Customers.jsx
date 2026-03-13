@@ -111,8 +111,20 @@ const Customers = () => {
             {/* --- LEFT SIDEBAR (List) --- */}
             <div className="glass-panel" style={{ width: '350px', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--glass-border)', borderRadius: 0 }}>
                 <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--glass-border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                        <button onClick={() => navigate('/')} className="btn-icon"><ArrowLeft size={20} /></button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <button
+                            onClick={() => navigate('/')}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+                                background: 'var(--color-primary)', color: 'white',
+                                border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                                cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem',
+                                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
+                                width: '100%'
+                            }}
+                        >
+                            <ArrowLeft size={24} /> Volver al TPV
+                        </button>
                         <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}><Users /> Clientes</h2>
                     </div>
 

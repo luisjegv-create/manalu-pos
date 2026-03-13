@@ -135,9 +135,18 @@ const Bodega = () => {
     return (
         <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
             <header className="header-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button onClick={() => navigate('/')} className="btn-icon-circle">
-                        <ArrowLeft size={20} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: 'var(--color-primary)', color: 'white',
+                            border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                            cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                        }}
+                    >
+                        <ArrowLeft size={24} /> Volver
                     </button>
                     <div>
                         <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Gestión de Bodega</h1>

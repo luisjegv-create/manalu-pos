@@ -872,13 +872,14 @@ const ManaluEventos = () => {
                     <button
                         onClick={() => navigate('/')}
                         style={{
-                            background: 'none', border: 'none', color: 'var(--color-text-muted)',
-                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            cursor: 'pointer', marginBottom: '1.5rem', fontSize: '0.9rem',
-                            padding: 0
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: 'var(--color-primary)', color: 'white',
+                            border: 'none', padding: '1rem', borderRadius: '12px',
+                            cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1.1rem',
+                            fontWeight: 'bold', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
                         }}
                     >
-                        <ArrowLeft size={16} /> Volver al TPV
+                        <ArrowLeft size={24} /> Volver al TPV
                     </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                         <div style={{
@@ -1033,13 +1034,14 @@ const ManaluEventos = () => {
                             <button
                                 onClick={() => navigate('/')}
                                 style={{
-                                    background: 'none', border: 'none', color: 'var(--color-text-muted)',
-                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                    cursor: 'pointer', marginBottom: '1rem', fontSize: '0.9rem',
-                                    padding: 0
+                                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                    background: 'var(--color-primary)', color: 'white',
+                                    border: 'none', padding: '1rem', borderRadius: '12px',
+                                    cursor: 'pointer', marginBottom: '1.5rem', fontSize: '1.1rem',
+                                    fontWeight: 'bold', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
                                 }}
                             >
-                                <ArrowLeft size={16} /> Volver al TPV
+                                <ArrowLeft size={24} /> Volver al TPV
                             </button>
                         )}
                         <h2 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: '800' }}>

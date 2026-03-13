@@ -579,21 +579,22 @@ const QRMenu = () => {
                             position: 'absolute',
                             top: '1.5rem',
                             left: '1.5rem',
-                            background: 'rgba(255,255,255,0.2)',
-                            backdropFilter: 'blur(10px)',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '45px',
-                            height: '45px',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            gap: '0.75rem',
+                            background: 'var(--color-primary)',
                             color: 'white',
+                            border: 'none',
+                            padding: '0.8rem 1.2rem',
+                            borderRadius: '12px',
                             cursor: 'pointer',
-                            zIndex: 20
+                            zIndex: 20,
+                            fontWeight: 'bold',
+                            fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
                         }}
                     >
-                        <ArrowLeft size={24} />
+                        <ArrowLeft size={24} /> Volver
                     </button>
                 )}
 

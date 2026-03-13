@@ -93,12 +93,18 @@ const TableSelection = () => {
                 background: 'var(--color-surface)',
                 borderBottom: '1px solid var(--border-strong)'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <button
                         onClick={() => navigate('/')}
-                        className="btn-icon-circle"
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: 'var(--color-primary)', color: 'white',
+                            border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                            cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                        }}
                     >
-                        <ArrowLeft size={20} />
+                        <ArrowLeft size={24} /> Volver
                     </button>
                     <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Selección de Mesa</h1>
                 </div>

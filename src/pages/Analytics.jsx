@@ -453,11 +453,13 @@ const Analytics = () => {
                 <button
                     onClick={() => navigate('/')}
                     style={{
-                        marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'rgba(255,255,255,0.05)', border: 'none', color: '#94a3b8',
-                        padding: '1rem', borderRadius: '8px', cursor: 'pointer'
+                        marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        background: 'var(--color-primary)', border: 'none', color: '#ffffff',
+                        padding: '1.2rem', borderRadius: '12px', cursor: 'pointer',
+                        fontWeight: 'bold', fontSize: '1.1rem',
+                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
                     }}>
-                    <ArrowLeft size={18} /> Volver al TPV
+                    <ArrowLeft size={24} /> Volver al TPV
                 </button>
             </div>
 

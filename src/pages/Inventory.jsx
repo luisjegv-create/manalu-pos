@@ -133,12 +133,18 @@ const Inventory = () => {
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <header style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                     <button
                         onClick={() => navigate('/')}
-                        style={{ background: 'none', border: 'none', color: 'var(--color-text)', cursor: 'pointer' }}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: 'var(--color-primary)', color: 'white',
+                            border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                            cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                        }}
                     >
-                        <ArrowLeft />
+                        <ArrowLeft size={24} /> Volver
                     </button>
                     <div>
                         <h1 style={{ margin: 0 }}>Almacén (Matriz)</h1>

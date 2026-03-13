@@ -86,8 +86,19 @@ const Bookings = () => {
     return (
         <div style={{ backgroundColor: 'var(--color-bg)', minHeight: '100vh' }}>
             <header className="header-card" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <button onClick={() => navigate('/')} className="btn-icon-circle"><ArrowLeft size={20} /></button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <button
+                        onClick={() => navigate('/')}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.75rem',
+                            background: 'var(--color-primary)', color: 'white',
+                            border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                            cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                        }}
+                    >
+                        <ArrowLeft size={24} /> Volver
+                    </button>
                     <div>
                         <h1 style={{ margin: 0 }}>Gestión de Reservas</h1>
                         <p style={{ margin: 0, color: 'var(--color-text-muted)' }}>Calendario, mesas y clientes</p>

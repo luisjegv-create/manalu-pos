@@ -60,9 +60,9 @@ const OrderSummary = ({
                 <div style={{ padding: '1rem', display: 'flex', justifyContent: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                     <button
                         onClick={() => setShowOrderMobile(false)}
-                        style={{ background: 'none', border: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        style={{ background: 'var(--color-primary)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.5rem', borderRadius: '12px', fontSize: '1.1rem', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)', cursor: 'pointer' }}
                     >
-                        <ArrowLeft size={20} /> Volver a la Carta
+                        <ArrowLeft size={24} /> Volver a la Carta
                     </button>
                 </div>
             )}

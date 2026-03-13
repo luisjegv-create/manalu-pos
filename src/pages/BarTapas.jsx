@@ -603,9 +603,15 @@ const BarTapas = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <button
                                     onClick={() => searchParams.get('mode') === 'quick' ? navigate('/') : navigate('/tables')}
-                                    className="btn-icon-circle"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                        background: 'var(--color-primary)', color: 'white',
+                                        border: 'none', padding: '0.8rem 1.2rem', borderRadius: '12px',
+                                        fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer',
+                                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
+                                    }}
                                 >
-                                    <ArrowLeft size={20} />
+                                    <ArrowLeft size={24} /> <span>{searchParams.get('mode') === 'quick' ? 'Ventas' : 'Mesas'}</span>
                                 </button>
                                 <img src="/logo_new.png" alt="Logo" style={{ height: '50px', objectFit: 'contain' }} />
                                 <div>
