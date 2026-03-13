@@ -91,14 +91,16 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
 
             <table class="items">
                 ${items.map(item => `
-                    <tr class="item-row">
-                        <td class="qty">${item.quantity}</td>
-                        <td class="name">
+                    <tr class="item-row" ${item.isIndividual ? 'style="border-bottom: 2px dashed black;"' : ''}>
+                        <td class="qty"><span style="${item.isIndividual ? 'font-size: 1.4rem; padding-bottom: 10px; display: inline-block;' : ''}">${item.quantity}</span></td>
+                        <td class="name" style="${item.isIndividual ? 'padding-bottom: 15px;' : ''}">
                             ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
-                            ${item.name}
+                            <span style="${item.isIndividual ? 'font-size: 1.3rem; font-weight: 900;' : ''}">${item.name}</span>
                             ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
+                            ${item.isIndividual ? '<div style="font-size:1.1rem; font-weight:900; color: black; background: white; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[INDIVIDUAL - NO COMPARTIR] 👤</div>' : ''}
                             ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
-                            ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}
+                            ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px; margin-top: 4px;">NOTA: ${item.notes}</div>` : ''}
+                            ${item.isIndividual ? '<div style="margin-top: 10px; border-bottom: 2px solid black;"></div>' : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -147,14 +149,16 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
 
                 <table class="items">
                     ${items.map(item => `
-                        <tr class="item-row">
-                            <td class="qty">${item.quantity}</td>
-                            <td class="name">
+                        <tr class="item-row" ${item.isIndividual ? 'style="border-bottom: 2px dashed black;"' : ''}>
+                            <td class="qty"><span style="${item.isIndividual ? 'font-size: 1.4rem; padding-bottom: 10px; display: inline-block;' : ''}">${item.quantity}</span></td>
+                            <td class="name" style="${item.isIndividual ? 'padding-bottom: 15px;' : ''}">
                                 ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
-                                ${item.name}
+                                <span style="${item.isIndividual ? 'font-size: 1.3rem; font-weight: 900;' : ''}">${item.name}</span>
                                 ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
+                                ${item.isIndividual ? '<div style="font-size:1.1rem; font-weight:900; color: black; background: white; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[INDIVIDUAL - NO COMPARTIR] 👤</div>' : ''}
                                 ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
-                                ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px;">NOTA: ${item.notes}</div>` : ''}
+                                ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px; margin-top: 4px;">NOTA: ${item.notes}</div>` : ''}
+                                ${item.isIndividual ? '<div style="margin-top: 10px; border-bottom: 2px solid black;"></div>' : ''}
                             </td>
                         </tr>
                     `).join('')}
@@ -236,7 +240,7 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
         </head>
         <body>
             ${generateTicketHtml('ORDEN COCINA', foodItems)}
-            ${generateTicketHtml('ORDEN BARRA', drinkItems)}
+            ${generateTicketHtml('ORDEN BARRA', [...(foodItems || []), ...(drinkItems || [])])}
             <script>
                 window.onload = function() {
                     window.print();

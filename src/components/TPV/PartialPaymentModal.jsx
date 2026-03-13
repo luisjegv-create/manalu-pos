@@ -24,6 +24,8 @@ const PartialPaymentModal = ({
     const [mode, setMode] = React.useState('products'); // 'products', 'equal', 'custom'
     const [numPeople, setNumPeople] = React.useState(2);
     const [customAmount, setCustomAmount] = React.useState('');
+    const [isAddingTip, setIsAddingTip] = React.useState(false);
+    const [tipAmount, setTipAmount] = React.useState('');
 
     if (!isOpen) return null;
 
@@ -42,8 +44,11 @@ const PartialPaymentModal = ({
     const finalToPay = Math.max(0, totalToPay - discountAmount);
 
     const onConfirmMode = (paymentMethod) => {
-        handleConfirmPartialPayment(paymentMethod, mode, totalToPay);
+        const finalTip = isAddingTip ? (parseFloat(tipAmount) || 0) : 0;
+        handleConfirmPartialPayment(paymentMethod, mode, totalToPay, finalTip);
         onClose();
+        setIsAddingTip(false);
+        setTipAmount('');
     };
 
     return (
@@ -169,7 +174,32 @@ const PartialPaymentModal = ({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <button className="btn-primary" style={{ background: '#10b981' }} onClick={() => onConfirmMode('Efectivo')} disabled={finalToPay <= 0}>Efectivo</button>
-                    <button className="btn-primary" style={{ background: '#3b82f6' }} onClick={() => onConfirmMode('Tarjeta')} disabled={finalToPay <= 0}>Tarjeta</button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button className="btn-primary" style={{ background: '#3b82f6', width: '100%' }} onClick={() => onConfirmMode('Tarjeta')} disabled={finalToPay <= 0}>Tarjeta</button>
+                        {isAddingTip ? (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                    type="number"
+                                    placeholder="Propina €"
+                                    value={tipAmount}
+                                    onChange={(e) => setTipAmount(e.target.value)}
+                                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', border: '1px solid #3b82f6', background: 'rgba(0,0,0,0.3)', color: 'white' }}
+                                    autoFocus
+                                />
+                                <button className="btn-primary" style={{ background: '#3b82f6', padding: '0.5rem' }} onClick={() => onConfirmMode('Tarjeta')}>OK</button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsAddingTip(true)}
+                                style={{
+                                    padding: '0.4rem', borderRadius: '8px', border: '1px dashed #3b82f6', background: 'transparent',
+                                    color: '#60a5fa', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                + Añadir Propina (Tarjeta)
+                            </button>
+                        )}
+                    </div>
                 </div>
             </motion.div>
         </div>
