@@ -705,10 +705,23 @@ const BarTapas = () => {
                                 {isMobile && (
                                     <button
                                         onClick={() => setShowMobileSearch(true)}
-                                        className="btn-icon-circle"
-                                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)' }}
+                                        className="btn-primary"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            padding: '0.75rem 1rem',
+                                            borderRadius: '12px',
+                                            background: 'var(--color-primary)',
+                                            color: 'white',
+                                            border: 'none',
+                                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                                            fontWeight: 'bold',
+                                            fontSize: '1rem'
+                                        }}
                                     >
-                                        <Search size={22} color="var(--color-primary)" />
+                                        <Search size={22} />
+                                        <span>Buscar</span>
                                     </button>
                                 )}
                                 <button
@@ -1352,23 +1365,24 @@ const BarTapas = () => {
                             padding: '1rem'
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                             <div style={{ flex: 1, position: 'relative' }}>
-                                <Search size={20} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                                <Search size={24} style={{ position: 'absolute', left: '1.25rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-primary)' }} />
                                 <input
                                     autoFocus
-                                    placeholder="¿Qué busca el cliente?..."
+                                    placeholder="Buscar producto..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     style={{
                                         width: '100%',
-                                        padding: '1rem 1rem 1rem 3rem',
+                                        padding: '1.25rem 1rem 1.25rem 3.5rem',
                                         background: 'var(--color-surface)',
-                                        border: '1px solid var(--color-primary)',
+                                        border: '2px solid var(--color-primary)',
                                         borderRadius: '16px',
                                         color: 'white',
-                                        fontSize: '1.1rem',
-                                        outline: 'none'
+                                        fontSize: '1.25rem',
+                                        outline: 'none',
+                                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
                                     }}
                                 />
                             </div>
@@ -1378,12 +1392,14 @@ const BarTapas = () => {
                                     setSearchQuery('');
                                 }}
                                 style={{
-                                    padding: '0.75rem',
-                                    borderRadius: '12px',
-                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    padding: '1.25rem',
+                                    borderRadius: '16px',
+                                    background: 'rgba(239, 68, 68, 0.15)',
                                     color: '#ef4444',
-                                    border: 'none',
-                                    fontWeight: 'bold'
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                 }}
                             >
                                 <X size={24} />
