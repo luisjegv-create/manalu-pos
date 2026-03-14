@@ -29,7 +29,27 @@ export const OrderProvider = ({ children }) => {
     };
 
     // Tables state (Sync with Supabase in future if needed, for now local is okay for layout)
-    const [tables, setTables] = useState(() => safeParse('manalu_tables', initialTables));
+    const [tables, setTables] = useState(() => {
+        const parsed = safeParse('manalu_tables', initialTables);
+        let changed = false;
+        
+        // Restore Mesa 1 and Mesa 2 if missing
+        if (!parsed.some(t => t.name === 'Mesa 1' || t.name === 'Mesa 1-2')) {
+            parsed.push(initialTables.find(t => t.name === 'Mesa 1'));
+            changed = true;
+        }
+        if (!parsed.some(t => t.name === 'Mesa 2' || t.name === 'Mesa 1-2')) {
+            parsed.push(initialTables.find(t => t.name === 'Mesa 2'));
+            changed = true;
+        }
+        
+        if (changed) {
+            parsed.sort((a,b) => (a.id > b.id) ? 1 : -1);
+            localStorage.setItem('manalu_tables', JSON.stringify(parsed));
+        }
+        
+        return parsed;
+    });
 
     // Active orders (Drafts) - Keep in localStorage for low latency/offline safety during rush
     const [tableOrders, setTableOrders] = useState(() => safeParse('manalu_table_orders', {}));
@@ -1080,6 +1100,179 @@ export const OrderProvider = ({ children }) => {
         return true;
     };
 
+    const transferTable = (sourceTableId, targetTableId) => {
+        if (sourceTableId === targetTableId) return;
+
+        // 1. Move Orders (Borrador)
+        setTableOrders(prev => {
+            const next = { ...prev };
+            const sourceOrders = next[sourceTableId] || [];
+            if (sourceOrders.length > 0) {
+                const targetOrders = next[targetTableId] || [];
+                next[targetTableId] = [...targetOrders, ...sourceOrders];
+            }
+            delete next[sourceTableId];
+            return next;
+        });
+
+        // 2. Move Bills (Enviados)
+        setTableBills(prev => {
+            const next = { ...prev };
+            const sourceBill = next[sourceTableId] || [];
+            if (sourceBill.length > 0) {
+                const targetBill = next[targetTableId] || [];
+                
+                // Combine bills matching quantities where possible
+                const combined = [...targetBill];
+                sourceBill.forEach(sourceItem => {
+                   const existing = combined.find(i => i.id === sourceItem.id && !i.isModified && !sourceItem.isModified);
+                   if (existing) {
+                       existing.quantity += sourceItem.quantity;
+                   } else {
+                       combined.push({ ...sourceItem });
+                   }
+                });
+
+                next[targetTableId] = combined;
+            }
+            delete next[sourceTableId];
+            return next;
+        });
+
+        // 3. Update Table Status
+        const targetTable = tables.find(t => t.id === targetTableId);
+        
+        setTables(prev => prev.map(t => {
+            if (t.id === sourceTableId) {
+                return { ...t, status: 'free', lastActionAt: null }; // Free source
+            }
+            if (t.id === targetTableId) {
+                return { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }; // Occupy target
+            }
+            return t;
+        }));
+        
+        // 4. Update Kitchen Orders (Optional: Change the name of the pending kitchen tickets to the new table)
+        if (targetTable) {
+             const sourceTableRecord = tables.find(t => t.id === sourceTableId);
+             if(sourceTableRecord) {
+                 // Best effort local update for kitchen orders (they would need a DB call to be fully effective across devices)
+                 setKitchenOrders(prev => prev.map(ko => 
+                     ko.table === sourceTableRecord.name ? { ...ko, table: targetTable.name } : ko
+                 ));
+                 
+                 // Async DB update for KDS
+                 supabase.from('kitchen_orders')
+                     .update({ table_name: targetTable.name })
+                     .eq('table_name', sourceTableRecord.name)
+                     .then();
+             }
+        }
+
+        if (currentTable && currentTable.id === sourceTableId) {
+            setCurrentTable(null);
+        }
+    };
+
+    const mergeTables = (sourceTableId, targetTableId) => {
+        if (sourceTableId === targetTableId) return;
+
+        const sourceTable = tables.find(t => t.id === sourceTableId);
+        const targetTable = tables.find(t => t.id === targetTableId);
+        
+        if (!sourceTable || !targetTable) return;
+
+        // Generate the new combined name (e.g., "Mesa 1-2")
+        // Try to be smart if they are already combined (e.g. "Mesa 1-2" + "Mesa 3" -> "Mesa 1-2-3")
+        const sourceNameNum = sourceTable.name.replace(/[^\d-]/g, '');
+        const targetNameNum = targetTable.name.replace(/[^\d-]/g, '');
+        
+        const newName = `Mesa ${Math.min(targetNameNum.split('-')[0], sourceNameNum.split('-')[0])}-${Math.max(targetNameNum.split('-').pop(), sourceNameNum.split('-').pop())}`;
+
+        // Create the new merged table entity
+        const mergedTableId = `merged-${Date.now()}`;
+        const newMergedTable = {
+            id: mergedTableId,
+            name: newName,
+            zone: targetTable.zone, // Keep the target table's zone
+            status: 'occupied',
+            seats: (sourceTable.seats || 4) + (targetTable.seats || 4), // Combine seats visually
+            lastActionAt: new Date().toISOString()
+        };
+
+        // 1. Move Orders into the new Merged Table
+        setTableOrders(prev => {
+            const next = { ...prev };
+            const sourceOrders = next[sourceTableId] || [];
+            const targetOrders = next[targetTableId] || [];
+            
+            if (sourceOrders.length > 0 || targetOrders.length > 0) {
+                next[mergedTableId] = [...targetOrders, ...sourceOrders];
+            }
+            
+            delete next[sourceTableId];
+            delete next[targetTableId];
+            return next;
+        });
+
+        // 2. Move Bills into the new Merged Table
+        setTableBills(prev => {
+            const next = { ...prev };
+            const sourceBill = next[sourceTableId] || [];
+            const targetBill = next[targetTableId] || [];
+            
+            const combined = [...targetBill];
+            sourceBill.forEach(sourceItem => {
+                const existing = combined.find(i => i.id === sourceItem.id && !i.isModified && !sourceItem.isModified);
+                if (existing) {
+                    existing.quantity += sourceItem.quantity;
+                } else {
+                    combined.push({ ...sourceItem });
+                }
+            });
+
+            if (combined.length > 0) {
+                 next[mergedTableId] = combined;
+            }
+
+            delete next[sourceTableId];
+            delete next[targetTableId];
+            return next;
+        });
+
+        // 3. Update Kitchen Orders
+        setKitchenOrders(prev => prev.map(ko => 
+            (ko.table === sourceTable.name || ko.table === targetTable.name) ? { ...ko, table: newName } : ko
+        ));
+        
+        // Async DB update for KDS
+        supabase.from('kitchen_orders')
+            .update({ table_name: newName })
+            .in('table_name', [sourceTable.name, targetTable.name])
+            .then();
+
+        // 4. Transform Tables List
+        setTables(prev => {
+            const next = [];
+            let inserted = false;
+            for (const t of prev) {
+                if (t.id === sourceTableId || t.id === targetTableId) {
+                    if (!inserted) {
+                        next.push(newMergedTable); // Put the merged table in the first encountered slot
+                        inserted = true;
+                    }
+                } else {
+                    next.push(t);
+                }
+            }
+            return next;
+        });
+
+        if (currentTable && (currentTable.id === sourceTableId || currentTable.id === targetTableId)) {
+            setCurrentTable(null);
+        }
+    };
+
     return (
         <OrderContext.Provider value={{
             order,
@@ -1128,7 +1321,9 @@ export const OrderProvider = ({ children }) => {
             clearServiceRequest,
             reservations, // Also expose reservations here for convenience
             activeQrAlert,
-            setActiveQrAlert
+            setActiveQrAlert,
+            transferTable,
+            mergeTables
         }}>
             {children}
         </OrderContext.Provider>

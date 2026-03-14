@@ -5,6 +5,7 @@ import { zones } from '../data/tables';
 import { Utensils, Wine, ArrowLeft, Armchair, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TableOrderPreview from '../components/TableOrderPreview';
+import BarMap from '../components/BarMap';
 
 const TableTimer = ({ startTime }) => {
     const [elapsed, setElapsed] = useState(0);
@@ -49,16 +50,42 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills, transferTable, mergeTables } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
+    
+    // Edit & Transfer states
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editingTable, setEditingTable] = useState(null); // For modal
+    const [editingTable, setEditingTable] = useState(null); 
+    
+    const [isTransferMode, setIsTransferMode] = useState(false);
+    const [sourceTable, setSourceTable] = useState(null);
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [targetTable, setTargetTable] = useState(null);
 
     const filteredTables = tables.filter(t => t.zone === activeZone);
 
     const handleTableSelect = (table) => {
         if (isEditMode) {
             setEditingTable(table);
+        } else if (isTransferMode) {
+            if (!sourceTable) {
+                // Must be occupied to be a source
+                const hasActiveOrder = (tableOrders[table.id] || []).length > 0 || tableBills[table.id] || kitchenOrders.some(o => o.table === table.name);
+                if (table.status === 'occupied' || hasActiveOrder) {
+                   setSourceTable(table);
+                } else {
+                   alert("Selecciona una mesa ocupada como origen primero.");
+                }
+            } else {
+                if (sourceTable.id === table.id) {
+                    // Deselect
+                    setSourceTable(null);
+                    return;
+                }
+                // Open modal for decision
+                setTargetTable(table);
+                setShowTransferModal(true);
+            }
         } else {
             selectTable(table);
             navigate('/bar-tapas'); // Go to TPV after selection
@@ -109,18 +136,40 @@ const TableSelection = () => {
                     <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Selección de Mesa</h1>
                 </div>
 
-                <button
-                    onClick={() => setIsEditMode(!isEditMode)}
-                    className="btn"
-                    style={{
-                        background: isEditMode ? 'var(--color-warning)' : 'var(--color-primary)',
-                        color: isEditMode ? 'black' : 'white',
-                        boxShadow: 'var(--shadow-md)',
-                        fontSize: '0.9rem'
-                    }}
-                >
-                    {isEditMode ? 'Terminar Edición' : 'Editar Mesas'}
-                </button>
+                <div style={{display: 'flex', gap: '1rem'}}>
+                    <button
+                        onClick={() => {
+                            setIsTransferMode(!isTransferMode);
+                            setIsEditMode(false);
+                            setSourceTable(null);
+                        }}
+                        className="btn"
+                        style={{
+                            background: isTransferMode ? 'var(--color-warning)' : 'var(--color-surface)',
+                            color: isTransferMode ? 'black' : 'var(--color-text)',
+                            border: '1px solid var(--border-strong)',
+                            boxShadow: 'var(--shadow-md)',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        {isTransferMode ? 'Cancelar Mover' : 'Mover/Agrupar'}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setIsEditMode(!isEditMode);
+                            setIsTransferMode(false);
+                        }}
+                        className="btn"
+                        style={{
+                            background: isEditMode ? 'var(--color-warning)' : 'var(--color-primary)',
+                            color: isEditMode ? 'black' : 'white',
+                            boxShadow: 'var(--shadow-md)',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        {isEditMode ? 'Terminar Edición' : 'Editar Mesas'}
+                    </button>
+                </div>
             </header>
 
             <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -173,7 +222,20 @@ const TableSelection = () => {
                     )}
                 </div>
 
-                {/* Grid */}
+                {/* Grid or Map */}
+                {activeZone === 'barra' ? (
+                    <BarMap 
+                        tables={filteredTables}
+                        handleTableSelect={handleTableSelect}
+                        isEditMode={isEditMode}
+                        isTransferMode={isTransferMode}
+                        sourceTable={sourceTable}
+                        tableOrders={tableOrders}
+                        tableBills={tableBills}
+                        kitchenOrders={kitchenOrders}
+                        reservations={reservations}
+                    />
+                ) : (
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -221,15 +283,19 @@ const TableSelection = () => {
                                     alignItems: 'center',
                                     gap: '0.8rem',
                                     cursor: 'pointer',
-                                    border: isEditMode ? '2px dashed #f59e0b' : '1px solid var(--border-strong)',
-                                    backgroundColor: isReserved
+                                    border: isEditMode ? '2px dashed #f59e0b' : (isTransferMode && sourceTable?.id === table.id ? '3px solid #f59e0b' : '1px solid var(--border-strong)'),
+                                    backgroundColor: (isTransferMode && sourceTable?.id === table.id) 
+                                        ? 'rgba(245, 158, 11, 0.3)'
+                                        : isReserved
                                         ? 'rgba(245, 158, 11, 0.15)'
                                         : hasActiveOrder
                                             ? 'rgba(59, 130, 246, 0.15)'
                                             : isOccupied
                                                 ? 'rgba(239, 68, 68, 0.1)'
                                                 : 'rgba(16, 185, 129, 0.1)',
-                                    borderColor: isReserved
+                                    borderColor: (isTransferMode && sourceTable?.id === table.id) 
+                                        ? '#f59e0b'
+                                        : isReserved
                                         ? '#f59e0b'
                                         : hasActiveOrder
                                             ? 'var(--color-primary)'
@@ -238,8 +304,9 @@ const TableSelection = () => {
                                                 : 'var(--border-strong)',
                                     color: 'var(--color-text)',
                                     position: 'relative',
-                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                                    minHeight: '200px'
+                                    boxShadow: (isTransferMode && sourceTable?.id === table.id) ? '0 0 15px rgba(245, 158, 11, 0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    minHeight: '200px',
+                                    animation: isTransferMode && !sourceTable && (isOccupied || hasActiveOrder) ? 'pulse 2s infinite' : 'none'
                                 }}
                             >
                                 {isOccupied && minStartTime && !isEditMode && <TableTimer startTime={minStartTime} />}
@@ -298,6 +365,7 @@ const TableSelection = () => {
                         );
                     })}
                 </div>
+                )}
             </div>
 
             {/* Edit Modal */}
@@ -381,6 +449,104 @@ const TableSelection = () => {
                     </div>
                 </div>
             )}
+
+            {/* Transfer/Merge Modal */}
+            {showTransferModal && sourceTable && targetTable && (
+                 <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+                }}>
+                    <div className="glass-panel" style={{ padding: '2rem', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid #3b82f6' }}>
+                        <h2 style={{ margin: 0, color: 'white', textAlign: 'center' }}>¿Qué deseas hacer?</h2>
+                        <p style={{textAlign: 'center', color: '#cbd5e1', marginBottom: '1rem'}}>
+                            Desde <strong>{sourceTable.name}</strong> hacia <strong>{targetTable.name}</strong>
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <button
+                                onClick={() => {
+                                    transferTable(sourceTable.id, targetTable.id);
+                                    setShowTransferModal(false);
+                                    setIsTransferMode(false);
+                                    setSourceTable(null);
+                                    setTargetTable(null);
+                                }}
+                                style={{ 
+                                    padding: '1rem', 
+                                    background: 'var(--color-primary)', 
+                                    border: 'none', 
+                                    color: 'white', 
+                                    borderRadius: '8px', 
+                                    cursor: 'pointer',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                            >
+                                <span>➡️ Mover Cuenta</span>
+                                <span style={{fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8}}>La {sourceTable.name} quedará libre</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    mergeTables(sourceTable.id, targetTable.id);
+                                    setShowTransferModal(false);
+                                    setIsTransferMode(false);
+                                    setSourceTable(null);
+                                    setTargetTable(null);
+                                }}
+                                style={{ 
+                                    padding: '1rem', 
+                                    background: '#10b981', 
+                                    border: 'none', 
+                                    color: 'white', 
+                                    borderRadius: '8px', 
+                                    cursor: 'pointer',
+                                    fontSize: '1.1rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}
+                            >
+                                <span>🤝 Agrupar Mesas</span>
+                                <span style={{fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8}}>Unir ambas cuentas y compartirlas</span>
+                            </button>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                setShowTransferModal(false);
+                                setTargetTable(null);
+                            }} 
+                            style={{ 
+                                background: 'none', 
+                                border: '1px solid #475569', 
+                                padding: '0.75rem',
+                                color: '#94a3b8', 
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                marginTop: '1rem'
+                            }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            <style>
+                {`
+                @keyframes pulse {
+                  0% { opacity: 1; }
+                  50% { opacity: 0.7; transform: scale(0.98); }
+                  100% { opacity: 1; }
+                }
+                `}
+            </style>
         </div>
     );
 };

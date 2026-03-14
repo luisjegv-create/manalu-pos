@@ -19,10 +19,14 @@ export const tables = [
     // Bar Seats
     { id: 11, name: 'Barra 1', zone: 'barra', status: 'free' },
     { id: 12, name: 'Barra 2', zone: 'barra', status: 'free' },
-    { id: 13, name: 'Barra 3', zone: 'barra', status: 'occupied' },
+    { id: 13, name: 'Barra 3', zone: 'barra', status: 'occupied' }, // Mock occupied
     { id: 14, name: 'Barra 4', zone: 'barra', status: 'free' },
     { id: 15, name: 'Barra 5', zone: 'barra', status: 'free' },
     { id: 16, name: 'Barra 6', zone: 'barra', status: 'free' },
     { id: 17, name: 'Barra 7', zone: 'barra', status: 'free' },
     { id: 18, name: 'Barra 8', zone: 'barra', status: 'free' },
+    { id: 19, name: 'Barra 9', zone: 'barra', status: 'free' },
+    { id: 20, name: 'Barra 10', zone: 'barra', status: 'free' },
+    { id: 21, name: 'Barra 11', zone: 'barra', status: 'free' },
+    { id: 22, name: 'Barra 12', zone: 'barra', status: 'free' },
 ];
