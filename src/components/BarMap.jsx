@@ -170,17 +170,22 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
 
     return (
         <div style={{
-            position: 'relative',
             width: '100%',
-            maxWidth: '1200px',
-            minHeight: '650px',
-            margin: '0 auto',
-            background: 'var(--color-surface)',
-            borderRadius: '16px',
-            border: '1px solid var(--border-strong)',
-            overflow: 'hidden',
-            boxShadow: 'inset 0 0 50px rgba(0,0,0,0.05)'
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: '20px'
         }}>
+            <div style={{
+                position: 'relative',
+                minWidth: '1200px',
+                minHeight: '650px',
+                margin: '0 auto',
+                background: 'var(--color-surface)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-strong)',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 0 50px rgba(0,0,0,0.05)'
+            }}>
             {/* Title or decorative element */}
             <div style={{
                 position: 'absolute',
@@ -270,6 +275,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
                     reservations={reservations}
                 />
             ))}
+            </div>
         </div>
     );
 };
