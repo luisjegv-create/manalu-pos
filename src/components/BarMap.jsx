@@ -134,22 +134,21 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
     // Hardcoded coordinates for the 12 spots to match an inverted L-shaped layout (short side up on the right)
     const layoutCoords = [
         // Short side (Right vertical) - 2 stools (OUTSIDE the bar on the right)
-        // Bar right edge is at 1380 + 100 = 1480px. So stools start at 1490px
-        { top: '100px', left: '1490px' },
-        { top: '220px', left: '1490px' },
+        { top: '100px', left: '1240px' },
+        { top: '220px', left: '1240px' },
         
         // Long side (Bottom horizontal) - 10 stools 
-        // We will space them ~140px apart, going from right (1380px) to left (120px)
-        { top: '440px', left: '1380px' }, // B3
-        { top: '440px', left: '1240px' }, // B4
-        { top: '440px', left: '1100px' }, // B5
-        { top: '440px', left: '960px' },  // B6
-        { top: '440px', left: '820px' },  // B7
-        { top: '440px', left: '680px' },  // B8
-        { top: '440px', left: '540px' },  // B9
-        { top: '440px', left: '400px' },  // B10
-        { top: '440px', left: '260px' },  // B11
-        { top: '440px', left: '120px' },  // B12
+        // We will space them ~119px apart, going from right (1130px) to left (60px)
+        { top: '440px', left: '1130px' }, // B3
+        { top: '440px', left: '1011px' }, // B4
+        { top: '440px', left: '892px' },  // B5
+        { top: '440px', left: '773px' },  // B6
+        { top: '440px', left: '654px' },  // B7
+        { top: '440px', left: '535px' },  // B8
+        { top: '440px', left: '416px' },  // B9
+        { top: '440px', left: '297px' },  // B10
+        { top: '440px', left: '178px' },  // B11
+        { top: '440px', left: '60px' },   // B12
     ];
 
     const mappedTables = tables.map((table, index) => {
@@ -177,7 +176,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
         }}>
             <div style={{
                 position: 'relative',
-                minWidth: '1600px',
+                minWidth: '1350px',
                 minHeight: '650px',
                 margin: '0 auto',
                 background: 'var(--color-surface)',
@@ -206,7 +205,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
             <div style={{
                 position: 'absolute',
                 top: '80px',
-                left: '1380px',
+                left: '1130px',
                 width: '100px',
                 height: '250px',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -223,7 +222,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
                 position: 'absolute',
                 top: '330px',
                 left: '50px',
-                width: '1430px',
+                width: '1180px',
                 height: '80px',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 border: '4px solid var(--border-strong)',
@@ -237,7 +236,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
             <div style={{
                 position: 'absolute',
                 top: '330px',
-                left: '1384px',
+                left: '1134px',
                 width: '92px',
                 height: '4px',
                 backgroundColor: 'rgba(59, 130, 246, 1)',
