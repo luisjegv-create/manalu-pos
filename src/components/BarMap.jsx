@@ -133,6 +133,36 @@ const Stool = ({ table, allTables, handleTableSelect, isTransferMode, sourceTabl
 };
 
 const BarMap = ({ tables, allTables, handleTableSelect, isTransferMode, sourceTable, tableOrders, tableBills, kitchenOrders, reservations }) => {
+    const containerRef = React.useRef(null);
+    const [scale, setScale] = React.useState(1);
+    
+    // Base dimensions for the map
+    const BASE_WIDTH = 1350;
+    const BASE_HEIGHT = 650;
+
+    React.useEffect(() => {
+        const handleResize = () => {
+            if (containerRef.current) {
+                const containerWidth = containerRef.current.offsetWidth;
+                // Leave some padding/margin
+                const availableWidth = containerWidth - 40; 
+                const newScale = Math.min(1, availableWidth / BASE_WIDTH);
+                setScale(newScale);
+            }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        
+        // Also check periodically for layout changes (sidebars opening/closing)
+        const timer = setInterval(handleResize, 1000);
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            clearInterval(timer);
+        };
+    }, []);
+
     // We expect 12 tables for the bar:
     // 2 on the short side (right), 10 on the long side (bottom)
     
@@ -173,22 +203,31 @@ const BarMap = ({ tables, allTables, handleTableSelect, isTransferMode, sourceTa
     });
 
     return (
-        <div style={{
-            width: '100%',
-            overflowX: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            paddingBottom: '20px'
-        }}>
+        <div 
+            ref={containerRef}
+            style={{
+                width: '100%',
+                overflow: 'hidden',
+                paddingBottom: '20px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                minHeight: `${BASE_HEIGHT * scale + 40}px`
+            }}
+        >
             <div style={{
                 position: 'relative',
-                minWidth: '1350px',
-                minHeight: '650px',
+                width: `${BASE_WIDTH}px`,
+                height: `${BASE_HEIGHT}px`,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top center',
                 margin: '0 auto',
                 background: 'var(--color-surface)',
                 borderRadius: '16px',
                 border: '1px solid var(--border-strong)',
                 overflow: 'hidden',
-                boxShadow: 'inset 0 0 50px rgba(0,0,0,0.05)'
+                boxShadow: 'inset 0 0 50px rgba(0,0,0,0.05)',
+                flexShrink: 0
             }}>
             {/* Title or decorative element */}
             <div style={{

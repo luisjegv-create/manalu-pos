@@ -374,7 +374,7 @@ const BarTapas = () => {
     };
 
 
-    const handleSendOrder = (isSilent = false, withoutPrinting = false) => {
+    const handleSendOrder = async (isSilent = false, withoutPrinting = false) => {
         if (order.length === 0) return;
 
         // Filter items
@@ -388,7 +388,7 @@ const BarTapas = () => {
             printServiceTickets(tableName, foodItems, drinkItems);
         }
 
-        sendToKitchen();
+        await sendToKitchen();
         if (!isSilent) {
             alert(withoutPrinting ? '¡Pedido guardado en la cuenta de la mesa! 💾' : '¡Pedido enviado a cocina e impreso! 👨‍🍳');
         }
@@ -933,6 +933,7 @@ const BarTapas = () => {
                         setIsPaymentModalOpen={setShowTicket}
                         setPartialPaymentModal={setPartialPaymentModal}
                         handlePrintPreTicket={handlePrintPreTicket}
+                        handleCloseTable={handleCloseTable}
                         currentTable={currentTable}
                     />
                 )}

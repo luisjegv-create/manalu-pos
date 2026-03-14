@@ -37,6 +37,7 @@ const OrderSummary = ({
     setIsPaymentModalOpen,
     setPartialPaymentModal,
     handlePrintPreTicket,
+    handleCloseTable,
     currentTable
 }) => {
     const [openQuickNotes, setOpenQuickNotes] = React.useState({});
@@ -46,6 +47,28 @@ const OrderSummary = ({
             ...prev,
             [id]: !prev[id]
         }));
+    };
+
+    const handleFastPay = async (method) => {
+        if (!currentTable) return;
+        
+        try {
+            // 1. If there's an active draft order, send it first
+            if (order.length > 0) {
+                await handleSendOrder(true, true); // Silent, no printing (or print as per config)
+            }
+            
+            // 2. Execute checkout with chosen method
+            await handleCloseTable(method);
+            
+            // 3. Clear local states if needed (context usually handles this, but safety first)
+            if (isMobile) {
+                setShowOrderMobile(false);
+            }
+        } catch (error) {
+            console.error("Fast Pay Error:", error);
+            alert("No se pudo completar el cobro rápido. Inténtalo de forma manual.");
+        }
     };
 
     return (
@@ -436,194 +459,177 @@ const OrderSummary = ({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {order.length > 0 ? (
-                        <>
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: (order.length > 0 ? '1fr 1fr' : '1.5fr 1fr'), gap: '0.75rem' }}>
+                        {order.length > 0 ? (
+                            <>
                                 <button
                                     className="btn-primary"
+                                    onClick={() => handleSendOrder(false, false)}
                                     style={{
-                                        flex: 2,
                                         padding: '1.25rem 0.5rem',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        fontSize: '1rem',
+                                        fontSize: '0.9rem',
                                         fontWeight: '800',
                                         borderRadius: '16px',
                                         background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                                         border: 'none',
                                         boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
                                         color: 'white',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem'
                                     }}
-                                    onClick={() => handleSendOrder(false, false)}
                                 >
-                                    <Printer size={20} /> <span>IMPRIMIR<br />Y ENVIAR</span>
+                                    <Printer size={20} /> ENVIAR
                                 </button>
                                 <button
                                     className="btn-primary"
+                                    onClick={() => handleFastPay('Efectivo')}
                                     style={{
-                                        flex: 2,
                                         padding: '1.25rem 0.5rem',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        fontSize: '1rem',
+                                        fontSize: '0.9rem',
                                         fontWeight: '800',
                                         borderRadius: '16px',
-                                        background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                                        background: 'linear-gradient(135deg, #059669, #10b981)',
                                         border: 'none',
-                                        boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)',
+                                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
                                         color: 'white',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
                                     }}
-                                    onClick={() => handleSendOrder(false, true)}
                                 >
-                                    <Send size={20} /> <span>SOLO<br />GUARDAR</span>
+                                    <Receipt size={18} /> EFECTIVO
                                 </button>
+                            </>
+                        ) : (bill && bill.length > 0) && (
+                            <>
                                 <button
-                                    onClick={() => {
-                                        handleSendOrder(true, false);
-                                        setIsPaymentModalOpen(true);
-                                    }}
+                                    className="btn-primary"
+                                    onClick={() => setIsPaymentModalOpen(true)}
                                     style={{
-                                        flex: 1,
-                                        padding: '1rem',
+                                        padding: '1.25rem',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         justifyContent: 'center',
                                         alignItems: 'center',
-                                        gap: '0.35rem',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 'bold',
+                                        gap: '0.5rem',
                                         borderRadius: '16px',
-                                        background: 'rgba(16, 185, 129, 0.1)',
-                                        color: '#10b981',
-                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                        border: 'none',
+                                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                                        color: 'white',
                                         cursor: 'pointer'
                                     }}
-                                    title="Cobro Directo Rápido"
                                 >
-                                    <Wine size={20} />
-                                    Cobrar
+                                    <Wine size={26} />
+                                    <span style={{ fontSize: '1.1rem', fontWeight: '900' }}>COBRAR</span>
                                 </button>
-                            </div>
-                        </>
-                    ) : (bill && bill.length > 0) ? (
-                        <>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <button
-                                        className="btn-primary"
-                                        onClick={() => setIsPaymentModalOpen(true)}
-                                        style={{
-                                            padding: '1.25rem',
-                                            display: 'flex',
+                                        onClick={() => handleFastPay('Efectivo')}
+                                        style={{ 
+                                            flex: 1, 
+                                            background: 'linear-gradient(135deg, #059669, #10b981)', 
+                                            border: 'none', 
+                                            borderRadius: '12px', 
+                                            color: 'white', 
+                                            display: 'flex', 
                                             flexDirection: 'column',
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            borderRadius: '16px',
-                                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                                            border: 'none',
-                                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                                            color: 'white',
-                                            cursor: 'pointer'
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            gap: '0.25rem', 
+                                            fontWeight: '800', 
+                                            fontSize: '0.75rem', 
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
                                         }}
                                     >
-                                        <Wine size={26} />
-                                        <span style={{ fontSize: '1.1rem', fontWeight: '900' }}>COBRAR</span>
+                                        <Receipt size={18} />
+                                        EFECTIVO
                                     </button>
-                                    
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        <button
-                                            onClick={() => {
-                                                // Function to fast pay with cash
-                                                console.log("Fast Pay Cash");
-                                            }}
-                                            style={{ 
-                                                flex: 1, 
-                                                background: 'linear-gradient(135deg, #059669, #10b981)', 
-                                                border: 'none', 
-                                                borderRadius: '12px', 
-                                                color: 'white', 
-                                                display: 'flex', 
-                                                flexDirection: 'column',
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                gap: '0.25rem', 
-                                                fontWeight: '800', 
-                                                fontSize: '0.75rem', 
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
-                                            }}
-                                        >
-                                            <Receipt size={18} />
-                                            EFECTIVO
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                // Function to fast pay with card
-                                                console.log("Fast Pay Card");
-                                            }}
-                                            style={{ 
-                                                flex: 1, 
-                                                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', 
-                                                border: 'none', 
-                                                borderRadius: '12px', 
-                                                color: 'white', 
-                                                display: 'flex', 
-                                                flexDirection: 'column',
-                                                alignItems: 'center', 
-                                                justifyContent: 'center', 
-                                                gap: '0.25rem', 
-                                                fontWeight: '800', 
-                                                fontSize: '0.75rem', 
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
-                                            }}
-                                        >
-                                            <CreditCard size={18} />
-                                            TARJETA
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => handleFastPay('Tarjeta')}
+                                        style={{ 
+                                            flex: 1, 
+                                            background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', 
+                                            border: 'none', 
+                                            borderRadius: '12px', 
+                                            color: 'white', 
+                                            display: 'flex', 
+                                            flexDirection: 'column',
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            gap: '0.25rem', 
+                                            fontWeight: '800', 
+                                            fontSize: '0.75rem', 
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
+                                        }}
+                                    >
+                                        <CreditCard size={18} />
+                                        TARJETA
+                                    </button>
                                 </div>
+                            </>
+                        )}
+                    </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                    <button
-                                        onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
-                                        style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
-                                    >
-                                        <CreditCard size={14} /> DIVIDIR CUENTA
-                                    </button>
-                                    <button
-                                        onClick={handlePrintPreTicket}
-                                        style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', color: '#fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
-                                    >
-                                        <Printer size={14} /> PRE-TICKET
-                                    </button>
-                                </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        {order.length > 0 ? (
+                            <>
+                                <button
+                                    onClick={() => handleSendOrder(false, true)}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                >
+                                    <Send size={14} /> SOLO GUARDAR
+                                </button>
+                                <button
+                                    onClick={() => handleFastPay('Tarjeta')}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}
+                                >
+                                    <CreditCard size={14} /> TARJETA DIRECTO
+                                </button>
+                            </>
+                        ) : (bill && bill.length > 0) ? (
+                            <>
+                                <button
+                                    onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                >
+                                    <CreditCard size={14} /> DIVIDIR CUENTA
+                                </button>
+                                <button
+                                    onClick={handlePrintPreTicket}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', color: '#fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                >
+                                    <Printer size={14} /> PRE-TICKET
+                                </button>
+                            </>
+                        ) : (
+                            <div style={{
+                                gridColumn: 'span 2',
+                                padding: '1.25rem',
+                                textAlign: 'center',
+                                color: 'var(--color-text-muted)',
+                                background: 'rgba(255,255,255,0.02)',
+                                borderRadius: '16px',
+                                border: '1px dashed rgba(255,255,255,0.05)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '0.5rem'
+                            }}>
+                                <Utensils size={24} style={{ opacity: 0.5 }} />
+                                <span>La mesa está libre</span>
                             </div>
-                        </>
-                    ) : (
-                        <div style={{
-                            padding: '1.25rem',
-                            textAlign: 'center',
-                            color: 'var(--color-text-muted)',
-                            background: 'rgba(255,255,255,0.02)',
-                            borderRadius: '16px',
-                            border: '1px dashed rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                        }}>
-                            <Utensils size={24} style={{ opacity: 0.5 }} />
-                            <span>La mesa está libre</span>
-                        </div>
-                    )}
+                        )}
+                    </div>
+                </div>
                 </div>
             </div>
         </div >
