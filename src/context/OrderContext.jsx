@@ -590,6 +590,26 @@ export const OrderProvider = ({ children }) => {
                     if (currentTable && currentTable.id === tableId) {
                         setCurrentTable(null);
                     }
+                    
+                    // NEW: Cleanup any left-over kitchen orders in local state for this table so it doesn't appear occupied
+                    const tableObj = tables.find(t => t.id === tableId);
+                    if (tableObj) {
+                        setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+                        // Attempt to clean them from DB as well or mark them closed if needed
+                        supabase.from('kitchen_orders')
+                            .update({ status: 'completed' })
+                            .eq('table_name', tableObj.name)
+                            .neq('status', 'completed')
+                            .then();
+                            
+                        // NEW: Also clear links and restore names if this was a master table
+                        setTables(prev => prev.map(t => 
+                            (t.linkedTo === tableId || t.id === tableId)
+                                ? { ...t, status: 'free', lastActionAt: null, linkedTo: null, name: t.originalName || t.name }
+                                : t
+                        ));
+                    }
+
                     return newSale;
                 }
             } catch (err) {
@@ -601,6 +621,16 @@ export const OrderProvider = ({ children }) => {
 
         // Cleanup if bill was empty
         updateTableStatus(tableId, 'free');
+        const tableObj = tables.find(t => t.id === tableId);
+        if (tableObj) {
+            setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+            supabase.from('kitchen_orders')
+                .update({ status: 'completed' })
+                .eq('table_name', tableObj.name)
+                .neq('status', 'completed')
+                .then();
+        }
+        
         if (currentTable && currentTable.id === tableId) {
             setCurrentTable(null);
         }
@@ -963,6 +993,17 @@ export const OrderProvider = ({ children }) => {
 
     const deleteTable = (tableId) => {
         setTables(prev => prev.filter(t => t.id !== tableId));
+        // Cleanup associated data
+        setTableOrders(prev => {
+            const next = { ...prev };
+            delete next[tableId];
+            return next;
+        });
+        setTableBills(prev => {
+            const next = { ...prev };
+            delete next[tableId];
+            return next;
+        });
     };
 
     const performCashClose = async (totals) => {
@@ -1182,93 +1223,129 @@ export const OrderProvider = ({ children }) => {
         
         if (!sourceTable || !targetTable) return;
 
-        // Generate the new combined name (e.g., "Mesa 1-2")
-        // Try to be smart if they are already combined (e.g. "Mesa 1-2" + "Mesa 3" -> "Mesa 1-2-3")
-        const sourceNameNum = sourceTable.name.replace(/[^\d-]/g, '');
-        const targetNameNum = targetTable.name.replace(/[^\d-]/g, '');
-        
-        const newName = `Mesa ${Math.min(targetNameNum.split('-')[0], sourceNameNum.split('-')[0])}-${Math.max(targetNameNum.split('-').pop(), sourceNameNum.split('-').pop())}`;
-
-        // Create the new merged table entity
-        const mergedTableId = `merged-${Date.now()}`;
-        const newMergedTable = {
-            id: mergedTableId,
-            name: newName,
-            zone: targetTable.zone, // Keep the target table's zone
-            status: 'occupied',
-            seats: (sourceTable.seats || 4) + (targetTable.seats || 4), // Combine seats visually
-            lastActionAt: new Date().toISOString()
-        };
-
-        // 1. Move Orders into the new Merged Table
+        // 1. Move Orders into the Target Table
         setTableOrders(prev => {
             const next = { ...prev };
             const sourceOrders = next[sourceTableId] || [];
-            const targetOrders = next[targetTableId] || [];
-            
-            if (sourceOrders.length > 0 || targetOrders.length > 0) {
-                next[mergedTableId] = [...targetOrders, ...sourceOrders];
+            if (sourceOrders.length > 0) {
+                const targetOrders = next[targetTableId] || [];
+                next[targetTableId] = [...targetOrders, ...sourceOrders];
             }
-            
             delete next[sourceTableId];
-            delete next[targetTableId];
             return next;
         });
 
-        // 2. Move Bills into the new Merged Table
+        // 2. Move Bills into the Target Table
         setTableBills(prev => {
             const next = { ...prev };
             const sourceBill = next[sourceTableId] || [];
-            const targetBill = next[targetTableId] || [];
-            
-            const combined = [...targetBill];
-            sourceBill.forEach(sourceItem => {
-                const existing = combined.find(i => i.id === sourceItem.id && !i.isModified && !sourceItem.isModified);
-                if (existing) {
-                    existing.quantity += sourceItem.quantity;
-                } else {
-                    combined.push({ ...sourceItem });
-                }
-            });
-
-            if (combined.length > 0) {
-                 next[mergedTableId] = combined;
+            if (sourceBill.length > 0) {
+                const targetBill = next[targetTableId] || [];
+                const combined = [...targetBill];
+                sourceBill.forEach(sourceItem => {
+                    const existing = combined.find(i => i.id === sourceItem.id && !i.isModified && !sourceItem.isModified);
+                    if (existing) {
+                        existing.quantity += sourceItem.quantity;
+                    } else {
+                        combined.push({ ...sourceItem });
+                    }
+                });
+                next[targetTableId] = combined;
             }
-
             delete next[sourceTableId];
-            delete next[targetTableId];
             return next;
         });
 
-        // 3. Update Kitchen Orders
+        // 3. Update Kitchen Orders names temporarily
         setKitchenOrders(prev => prev.map(ko => 
-            (ko.table === sourceTable.name || ko.table === targetTable.name) ? { ...ko, table: newName } : ko
+            (ko.table === sourceTable.name) ? { ...ko, table: targetTable.name } : ko
         ));
         
         // Async DB update for KDS
         supabase.from('kitchen_orders')
-            .update({ table_name: newName })
-            .in('table_name', [sourceTable.name, targetTable.name])
+            .update({ table_name: targetTable.name })
+            .eq('table_name', sourceTable.name)
             .then();
 
-        // 4. Transform Tables List
+        // 4. Link Tables (source -> target) and Update Name
         setTables(prev => {
-            const next = [];
-            let inserted = false;
-            for (const t of prev) {
-                if (t.id === sourceTableId || t.id === targetTableId) {
-                    if (!inserted) {
-                        next.push(newMergedTable); // Put the merged table in the first encountered slot
-                        inserted = true;
-                    }
-                } else {
-                    next.push(t);
-                }
-            }
-            return next;
-        });
+            const sourceT = prev.find(t => t.id === sourceTableId);
+            const targetT = prev.find(t => t.id === targetTableId);
+            if (!sourceT || !targetT) return prev;
 
-        if (currentTable && (currentTable.id === sourceTableId || currentTable.id === targetTableId)) {
+            const sourceNum = sourceT.name.replace(/[^\d]/g, '');
+            const targetCurrentName = targetT.name;
+            const originalName = targetT.originalName || targetT.name;
+            
+            // Generate composite name: "Mesa 1/5" or "Mesa 1/2/5"
+            // We take the existing name of target, extract the numbers, and add the new one
+            const prefix = originalName.match(/^[^\d]*/) ? originalName.match(/^[^\d]*/)[0] : 'Mesa ';
+            const targetNums = targetCurrentName.replace(prefix, '').split('/');
+            if (!targetNums.includes(sourceNum)) {
+                targetNums.unshift(sourceNum);
+            }
+            const newCompositeName = `${prefix}${targetNums.join('/')}`;
+            const updatedTarget = { 
+                ...targetT, 
+                status: 'occupied', 
+                name: newCompositeName, 
+                originalName: originalName,
+                lastActionAt: new Date().toISOString() 
+            };
+
+            if (currentTable && currentTable.id === sourceTableId) {
+                setCurrentTable(updatedTarget);
+            }
+
+            return prev.map(t => {
+                if (t.id === sourceTableId) {
+                    return { ...t, status: 'occupied', linkedTo: targetTableId };
+                }
+                if (t.id === targetTableId) {
+                    return updatedTarget;
+                }
+                return t;
+            });
+        });
+    };
+
+    const splitTable = (tableId) => {
+        const table = tables.find(t => t.id === tableId);
+        if (!table) return;
+
+        // If it's a "slave" table, just unlink it
+        if (table.linkedTo) {
+            const targetId = table.linkedTo;
+            setTables(prev => {
+                const sourceT = prev.find(t => t.id === tableId);
+                const targetT = prev.find(t => t.id === targetId);
+                if (!sourceT || !targetT) return prev;
+
+                const sourceNum = sourceT.name.replace(/[^\d]/g, '');
+                const originalName = targetT.originalName || targetT.name;
+                const prefix = originalName.match(/^[^\d]*/) ? originalName.match(/^[^\d]*/)[0] : 'Mesa ';
+                
+                // Remove the source number from the composite target name
+                const targetNums = targetT.name.replace(prefix, '').split('/').filter(n => n !== sourceNum);
+                const newName = targetNums.length > 0 ? `${prefix}${targetNums.join('/')}` : originalName;
+
+                return prev.map(t => {
+                    if (t.id === tableId) return { ...t, linkedTo: null, status: 'free' };
+                    if (t.id === targetId) return { ...t, name: newName };
+                    return t;
+                });
+            });
+            return;
+        }
+
+        // If it's a "master" table, unlink everyone pointing to it and restore name
+        setTables(prev => prev.map(t => 
+            (t.linkedTo === tableId || t.id === tableId) 
+                ? { ...t, linkedTo: null, status: 'free', name: t.originalName || t.name } 
+                : t
+        ));
+
+        if (currentTable && currentTable.id === tableId) {
             setCurrentTable(null);
         }
     };
@@ -1323,7 +1400,8 @@ export const OrderProvider = ({ children }) => {
             activeQrAlert,
             setActiveQrAlert,
             transferTable,
-            mergeTables
+            mergeTables,
+            splitTable
         }}>
             {children}
         </OrderContext.Provider>

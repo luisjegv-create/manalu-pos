@@ -50,45 +50,45 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills, transferTable, mergeTables } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills, transferTable, mergeTables, splitTable } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     
-    // Edit & Transfer states
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [editingTable, setEditingTable] = useState(null); 
-    
-    const [isTransferMode, setIsTransferMode] = useState(false);
-    const [sourceTable, setSourceTable] = useState(null);
-    const [showTransferModal, setShowTransferModal] = useState(false);
-    const [targetTable, setTargetTable] = useState(null);
+    // Unified UI Action States
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [activeModal, setActiveModal] = useState(null); // 'main', 'edit'
+    const [interactionMode, setInteractionMode] = useState(null); // null, 'move_target', 'group_target'
 
     const filteredTables = tables.filter(t => t.zone === activeZone);
 
     const handleTableSelect = (table) => {
-        if (isEditMode) {
-            setEditingTable(table);
-        } else if (isTransferMode) {
-            if (!sourceTable) {
-                // Must be occupied to be a source
-                const hasActiveOrder = (tableOrders[table.id] || []).length > 0 || tableBills[table.id] || kitchenOrders.some(o => o.table === table.name);
-                if (table.status === 'occupied' || hasActiveOrder) {
-                   setSourceTable(table);
-                } else {
-                   alert("Selecciona una mesa ocupada como origen primero.");
-                }
-            } else {
-                if (sourceTable.id === table.id) {
-                    // Deselect
-                    setSourceTable(null);
-                    return;
-                }
-                // Open modal for decision
-                setTargetTable(table);
-                setShowTransferModal(true);
+        // Redirection logic for linked tables
+        const effectiveTable = table.linkedTo ? (tables.find(t => t.id === table.linkedTo) || table) : table;
+
+        if (interactionMode === 'move_target') {
+            if (table.id === selectedTable.id) {
+                setInteractionMode(null);
+                setSelectedTable(null);
+                return;
+            }
+            if (confirm(`¿Mover cuenta de ${selectedTable.name} a ${table.name}?`)) {
+                transferTable(selectedTable.id, table.id);
+                setInteractionMode(null);
+                setSelectedTable(null);
+            }
+        } else if (interactionMode === 'group_target') {
+            if (table.id === selectedTable.id) {
+                setInteractionMode(null);
+                setSelectedTable(null);
+                return;
+            }
+            if (confirm(`¿Agrupar ${selectedTable.name} con ${table.name}?`)) {
+                mergeTables(selectedTable.id, table.id);
+                setInteractionMode(null);
+                setSelectedTable(null);
             }
         } else {
-            selectTable(table);
-            navigate('/bar-tapas'); // Go to TPV after selection
+            setSelectedTable(effectiveTable);
+            setActiveModal('main');
         }
     };
 
@@ -100,12 +100,12 @@ const TableSelection = () => {
     };
 
     const handleSaveEdit = () => {
-        if (editingTable) {
-            updateTableDetails(editingTable.id, {
-                name: editingTable.name,
-                isReserved: editingTable.isReserved
+        if (selectedTable) {
+            updateTableDetails(selectedTable.id, {
+                name: selectedTable.name,
+                isReserved: selectedTable.isReserved
             });
-            setEditingTable(null);
+            setActiveModal('main');
         }
     };
 
@@ -138,39 +138,65 @@ const TableSelection = () => {
 
                 <div style={{display: 'flex', gap: '1rem'}}>
                     <button
-                        onClick={() => {
-                            setIsTransferMode(!isTransferMode);
-                            setIsEditMode(false);
-                            setSourceTable(null);
-                        }}
-                        className="btn"
+                        onClick={handleAddTable}
                         style={{
-                            background: isTransferMode ? 'var(--color-warning)' : 'var(--color-surface)',
-                            color: isTransferMode ? 'black' : 'var(--color-text)',
-                            border: '1px solid var(--border-strong)',
-                            boxShadow: 'var(--shadow-md)',
-                            fontSize: '0.9rem'
+                            padding: '0.8rem 1.2rem',
+                            borderRadius: '12px',
+                            border: '2px dashed #10b981',
+                            background: 'rgba(16, 185, 129, 0.1)',
+                            color: '#10b981',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
                         }}
                     >
-                        {isTransferMode ? 'Cancelar Mover' : 'Mover/Agrupar'}
-                    </button>
-                    <button
-                        onClick={() => {
-                            setIsEditMode(!isEditMode);
-                            setIsTransferMode(false);
-                        }}
-                        className="btn"
-                        style={{
-                            background: isEditMode ? 'var(--color-warning)' : 'var(--color-primary)',
-                            color: isEditMode ? 'black' : 'white',
-                            boxShadow: 'var(--shadow-md)',
-                            fontSize: '0.9rem'
-                        }}
-                    >
-                        {isEditMode ? 'Terminar Edición' : 'Editar Mesas'}
+                        + Añadir Mesa
                     </button>
                 </div>
             </header>
+
+            {/* Instructional Banner for Transfer/Group Mode Target Selection */}
+            {interactionMode && selectedTable && (
+                <div style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid var(--color-primary)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    margin: '0 2rem 1.5rem',
+                    maxWidth: '1200px',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '1rem',
+                    color: 'var(--color-text)'
+                }}>
+                    <div style={{
+                        background: 'var(--color-primary)',
+                        color: 'white',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold'
+                    }}>
+                        2
+                    </div>
+                    <span style={{ fontSize: '1.1rem', fontWeight: '500', flex: 1 }}>
+                        {interactionMode === 'move_target'
+                            ? `Selecciona la mesa de DESTINO para mover la cuenta de la ${selectedTable.name}.`
+                            : `Selecciona la mesa de DESTINO para agruparla con la ${selectedTable.name}.`}
+                    </span>
+                    <button 
+                        onClick={() => { setInteractionMode(null); setSelectedTable(null); }}
+                        style={{ padding: '0.5rem 1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            )}
 
             <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
                 {/* Tabs */}
@@ -203,33 +229,17 @@ const TableSelection = () => {
                         );
                     })}
 
-                    {isEditMode && (
-                        <button
-                            onClick={handleAddTable}
-                            style={{
-                                padding: '1rem',
-                                borderRadius: '12px',
-                                border: '2px dashed #10b981',
-                                background: 'rgba(16, 185, 129, 0.1)',
-                                color: '#10b981',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                marginLeft: 'auto'
-                            }}
-                        >
-                            + Añadir Mesa
-                        </button>
-                    )}
+                    {/* AddTable button moved to header */}
                 </div>
 
                 {/* Grid or Map */}
                 {activeZone === 'barra' ? (
                     <BarMap 
                         tables={filteredTables}
+                        allTables={tables}
                         handleTableSelect={handleTableSelect}
-                        isEditMode={isEditMode}
-                        isTransferMode={isTransferMode}
-                        sourceTable={sourceTable}
+                        isTransferMode={interactionMode !== null}
+                        sourceTable={selectedTable}
                         tableOrders={tableOrders}
                         tableBills={tableBills}
                         kitchenOrders={kitchenOrders}
@@ -283,8 +293,8 @@ const TableSelection = () => {
                                     alignItems: 'center',
                                     gap: '0.8rem',
                                     cursor: 'pointer',
-                                    border: isEditMode ? '2px dashed #f59e0b' : (isTransferMode && sourceTable?.id === table.id ? '3px solid #f59e0b' : '1px solid var(--border-strong)'),
-                                    backgroundColor: (isTransferMode && sourceTable?.id === table.id) 
+                                    border: (interactionMode && selectedTable?.id === table.id) ? '3px solid #f59e0b' : '1px solid var(--border-strong)',
+                                    backgroundColor: (interactionMode && selectedTable?.id === table.id) 
                                         ? 'rgba(245, 158, 11, 0.3)'
                                         : isReserved
                                         ? 'rgba(245, 158, 11, 0.15)'
@@ -293,7 +303,7 @@ const TableSelection = () => {
                                             : isOccupied
                                                 ? 'rgba(239, 68, 68, 0.1)'
                                                 : 'rgba(16, 185, 129, 0.1)',
-                                    borderColor: (isTransferMode && sourceTable?.id === table.id) 
+                                    borderColor: (interactionMode && selectedTable?.id === table.id) 
                                         ? '#f59e0b'
                                         : isReserved
                                         ? '#f59e0b'
@@ -304,16 +314,22 @@ const TableSelection = () => {
                                                 : 'var(--border-strong)',
                                     color: 'var(--color-text)',
                                     position: 'relative',
-                                    boxShadow: (isTransferMode && sourceTable?.id === table.id) ? '0 0 15px rgba(245, 158, 11, 0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                                    boxShadow: (interactionMode && selectedTable?.id === table.id) ? '0 0 15px rgba(245, 158, 11, 0.5)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                                     minHeight: '200px',
-                                    animation: isTransferMode && !sourceTable && (isOccupied || hasActiveOrder) ? 'pulse 2s infinite' : 'none'
+                                    animation: interactionMode ? 'pulse 2s infinite' : 'none'
                                 }}
                             >
-                                {isOccupied && minStartTime && !isEditMode && <TableTimer startTime={minStartTime} />}
+                                {isOccupied && minStartTime && <TableTimer startTime={minStartTime} />}
 
-                                {isEditMode && (
-                                    <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '0.8rem', color: '#f59e0b' }}>
-                                        ✏️
+                                {(table.linkedTo || tables.some(t => t.linkedTo === table.id)) && (
+                                    <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '1.2rem' }} title="Mesa Agrupada">
+                                        🤝
+                                    </div>
+                                )}
+
+                                {table.linkedTo && (
+                                    <div style={{ position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 'bold' }}>
+                                        Unida a {tables.find(t => t.id === table.linkedTo)?.name}
                                     </div>
                                 )}
 
@@ -335,7 +351,9 @@ const TableSelection = () => {
                                     <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{table.name}</h3>
                                     <span style={{
                                         fontSize: '0.8rem',
-                                        color: isReserved
+                                        color: table.linkedTo 
+                                            ? 'var(--color-primary)'
+                                            : isReserved
                                             ? '#f59e0b'
                                             : hasActiveOrder
                                                 ? 'var(--color-primary)'
@@ -344,7 +362,7 @@ const TableSelection = () => {
                                         display: 'block',
                                         marginBottom: '0.5rem'
                                     }}>
-                                        {isReserved ? 'RESERVADA' : hasActiveOrder ? 'EN SERVICIO' : isOccupied ? 'Ocupada' : 'Libre'}
+                                        {table.linkedTo ? 'AGRUPADA' : (isReserved ? 'RESERVADA' : (hasActiveOrder ? 'EN SERVICIO' : (isOccupied ? 'Ocupada' : 'Libre')))}
                                     </span>
 
                                     {isOccupied && (
@@ -368,61 +386,145 @@ const TableSelection = () => {
                 )}
             </div>
 
-            {/* Edit Modal */}
-            {isEditMode && editingTable && (
+            {/* ACTION MODAL */}
+            {activeModal === 'main' && selectedTable && (
                 <div style={{
                     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-                }}>
-                    <div className="glass-panel" style={{ padding: '2rem', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid #f59e0b' }}>
-                        <h2 style={{ margin: 0 }}>Editar Mesa</h2>
+                }} onClick={() => { setActiveModal(null); setSelectedTable(null); }}>
+                    <div className="glass-panel slide-up" onClick={e => e.stopPropagation()} style={{ padding: '2rem', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <h2 style={{ margin: '0 0 1rem 0', textAlign: 'center', fontSize: '1.8rem', color: 'white' }}>{selectedTable.name}</h2>
+                        
+                        <button
+                            onClick={() => {
+                                setActiveModal(null);
+                                selectTable(selectedTable);
+                                navigate('/bar-tapas');
+                            }}
+                            className="btn-glow"
+                            style={{ padding: '1.25rem', background: '#10b981', border: 'none', color: 'white', borderRadius: '12px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}
+                        >
+                            🟢 Tomar Nota / Entrar
+                        </button>
+
+                        <button
+                            onClick={() => setActiveModal('edit')}
+                            style={{ padding: '1rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        >
+                            ✏️ Editar Nombre / Reservar
+                        </button>
+
+                        <hr style={{ borderColor: 'var(--border-strong)', width: '100%', margin: '0.75rem 0' }} />
+
+                        {((tableOrders[selectedTable.id] && tableOrders[selectedTable.id].length > 0) || 
+                          (tableBills[selectedTable.id] && tableBills[selectedTable.id].length > 0) || 
+                          kitchenOrders.some(o => o.table === selectedTable.name)) && (
+                            <button
+                                onClick={() => {
+                                    setActiveModal(null);
+                                    setInteractionMode('move_target');
+                                }}
+                                style={{ padding: '1rem', background: 'var(--color-primary)', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                            >
+                                ➡️ Mover Cuenta a otra mesa
+                            </button>
+                        )}
+
+                        <button
+                            onClick={() => {
+                                setActiveModal(null);
+                                setInteractionMode('group_target');
+                            }}
+                            style={{ padding: '1rem', background: '#3b82f6', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                        >
+                            🤝 Agrupar con otra mesa
+                        </button>
+
+                        {(selectedTable.linkedTo || tables.some(t => t.linkedTo === selectedTable.id)) && (
+                            <button
+                                onClick={() => {
+                                    if (confirm(`¿Seguro que quieres desagrupar esta mesa?`)) {
+                                        splitTable(selectedTable.id);
+                                        setActiveModal(null);
+                                        setSelectedTable(null);
+                                    }
+                                }}
+                                style={{ padding: '1rem', background: '#8b5cf6', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 'bold' }}
+                            >
+                                ✂️ Desagrupar Mesas
+                            </button>
+                        )}
+
+                        <button 
+                            onClick={() => { setActiveModal(null); setSelectedTable(null); }} 
+                            style={{ background: 'transparent', border: '1px solid #475569', padding: '1rem', color: '#cbd5e1', borderRadius: '8px', cursor: 'pointer', marginTop: '0.5rem', fontSize: '1.1rem' }}
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT MODAL */}
+            {activeModal === 'edit' && selectedTable && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
+                }} onClick={() => setActiveModal('main')}>
+                    <div className="glass-panel" onClick={e => e.stopPropagation()} style={{ padding: '2rem', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid #f59e0b' }}>
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                             <button onClick={() => setActiveModal('main')} style={{background: 'none', border:'none', color: 'white', fontSize: '1.5rem', cursor:'pointer'}}><ArrowLeft size={24} /></button>
+                             <h2 style={{ margin: 0, flex: 1, textAlign: 'center' }}>Editar Mesa</h2>
+                             <div style={{width: 24}}></div>
+                        </div>
 
                         <div>
                             <label>Nombre de la Mesa</label>
                             <input
                                 type="text"
-                                value={editingTable.name}
-                                onChange={(e) => setEditingTable({ ...editingTable, name: e.target.value })}
-                                style={{ width: '100%', padding: '0.5rem', marginTop: '0.5rem', background: 'rgba(255,255,255,0.1)', border: '1px solid #666', color: 'white' }}
+                                value={selectedTable.name}
+                                onChange={(e) => setSelectedTable({ ...selectedTable, name: e.target.value })}
+                                style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', background: 'rgba(255,255,255,0.1)', border: '1px solid #666', color: 'white', borderRadius: '8px', fontSize: '1.1rem' }}
                             />
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(245, 158, 11, 0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
                             <input
                                 type="checkbox"
                                 id="reserved"
-                                checked={editingTable.isReserved || false}
-                                onChange={(e) => setEditingTable({ ...editingTable, isReserved: e.target.checked })}
-                                style={{ width: '20px', height: '20px' }}
+                                checked={selectedTable.isReserved || false}
+                                onChange={(e) => setSelectedTable({ ...selectedTable, isReserved: e.target.checked })}
+                                style={{ width: '24px', height: '24px', accentColor: '#f59e0b' }}
                             />
-                            <label htmlFor="reserved">Marcar como RESERVADA</label>
+                            <label htmlFor="reserved" style={{fontSize: '1.1rem', fontWeight: '500'}}>Marcar como RESERVADA</label>
                         </div>
 
-                        {editingTable.status === 'occupied' && (
+                        {selectedTable.status === 'occupied' && (
                             <button
                                 onClick={() => {
-                                    if (confirm('¿Liberar mesa y borrar cuenta actual?')) {
-                                        closeTable(editingTable.id);
-                                        setEditingTable(null);
+                                    if (confirm('¿Liberar mesa y borrar cuenta actual para SIEMPRE?')) {
+                                        closeTable(selectedTable.id);
+                                        setActiveModal(null);
+                                        setSelectedTable(null);
                                     }
                                 }}
                                 style={{
                                     width: '100%',
-                                    padding: '0.75rem',
-                                    background: '#3b82f6',
+                                    padding: '1rem',
+                                    background: '#ef4444',
                                     border: 'none',
                                     color: 'white',
-                                    borderRadius: '4px',
+                                    borderRadius: '8px',
                                     cursor: 'pointer',
-                                    marginTop: '1rem',
                                     fontWeight: 'bold',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    gap: '0.5rem'
+                                    gap: '0.5rem',
+                                    fontSize: '1.1rem'
                                 }}
                             >
-                                🧹 Liberar / Desocupar Mesa
+                                🧹 Forzar Liberar Mesa
                             </button>
                         )}
 
@@ -430,110 +532,22 @@ const TableSelection = () => {
                             <button
                                 onClick={() => {
                                     if (confirm('¿Seguro que quieres eliminar esta mesa?')) {
-                                        deleteTable(editingTable.id);
-                                        setEditingTable(null);
+                                        deleteTable(selectedTable.id);
+                                        setActiveModal(null);
+                                        setSelectedTable(null);
                                     }
                                 }}
-                                style={{ flex: 1, padding: '0.75rem', background: '#ef4444', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer' }}
+                                style={{ flex: 1, padding: '1rem', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
                             >
                                 Eliminar Mesa
                             </button>
                             <button
                                 onClick={handleSaveEdit}
-                                style={{ flex: 1, padding: '0.75rem', background: '#10b981', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer' }}
+                                style={{ flex: 1, padding: '1rem', background: '#10b981', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}
                             >
-                                Guardar
+                                ✅ Guardar
                             </button>
                         </div>
-                        <button onClick={() => setEditingTable(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>Cancelar</button>
-                    </div>
-                </div>
-            )}
-
-            {/* Transfer/Merge Modal */}
-            {showTransferModal && sourceTable && targetTable && (
-                 <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100
-                }}>
-                    <div className="glass-panel" style={{ padding: '2rem', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid #3b82f6' }}>
-                        <h2 style={{ margin: 0, color: 'white', textAlign: 'center' }}>¿Qué deseas hacer?</h2>
-                        <p style={{textAlign: 'center', color: '#cbd5e1', marginBottom: '1rem'}}>
-                            Desde <strong>{sourceTable.name}</strong> hacia <strong>{targetTable.name}</strong>
-                        </p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <button
-                                onClick={() => {
-                                    transferTable(sourceTable.id, targetTable.id);
-                                    setShowTransferModal(false);
-                                    setIsTransferMode(false);
-                                    setSourceTable(null);
-                                    setTargetTable(null);
-                                }}
-                                style={{ 
-                                    padding: '1rem', 
-                                    background: 'var(--color-primary)', 
-                                    border: 'none', 
-                                    color: 'white', 
-                                    borderRadius: '8px', 
-                                    cursor: 'pointer',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <span>➡️ Mover Cuenta</span>
-                                <span style={{fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8}}>La {sourceTable.name} quedará libre</span>
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    mergeTables(sourceTable.id, targetTable.id);
-                                    setShowTransferModal(false);
-                                    setIsTransferMode(false);
-                                    setSourceTable(null);
-                                    setTargetTable(null);
-                                }}
-                                style={{ 
-                                    padding: '1rem', 
-                                    background: '#10b981', 
-                                    border: 'none', 
-                                    color: 'white', 
-                                    borderRadius: '8px', 
-                                    cursor: 'pointer',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <span>🤝 Agrupar Mesas</span>
-                                <span style={{fontSize: '0.8rem', fontWeight: 'normal', opacity: 0.8}}>Unir ambas cuentas y compartirlas</span>
-                            </button>
-                        </div>
-                        <button 
-                            onClick={() => {
-                                setShowTransferModal(false);
-                                setTargetTable(null);
-                            }} 
-                            style={{ 
-                                background: 'none', 
-                                border: '1px solid #475569', 
-                                padding: '0.75rem',
-                                color: '#94a3b8', 
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                marginTop: '1rem'
-                            }}
-                        >
-                            Cancelar
-                        </button>
                     </div>
                 </div>
             )}
@@ -544,6 +558,13 @@ const TableSelection = () => {
                   0% { opacity: 1; }
                   50% { opacity: 0.7; transform: scale(0.98); }
                   100% { opacity: 1; }
+                }
+                @keyframes slideUp {
+                  from { transform: translateY(20px); opacity: 0; }
+                  to { transform: translateY(0); opacity: 1; }
+                }
+                .slide-up {
+                  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 `}
             </style>

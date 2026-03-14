@@ -41,7 +41,7 @@ const TableTimer = ({ startTime }) => {
     );
 };
 
-const Stool = ({ table, handleTableSelect, isEditMode, isTransferMode, sourceTable, tableOrderItems, tableBillItems, tableKitchenOrders, reservations }) => {
+const Stool = ({ table, allTables, handleTableSelect, isTransferMode, sourceTable, tableOrderItems, tableBillItems, tableKitchenOrders, reservations }) => {
     const hasActiveOrder = tableOrderItems.length > 0 || tableKitchenOrders.length > 0 || tableBillItems.length > 0;
     const isOccupied = table.status === 'occupied' || hasActiveOrder;
     
@@ -86,19 +86,24 @@ const Stool = ({ table, handleTableSelect, isEditMode, isTransferMode, sourceTab
                 height: '75px',
                 borderRadius: '50%',
                 background: bgColor,
-                border: isEditMode ? '2px dashed #f59e0b' : (isTransferMode && sourceTable?.id === table.id ? '3px solid white' : '2px solid rgba(255,255,255,0.5)'),
+                border: (isTransferMode && sourceTable?.id === table.id) ? '3px solid white' : '2px solid rgba(255,255,255,0.5)',
                 color: 'white',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: isOccupied ? `0 0 15px ${bgColor}` : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                boxShadow: (isTransferMode && sourceTable?.id === table.id) ? '0 0 20px #f59e0b' : (isOccupied ? `0 0 15px ${bgColor}` : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'),
                 zIndex: 5,
-                animation: isTransferMode && !sourceTable && (isOccupied || hasActiveOrder) ? 'pulse 2s infinite' : 'none'
+                animation: isTransferMode ? 'pulse 2s infinite' : 'none'
             }}
         >
-            {isOccupied && minStartTime && !isEditMode && <TableTimer startTime={minStartTime} />}
+            {(table.linkedTo || (allTables && allTables.some(t => t.linkedTo === table.id))) && (
+                <div style={{ position: 'absolute', top: '-5px', left: '-5px', fontSize: '1.2rem', background: 'white', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                    🤝
+                </div>
+            )}
+            {isOccupied && minStartTime && <TableTimer startTime={minStartTime} />}
             <Wine size={20} />
             <span style={{ fontSize: '0.75rem', fontWeight: 'bold', marginTop: '2px', textAlign: 'center', lineHeight: '1' }}>
                 {table.name.replace('Barra ', 'B')}
@@ -127,7 +132,7 @@ const Stool = ({ table, handleTableSelect, isEditMode, isTransferMode, sourceTab
     );
 };
 
-const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceTable, tableOrders, tableBills, kitchenOrders, reservations }) => {
+const BarMap = ({ tables, allTables, handleTableSelect, isTransferMode, sourceTable, tableOrders, tableBills, kitchenOrders, reservations }) => {
     // We expect 12 tables for the bar:
     // 2 on the short side (right), 10 on the long side (bottom)
     
@@ -199,7 +204,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
             }}>
                 Barra
             </div>
-
+ 
             {/* The Physical Counter - Inverted L Shape (Short arm on right) */}
             {/* Top/Vertical piece of the L on the RIGHT */}
             <div style={{
@@ -216,7 +221,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
             }}>
                 <div style={{ position: 'absolute', left: '10px', top: '10px', bottom: '10px', width: '20px', background: 'rgba(0,0,0,0.1)', borderRadius: '10px' }}></div>
             </div>
-
+ 
             {/* Bottom/Horizontal piece of the L */}
             <div style={{
                 position: 'absolute',
@@ -243,7 +248,7 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
                 opacity: 0.1, // match inner bg
                 zIndex: 2
             }}></div>
-
+ 
             {/* Bartender zone (Inside the L, Top Left) */}
             <div style={{
                 position: 'absolute',
@@ -258,14 +263,14 @@ const BarMap = ({ tables, handleTableSelect, isEditMode, isTransferMode, sourceT
             }}>
                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-muted)' }}>Zona de Trabajo / Camareros</span>
             </div>
-
+ 
             {/* Stools */}
             {mappedTables.map(table => (
                 <Stool
                     key={table.id}
                     table={table}
+                    allTables={allTables}
                     handleTableSelect={handleTableSelect}
-                    isEditMode={isEditMode}
                     isTransferMode={isTransferMode}
                     sourceTable={sourceTable}
                     tableOrderItems={tableOrders[table.id] || []}
