@@ -812,15 +812,16 @@ const BarTapas = () => {
                                         <button
                                             onClick={() => setActiveSubcategory(null)}
                                             style={{
-                                                padding: '0.4rem 0.8rem',
-                                                borderRadius: '16px',
-                                                border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'var(--glass-border)'),
-                                                background: !activeSubcategory ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                                color: !activeSubcategory ? 'var(--color-primary)' : 'var(--color-text-dark)',
+                                                padding: '0.5rem 1.25rem',
+                                                borderRadius: '20px',
+                                                border: '1px solid ' + (!activeSubcategory ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)'),
+                                                background: !activeSubcategory ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'rgba(255,255,255,0.03)',
+                                                color: !activeSubcategory ? 'white' : 'var(--color-text-muted)',
                                                 cursor: 'pointer',
-                                                fontSize: '0.75rem',
+                                                fontSize: '0.8rem',
                                                 fontWeight: 'bold',
-                                                transition: 'all 0.2s'
+                                                transition: 'all 0.2s',
+                                                boxShadow: !activeSubcategory ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
                                             }}
                                         >
                                             Todos
@@ -830,17 +831,18 @@ const BarTapas = () => {
                                                 key={sub}
                                                 onClick={() => setActiveSubcategory(sub)}
                                                 style={{
-                                                    padding: '0.4rem 0.8rem',
-                                                    borderRadius: '16px',
-                                                    border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'var(--glass-border)'),
-                                                    background: activeSubcategory === sub ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                                    color: activeSubcategory === sub ? 'var(--color-primary)' : 'var(--color-text-dark)',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 'bold',
-                                                    textTransform: 'capitalize',
-                                                    transition: 'all 0.2s'
-                                                }}
+                                                                 padding: '0.5rem 1.25rem',
+                                                borderRadius: '20px',
+                                                border: '1px solid ' + (activeSubcategory === sub ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)'),
+                                                background: activeSubcategory === sub ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'rgba(255,255,255,0.03)',
+                                                color: activeSubcategory === sub ? 'white' : 'var(--color-text-muted)',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 'bold',
+                                                textTransform: 'capitalize',
+                                                transition: 'all 0.2s',
+                                                boxShadow: activeSubcategory === sub ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
+                                            }}
                                             >
                                                 {sub}
                                             </button>

@@ -39,6 +39,15 @@ const OrderSummary = ({
     handlePrintPreTicket,
     currentTable
 }) => {
+    const [openQuickNotes, setOpenQuickNotes] = React.useState({});
+
+    const toggleQuickNotes = (id) => {
+        setOpenQuickNotes(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
     return (
         <div style={{
             width: isMobile ? '100%' : '480px',
@@ -171,23 +180,28 @@ const OrderSummary = ({
             }
 
             <div style={{
-                padding: '1.25rem 1.5rem',
+                padding: '0.75rem 1.25rem',
                 borderBottom: '1px solid rgba(255,255,255,0.1)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                flexShrink: 0
+                flexShrink: 0,
+                background: 'rgba(0,0,0,0.2)'
             }}>
-                <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text)', fontWeight: '800' }}>
-                    Comanda {currentTable ? `Mesa: ${currentTable.name}` : ''}
-                </h2>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: '800' }}>
+                        {currentTable ? currentTable.name : 'Venta Rápida'}
+                    </h2>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cuenta de Mesa</span>
+                </div>
                 <div style={{
-                    fontSize: '0.9rem',
+                    fontSize: '0.85rem',
                     color: 'var(--color-primary)',
-                    background: 'rgba(59, 130, 246, 0.1)',
+                    background: 'rgba(59, 130, 246, 0.15)',
                     padding: '4px 12px',
                     borderRadius: '20px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    border: '1px solid rgba(59, 130, 246, 0.3)'
                 }}>
                     {order.length + (bill?.length || 0)} {(order.length + (bill?.length || 0)) === 1 ? 'item' : 'items'}
                 </div>
@@ -203,203 +217,164 @@ const OrderSummary = ({
                     ) : (
                         <>
                             {/* Draft Items (Unsended) */}
-                            {order.map(item => (
-                                <motion.div
-                                    key={item.uniqueId || item.id}
-                                    layout
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    style={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        padding: '1.25rem',
-                                        background: 'var(--color-surface-dark)',
-                                        color: 'var(--color-text-on-dark)',
-                                        borderRadius: '16px',
-                                        border: '1px solid rgba(0,0,0,0.2)',
-                                        boxShadow: 'var(--shadow-md)',
-                                        gap: '0.75rem'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div style={{ display: 'flex', gap: '1rem', flex: 1 }}>
-                                            <div style={{
-                                                width: '50px',
-                                                height: '50px',
-                                                flexShrink: 0,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '1.5rem',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                borderRadius: '10px',
-                                                overflow: 'hidden',
-                                                border: '1px solid rgba(255,255,255,0.1)'
-                                            }}>
-                                                {(String(item.image || '').startsWith('data:image') || String(item.image || '').startsWith('http') || String(item.image || '').startsWith('/'))
-                                                    ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    : item.image || '🍽️'}
-                                            </div>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', color: item.isPriority ? '#ef4444' : 'var(--color-text-on-dark)', fontSize: '1.1rem', lineHeight: '1.2' }}>
-                                                    {item.isPriority && <span style={{ marginRight: '4px' }}>⚡</span>}
-                                                    {item.name}
+                            {order.map(item => {
+                                const isQuickNotesOpen = openQuickNotes[item.uniqueId || item.id] || false;
+                                
+                                return (
+                                    <motion.div
+                                        key={item.uniqueId || item.id}
+                                        layout
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        style={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            padding: '0.75rem 1rem',
+                                            background: 'var(--color-surface-dark)',
+                                            color: 'var(--color-text-on-dark)',
+                                            borderRadius: '16px',
+                                            border: '1px solid rgba(255,255,255,0.05)',
+                                            boxShadow: 'var(--shadow-sm)',
+                                            gap: '0.5rem',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', gap: '0.75rem', flex: 1, alignItems: 'center' }}>
+                                                <div style={{
+                                                    width: '42px',
+                                                    height: '42px',
+                                                    flexShrink: 0,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '1.2rem',
+                                                    background: 'rgba(0,0,0,0.2)',
+                                                    borderRadius: '10px',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid rgba(255,255,255,0.05)'
+                                                }}>
+                                                    {(String(item.image || '').startsWith('data:image') || String(item.image || '').startsWith('http') || String(item.image || '').startsWith('/'))
+                                                        ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        : item.image || '🍽️'}
                                                 </div>
-                                                <div style={{ fontSize: '1rem', color: item.isInvitation ? '#8b5cf6' : '#93c5fd', fontWeight: 'bold', marginTop: '4px' }}>
-                                                    {item.isInvitation ? 'Invitación (0.00€)' : `${item.price.toFixed(2)}€`}
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: '700', color: item.isPriority ? '#f87171' : 'var(--color-text-on-dark)', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {item.isPriority && <span style={{ marginRight: '4px' }}>⚡</span>}
+                                                        {item.name}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: item.isInvitation ? '#a78bfa' : 'var(--color-primary)', fontWeight: 'bold' }}>
+                                                            {item.isInvitation ? '0.00€' : `${(item.price * item.quantity).toFixed(2)}€`}
+                                                        </span>
+                                                        {item.quantity > 1 && (
+                                                            <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
+                                                                ({item.quantity} x {item.price.toFixed(2)}€)
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {/* Action Column for item */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-                                            <div style={{ fontSize: '1.1rem', fontWeight: '800', color: item.isInvitation ? '#a78bfa' : 'var(--color-text-on-dark)' }}>
-                                                {item.isInvitation ? '0.00€' : `${(item.price * item.quantity).toFixed(2)}€`}
-                                            </div>
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '0.2rem',
-                                                background: '#ffffff',
+                                                background: 'rgba(0,0,0,0.3)',
                                                 borderRadius: '25px',
-                                                padding: '4px',
-                                                boxShadow: '0 4px 6px rgba(0,0,0,0.2)'
+                                                padding: '2px',
+                                                border: '1px solid rgba(255,255,255,0.1)'
                                             }}>
                                                 <button
                                                     onClick={() => item.quantity === 1 ? removeFromOrder(item.uniqueId || item.id) : updateQuantity(item.uniqueId || item.id, -1)}
-                                                    style={{ width: '32px', height: '32px', border: 'none', background: 'none', color: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ width: '28px', height: '28px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    {item.quantity === 1 ? <Trash2 size={18} color="#ef4444" /> : <Minus size={18} />}
+                                                    {item.quantity === 1 ? <Trash2 size={16} /> : <Minus size={16} />}
                                                 </button>
-                                                <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '900', color: '#1e293b', fontSize: '1.1rem' }}>{item.quantity}</span>
+                                                <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: '900', color: 'white', fontSize: '0.9rem' }}>{item.quantity}</span>
                                                 <button
                                                     onClick={() => updateQuantity(item.uniqueId || item.id, 1)}
-                                                    style={{ width: '32px', height: '32px', border: 'none', background: 'none', color: '#1e293b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ width: '28px', height: '28px', border: 'none', background: 'none', color: '#4ade80', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                 >
-                                                    <Plus size={18} />
+                                                    <Plus size={16} />
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Modifiers and Notes Grid */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                                        {item.selectedModifiers && Object.entries(item.selectedModifiers).map(([key, value]) => (
-                                            <span key={key} style={{ fontSize: '0.75rem', background: 'rgba(16, 185, 129, 0.2)', color: '#4ade80', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 'bold' }}>
-                                                {value}
-                                            </span>
-                                        ))}
+                                        {(item.selectedModifiers || item.notes || item.isPriority || item.isShared || item.isIndividual || item.isInvitation) && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', overflow: 'hidden' }}>
+                                                {item.isPriority && <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.3)', fontWeight: 'bold' }}>PRIORIDAD</span>}
+                                                {item.isShared && <span style={{ background: 'rgba(249, 115, 22, 0.2)', color: '#fdba74', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(249, 115, 22, 0.3)', fontWeight: 'bold' }}>PARA COMPARTIR</span>}
+                                                {item.isIndividual && <span style={{ background: 'rgba(59, 130, 246, 0.2)', color: '#93c5fd', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.3)', fontWeight: 'bold' }}>INDIVIDUAL</span>}
+                                                {item.isInvitation && <span style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(139, 92, 246, 0.3)', fontWeight: 'bold' }}>INVITACIÓN</span>}
+                                                
+                                                {item.selectedModifiers && Object.entries(item.selectedModifiers).map(([key, value]) => (
+                                                    <span key={key} style={{ fontSize: '0.65rem', background: 'rgba(16, 185, 129, 0.15)', color: '#4ade80', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                                        {value}
+                                                    </span>
+                                                ))}
 
-                                        {item.notes && editingNoteId !== item.uniqueId && (
-                                            <div style={{ width: '100%', fontSize: '0.85rem', color: '#fbbf24', padding: '6px 10px', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px', fontStyle: 'italic', border: '1px dashed rgba(251, 191, 36, 0.3)' }}>
-                                                <MessageSquare size={12} style={{ display: 'inline', marginRight: '5px' }} />
-                                                {item.notes}
+                                                {item.notes && (
+                                                    <div style={{ width: '100%', fontSize: '0.75rem', color: '#fbbf24', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <MessageSquare size={10} /> {item.notes}
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
-                                    </div>
 
-                                    {editingNoteId === item.uniqueId && (
-                                        <div style={{ marginTop: '0.25rem', display: 'flex', gap: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                value={noteDraft}
-                                                onChange={(e) => setNoteDraft(e.target.value)}
-                                                placeholder="Nota para cocina..."
-                                                autoFocus
-                                                className="glass-panel"
-                                                style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem', color: 'white', border: '1px solid var(--color-primary)' }}
-                                            />
-                                            <button onClick={() => { updateItemNote(item.uniqueId, noteDraft); setEditingNoteId(null); }} className="btn-primary" style={{ padding: '0.6rem 1rem' }}>OK</button>
-                                        </div>
-                                    )}
-
-                                    {/* Quick Notes Buttons Row */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.75rem' }}>
-                                        <button
-                                            onClick={() => { setEditingNoteId(editingNoteId === item.uniqueId ? null : item.uniqueId); setNoteDraft(item.notes || ''); }}
-                                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text-on-dark)', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}
-                                        >
-                                            <MessageSquare size={12} style={{ display: 'inline', marginRight: '4px' }} /> Personalizar
-                                        </button>
-                                        <button
-                                            onClick={() => toggleItemPriority(item.uniqueId || item.id)}
-                                            style={{
-                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isPriority ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
-                                                background: item.isPriority ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                                                color: item.isPriority ? '#f87171' : '#94a3b8',
-                                                cursor: 'pointer',
-                                                fontWeight: item.isPriority ? 'bold' : 'normal',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}
-                                        >
-                                            ⚡ Marcha Rápida
-                                        </button>
-                                        <button
-                                            onClick={() => toggleItemToShare(item.uniqueId || item.id)}
-                                            style={{
-                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isShared ? '1px solid #f97316' : '1px solid rgba(255,255,255,0.1)',
-                                                background: item.isShared ? 'rgba(249, 115, 22, 0.2)' : 'transparent',
-                                                color: item.isShared ? '#fdba74' : '#94a3b8',
-                                                cursor: 'pointer',
-                                                fontWeight: item.isShared ? 'bold' : 'normal',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}
-                                        >
-                                            <Users size={14} /> Compartir
-                                        </button>
-                                        <button
-                                            onClick={() => toggleItemIndividual(item.uniqueId || item.id)}
-                                            style={{
-                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isIndividual ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
-                                                background: item.isIndividual ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                                color: item.isIndividual ? '#93c5fd' : '#94a3b8',
-                                                cursor: 'pointer',
-                                                fontWeight: item.isIndividual ? 'bold' : 'normal',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}
-                                        >
-                                            <User size={14} /> Individual
-                                        </button>
-                                        <button
-                                            onClick={() => toggleItemInvitation(item.uniqueId || item.id)}
-                                            style={{
-                                                fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: item.isInvitation ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
-                                                background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                                                color: item.isInvitation ? '#a78bfa' : '#94a3b8',
-                                                cursor: 'pointer',
-                                                fontWeight: item.isInvitation ? 'bold' : 'normal',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}
-                                        >
-                                            <Gift size={14} /> Invitación
-                                        </button>
-                                        {['Poco hecho', 'Muy hecho', 'Celiaco', 'Vegano', 'Sin cebolla'].map(qn => (
+                                        <div style={{ display: 'flex', gap: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.4rem' }}>
                                             <button
-                                                key={qn}
-                                                onClick={() => updateItemNote(item.uniqueId, qn)}
-                                                style={{
-                                                    fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)',
-                                                    background: item.notes === qn ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                                                    color: item.notes === qn ? '#60a5fa' : '#94a3b8',
-                                                    cursor: 'pointer',
-                                                    fontWeight: item.notes === qn ? 'bold' : 'normal'
-                                                }}
+                                                onClick={() => { toggleQuickNotes(item.uniqueId || item.id); setEditingNoteId(null); }}
+                                                style={{ padding: '0.35rem 0.75rem', background: isQuickNotesOpen ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', color: isQuickNotesOpen ? 'var(--color-primary)' : '#94a3b8', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                                             >
-                                                {qn}
+                                                <Plus size={12} /> Modificar
                                             </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            ))}
+                                            <button
+                                                onClick={() => { setEditingNoteId(editingNoteId === item.uniqueId ? null : item.uniqueId); setNoteDraft(item.notes || ''); if (isQuickNotesOpen) toggleQuickNotes(item.uniqueId || item.id); }}
+                                                style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                            >
+                                                <MessageSquare size={12} /> Nota
+                                            </button>
+                                        </div>
+
+                                        {editingNoteId === item.uniqueId && (
+                                            <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.25rem' }}>
+                                                <input
+                                                    type="text"
+                                                    value={noteDraft}
+                                                    onChange={(e) => setNoteDraft(e.target.value)}
+                                                    placeholder="Escribir nota..."
+                                                    autoFocus
+                                                    style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem', color: 'white', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--color-primary)', borderRadius: '8px' }}
+                                                />
+                                                <button onClick={() => { updateItemNote(item.uniqueId, noteDraft); setEditingNoteId(null); }} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>OK</button>
+                                            </div>
+                                        )}
+
+                                        <AnimatePresence>
+                                            {isQuickNotesOpen && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    style={{ overflow: 'hidden' }}
+                                                >
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', padding: '0.5rem 0', borderTop: '1px dashed rgba(255,255,255,0.1)', marginTop: '0.25rem' }}>
+                                                        <button onClick={() => toggleItemPriority(item.uniqueId || item.id)} style={{ fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid ' + (item.isPriority ? '#ef4444' : 'rgba(255,255,255,0.1)'), background: item.isPriority ? 'rgba(239, 68, 68, 0.2)' : 'transparent', color: item.isPriority ? '#f87171' : '#94a3b8', cursor: 'pointer' }}>M. Rápida</button>
+                                                        <button onClick={() => toggleItemToShare(item.uniqueId || item.id)} style={{ fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid ' + (item.isShared ? '#f97316' : 'rgba(255,255,255,0.1)'), background: item.isShared ? 'rgba(249, 115, 22, 0.2)' : 'transparent', color: item.isShared ? '#fdba74' : '#94a3b8', cursor: 'pointer' }}>Compartir</button>
+                                                        <button onClick={() => toggleItemIndividual(item.uniqueId || item.id)} style={{ fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid ' + (item.isIndividual ? '#3b82f6' : 'rgba(255,255,255,0.1)'), background: item.isIndividual ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: item.isIndividual ? '#93c5fd' : '#94a3b8', cursor: 'pointer' }}>Individual</button>
+                                                        <button onClick={() => toggleItemInvitation(item.uniqueId || item.id)} style={{ fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid ' + (item.isInvitation ? '#8b5cf6' : 'rgba(255,255,255,0.1)'), background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'transparent', color: item.isInvitation ? '#a78bfa' : '#94a3b8', cursor: 'pointer' }}>Invitación</button>
+                                                        {['Poco hecho', 'Muy hecho', 'Celiaco', 'Sin cebolla'].map(qn => (
+                                                            <button key={qn} onClick={() => updateItemNote(item.uniqueId, qn)} style={{ fontSize: '0.65rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: item.notes === qn ? 'rgba(59, 130, 246, 0.2)' : 'transparent', color: item.notes === qn ? '#60a5fa' : '#94a3b8', cursor: 'pointer' }}>{qn}</button>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                );
+                            })}
 
                             {/* Already sent Items (Bill) */}
                             {bill && bill.length > 0 && (
@@ -538,76 +513,66 @@ const OrderSummary = ({
                         </>
                     ) : (bill && bill.length > 0) ? (
                         <>
-                            <button
-                                className="btn-primary"
-                                onClick={() => setIsPaymentModalOpen(true)}
-                                style={{
-                                    width: '100%',
-                                    padding: '1.5rem',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    gap: '0.75rem',
-                                    fontSize: '1.35rem',
-                                    fontWeight: '900',
-                                    borderRadius: '16px',
-                                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
-                                    color: 'white',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <Wine size={28} /> COBRAR ({calculateBillTotal().toFixed(2)}€)
-                            </button>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                <button
-                                    onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
-                                    style={{
-                                        padding: '1rem',
-                                        fontSize: '0.95rem',
-                                        borderRadius: '12px',
-                                        background: 'rgba(59, 130, 246, 0.25)',
-                                        border: '1px solid rgba(59, 130, 246, 0.8)',
-                                        color: '#eff6ff',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '0.5rem',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.4)'}
-                                    onMouseLeave={(e) => e.target.style.background = 'rgba(59, 130, 246, 0.25)'}
-                                >
-                                    <CreditCard size={18} /> Cobro Dividido
-                                </button>
-                                <button
-                                    onClick={handlePrintPreTicket}
-                                    style={{
-                                        padding: '1rem',
-                                        fontSize: '0.95rem',
-                                        borderRadius: '12px',
-                                        background: 'rgba(251, 191, 36, 0.25)',
-                                        color: '#fffbeb',
-                                        border: '1px solid rgba(251, 191, 36, 0.8)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '0.5rem',
-                                        fontWeight: 'bold',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                    }}
-                                    onMouseEnter={(e) => e.target.style.background = 'rgba(251, 191, 36, 0.4)'}
-                                    onMouseLeave={(e) => e.target.style.background = 'rgba(251, 191, 36, 0.25)'}
-                                    title="Imprimir ticket pre-cuenta"
-                                >
-                                    <Printer size={18} /> Pre-Ticket
-                                </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '0.75rem' }}>
+                                    <button
+                                        className="btn-primary"
+                                        onClick={() => setIsPaymentModalOpen(true)}
+                                        style={{
+                                            padding: '1.25rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            borderRadius: '16px',
+                                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                                            border: 'none',
+                                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                                            color: 'white',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <Wine size={26} />
+                                        <span style={{ fontSize: '1.1rem', fontWeight: '900' }}>COBRAR</span>
+                                    </button>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <button
+                                            onClick={() => {
+                                                // Function to fast pay with cash (to be implemented/passed)
+                                                console.log("Fast Pay Cash");
+                                            }}
+                                            style={{ flex: 1, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '12px', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+                                        >
+                                            DIRECTO EFEC.
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                // Function to fast pay with card (to be implemented/passed)
+                                                console.log("Fast Pay Card");
+                                            }}
+                                            style={{ flex: 1, background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '12px', color: '#a78bfa', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+                                        >
+                                            DIRECTO TARJ.
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                    <button
+                                        onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
+                                        style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                    >
+                                        <CreditCard size={14} /> DIVIDIR CUENTA
+                                    </button>
+                                    <button
+                                        onClick={handlePrintPreTicket}
+                                        style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', color: '#fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                    >
+                                        <Printer size={14} /> PRE-TICKET
+                                    </button>
+                                </div>
                             </div>
                         </>
                     ) : (

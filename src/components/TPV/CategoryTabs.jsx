@@ -37,26 +37,28 @@ const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile 
                         key={cat.id}
                         onClick={() => setActiveCategory(cat.id)}
                         style={{
-                            padding: isMobile ? '0.5rem 0.75rem' : '1rem 0.25rem',
+                            padding: isMobile ? '0.6rem 0.5rem' : '1rem 0.25rem',
                             border: 'none',
                             background: isActive
-                                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2))'
+                                ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.05))'
                                 : 'transparent',
                             color: isActive ? 'var(--color-primary)' : 'var(--color-text-muted)',
                             display: 'flex',
-                            flexDirection: isMobile ? 'row' : 'column',
+                            flexDirection: isMobile ? 'column' : 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.5rem',
+                            gap: '0.35rem',
                             cursor: 'pointer',
-                            fontSize: isMobile ? '0.8rem' : '0.65rem',
-                            fontWeight: 'bold',
+                            fontSize: isMobile ? '0.75rem' : '0.65rem',
+                            fontWeight: isActive ? '800' : '600',
                             borderRadius: isMobile ? '12px' : '0',
                             borderLeft: !isMobile && isActive ? '4px solid var(--color-primary)' : 'none',
-                            borderBottom: isMobile && isActive ? '2px solid var(--color-primary)' : 'none',
-                            transition: 'all 0.3s ease',
-                            minWidth: isMobile ? '100px' : 'auto',
-                            whiteSpace: 'nowrap'
+                            borderBottom: isMobile && isActive ? '3px solid var(--color-primary)' : 'none',
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            minWidth: isMobile ? '80px' : 'auto',
+                            whiteSpace: 'nowrap',
+                            opacity: isActive ? 1 : 0.7,
+                            transform: isActive ? 'scale(1.02)' : 'scale(1)'
                         }}
                     >
                         <Icon size={isMobile ? 16 : 20} />
