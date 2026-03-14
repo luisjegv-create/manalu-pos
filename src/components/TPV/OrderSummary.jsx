@@ -540,21 +540,53 @@ const OrderSummary = ({
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         <button
                                             onClick={() => {
-                                                // Function to fast pay with cash (to be implemented/passed)
+                                                // Function to fast pay with cash
                                                 console.log("Fast Pay Cash");
                                             }}
-                                            style={{ flex: 1, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.4)', borderRadius: '12px', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+                                            style={{ 
+                                                flex: 1, 
+                                                background: 'linear-gradient(135deg, #059669, #10b981)', 
+                                                border: 'none', 
+                                                borderRadius: '12px', 
+                                                color: 'white', 
+                                                display: 'flex', 
+                                                flexDirection: 'column',
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                gap: '0.25rem', 
+                                                fontWeight: '800', 
+                                                fontSize: '0.75rem', 
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                            }}
                                         >
-                                            DIRECTO EFEC.
+                                            <Receipt size={18} />
+                                            EFECTIVO
                                         </button>
                                         <button
                                             onClick={() => {
-                                                // Function to fast pay with card (to be implemented/passed)
+                                                // Function to fast pay with card
                                                 console.log("Fast Pay Card");
                                             }}
-                                            style={{ flex: 1, background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '12px', color: '#a78bfa', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer' }}
+                                            style={{ 
+                                                flex: 1, 
+                                                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', 
+                                                border: 'none', 
+                                                borderRadius: '12px', 
+                                                color: 'white', 
+                                                display: 'flex', 
+                                                flexDirection: 'column',
+                                                alignItems: 'center', 
+                                                justifyContent: 'center', 
+                                                gap: '0.25rem', 
+                                                fontWeight: '800', 
+                                                fontSize: '0.75rem', 
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
+                                            }}
                                         >
-                                            DIRECTO TARJ.
+                                            <CreditCard size={18} />
+                                            TARJETA
                                         </button>
                                     </div>
                                 </div>
