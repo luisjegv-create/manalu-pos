@@ -26,6 +26,14 @@ const PaymentModal = ({
     const [amountReceived, setAmountReceived] = React.useState('');
     const [cardTips, setCardTips] = React.useState('');
 
+    // Responsive para no superponerse con el OrderSummary de 480px
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 1024);
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     if (!isOpen) return null;
 
     const totalBill = calculateBillTotal();
@@ -35,7 +43,13 @@ const PaymentModal = ({
     const changeDue = amountReceived ? Math.max(0, parseFloat(amountReceived) - finalTotal) : 0;
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div style={{ 
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', 
+            zIndex: 140, // Just below OrderSummary (150) so sidebar stays active and visible
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            padding: '2rem', 
+            paddingRight: isMobile ? '2rem' : 'calc(480px + 2rem)' // Empuja el contenido hacia la izquierda!
+        }}>
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
