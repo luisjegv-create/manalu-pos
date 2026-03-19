@@ -45,6 +45,8 @@ const Recipes = () => {
     const [activeCategory, setActiveCategory] = useState('raciones');
     const [activeSubcategory, setActiveSubcategory] = useState(null);
 
+    const MODO_APERTURA_RAPIDA = true; // Activa la vista puramente orientada a carta e ignora escandallos
+    
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     React.useEffect(() => {
@@ -167,8 +169,10 @@ const Recipes = () => {
                         <ArrowLeft size={24} /> Volver
                     </button>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2rem' }}>Escandallos y Productos</h1>
-                        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: isMobile ? '0.8rem' : '1rem' }}>Configuración de carta e ingredientes</p>
+                        <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2rem' }}>{MODO_APERTURA_RAPIDA ? 'Gestión de Carta' : 'Escandallos y Productos'}</h1>
+                        <p style={{ margin: 0, color: MODO_APERTURA_RAPIDA ? '#fbbf24' : 'var(--color-text-muted)', fontSize: isMobile ? '0.8rem' : '1rem', fontWeight: MODO_APERTURA_RAPIDA ? 'bold' : 'normal' }}>
+                            {MODO_APERTURA_RAPIDA ? 'Modo Apertura Rápida (Sin recetario)' : 'Configuración de carta e ingredientes'}
+                        </p>
                     </div>
                 </div>
                 <button className="btn-primary" onClick={() => setIsAddingProduct(true)} style={{ width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}>
@@ -555,6 +559,7 @@ const Recipes = () => {
                             </div>
 
                             {/* Summary Card */}
+                            {!MODO_APERTURA_RAPIDA && (
                             <div className="glass-panel" style={{
                                 padding: isMobile ? '1.5rem' : '2rem',
                                 display: 'grid',
@@ -574,8 +579,10 @@ const Recipes = () => {
                                     <h2 style={{ margin: '0.25rem 0', color: '#10b981', fontSize: isMobile ? '1.5rem' : '2rem' }}>{margin}%</h2>
                                 </div>
                             </div>
+                            )}
 
                             {/* Ingredients Table */}
+                            {!MODO_APERTURA_RAPIDA && (
                             <div className="glass-panel" style={{ flex: 1, padding: isMobile ? '1rem' : '2rem' }}>
                                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', marginBottom: '1.5rem', gap: '1rem' }}>
                                     <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: isMobile ? '1.1rem' : '1.25rem', color: '#ffffff' }}>
@@ -667,12 +674,13 @@ const Recipes = () => {
                                     )}
                                 </div>
                             </div>
+                            )}
                         </>
                     ) : (
                         <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', padding: isMobile ? '2rem' : '4rem', textAlign: 'center' }}>
                             <PieChart size={isMobile ? 48 : 64} style={{ marginBottom: '1.5rem', opacity: 0.3 }} />
-                            <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.5rem' }}>Gestión de Carta</h2>
-                            <p style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>Selecciona un producto para configurar su receta y calcular costes.</p>
+                            <h2 style={{ fontSize: isMobile ? '1.25rem' : '1.5rem' }}>{MODO_APERTURA_RAPIDA ? 'Gestión de Carta' : 'Gestión de Escandallos'}</h2>
+                            <p style={{ fontSize: isMobile ? '0.9rem' : '1rem' }}>{MODO_APERTURA_RAPIDA ? 'Selecciona o crea un producto para introducir su precio de venta.' : 'Selecciona un producto para configurar su receta y calcular costes.'}</p>
                         </div>
                     )}
                 </div>

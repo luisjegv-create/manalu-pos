@@ -515,43 +515,56 @@ export const InventoryProvider = ({ children }) => {
 
     // --- Stock Logic ---
     const deductStockForOrder = async (orderItems) => {
-        const wineChanges = {};
-        const ingChanges = {};
+        // MODO EMERGENCIA: Solo aplicamos deducción si existen recetas configuradas
+        // (En modo apertura rápida, esto no hará nada si no hay nada en almacén).
+        try {
+            const wineChanges = {};
+            const ingChanges = {};
 
-        orderItems.forEach(item => {
-            const isWinePrefixed = String(item.id).startsWith('wine_');
-            const isProdPrefixed = String(item.id).startsWith('prod_');
-            const dbId = (isWinePrefixed || isProdPrefixed) ? item.id.split('_')[1] : item.id;
+            orderItems.forEach(item => {
+                const isWinePrefixed = String(item.id).startsWith('wine_');
+                const isProdPrefixed = String(item.id).startsWith('prod_');
+                const dbId = (isWinePrefixed || isProdPrefixed) ? item.id.split('_')[1] : item.id;
 
-            if (item.isWine || isWinePrefixed) {
-                wineChanges[dbId] = (wineChanges[dbId] || 0) + item.quantity;
-            }
-            const productRecipe = recipes[dbId];
-            if (productRecipe) {
-                productRecipe.forEach(recipeItem => {
-                    const amount = parseFloat(recipeItem.quantity) * item.quantity;
-                    const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
-                    ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
-                });
-            }
-        });
+                if (item.isWine || isWinePrefixed) {
+                    wineChanges[dbId] = (wineChanges[dbId] || 0) + item.quantity;
+                }
+                const productRecipe = recipes[dbId];
+                if (productRecipe) {
+                    productRecipe.forEach(recipeItem => {
+                        const amount = parseFloat(recipeItem.quantity) * item.quantity;
+                        const ingId = recipeItem.ingredient_id || recipeItem.ingredientId;
+                        if (amount && ingId) {
+                            ingChanges[ingId] = (ingChanges[ingId] || 0) + amount;
+                        }
+                    });
+                }
+            });
 
-        // Apply Wine Stock Deductions
-        for (const [id, deduction] of Object.entries(wineChanges)) {
-            const wine = wines.find(w => String(w.id) === String(id));
-            if (wine) {
-                const currentStock = parseFloat(wine.stock) || 0;
-                await updateWine(wine.id, { ...wine, stock: Math.max(0, currentStock - deduction) });
+            // Apply Wine Stock Deductions
+            for (const [id, deduction] of Object.entries(wineChanges)) {
+                if (deduction > 0) {
+                    const wine = wines.find(w => String(w.id) === String(id));
+                    if (wine) {
+                        const currentStock = parseFloat(wine.stock) || 0;
+                        await updateWine(wine.id, { ...wine, stock: Math.max(0, currentStock - deduction) });
+                    }
+                }
             }
-        }
 
-        // Apply Ingredient Stock Deductions
-        for (const [id, deduction] of Object.entries(ingChanges)) {
-            const ing = ingredients.find(i => String(i.id) === String(id));
-            if (ing) {
-                const currentQty = parseFloat(ing.quantity) || 0;
-                await updateIngredient(ing.id, { ...ing, quantity: Math.max(0, currentQty - deduction) });
+            // Apply Ingredient Stock Deductions
+            for (const [id, deduction] of Object.entries(ingChanges)) {
+                if (deduction > 0) {
+                    const ing = ingredients.find(i => String(i.id) === String(id));
+                    if (ing) {
+                        const currentQty = parseFloat(ing.quantity) || 0;
+                        await updateIngredient(ing.id, { ...ing, quantity: Math.max(0, currentQty - deduction) });
+                    }
+                }
             }
+        } catch (error) {
+            console.error("Deducción de stock omitida (Modo Apertura):", error);
+            // No bloqueamos el flujo
         }
     };
 
@@ -647,19 +660,9 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const checkProductAvailability = (productId) => {
-        // Resolve prefixed IDs
-        const isWinePrefixed = String(productId).startsWith('wine_');
-        const isProdPrefixed = String(productId).startsWith('prod_');
-        const dbId = (isWinePrefixed || isProdPrefixed) ? productId.split('_')[1] : productId;
-
-        // 1. Check if it's a wine
-        const wine = wines.find(w => String(w.id) === String(dbId) && (isWinePrefixed || !isProdPrefixed));
-        if (wine) {
-            return (parseFloat(wine.stock) || 0) > 0;
-        }
-
-        // Return true for all non-wine products to prevent blocking sales
-        // due to theoretical ingredient stock issues.
+        // MODO EMERGENCIA/APERTURA RÁPIDA: Siempre devuelve true.
+        // Esto permite vender cualquier producto o vino en TPV y Menú QR
+        // sin importar si tiene stock, receta o ingredientes.
         return true;
     };
 
