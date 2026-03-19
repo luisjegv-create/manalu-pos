@@ -20,7 +20,9 @@ import {
     Menu,
     ShoppingCart,
     Check,
-    Printer
+    Printer,
+    MapPin,
+    Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerAIAssistant from '../components/CustomerAIAssistant';
@@ -723,6 +725,50 @@ const QRMenu = () => {
                                 Bienvenido a <span style={{ color: '#fbbf24', fontSize: '1.15rem', fontWeight: 'bold' }}>Tapas y Bocatas</span>, donde cada bocado es una experiencia
                             </p>
                         </div>
+
+                        {/* Google Maps Review Banner */}
+                        <a 
+                            href={restaurantInfo.googleMapsUrl || "https://maps.google.com/?q=Restaurante"}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.25) 100%)',
+                                borderRadius: '16px',
+                                padding: '1rem 1.25rem',
+                                marginBottom: '1.5rem',
+                                textDecoration: 'none',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{ 
+                                    background: 'var(--color-primary)', 
+                                    padding: '0.6rem', 
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)'
+                                }}>
+                                    <MapPin size={24} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.2rem' }}>Ver fotos y reseñas</span>
+                                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                            {[1,2,3,4,5].map(i => <Star key={i} size={12} color="#fbbf24" fill="#fbbf24" />)}
+                                        </div>
+                                        <span style={{ color: '#cbd5e1', fontSize: '0.85rem', marginLeft: '0.25rem' }}>en Google Maps</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <ChevronRight size={20} color="#94a3b8" />
+                        </a>
 
                         <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
                             <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#fbbf24' }} size={20} />
