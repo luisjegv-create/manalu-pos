@@ -18,7 +18,9 @@ import {
     Beer,
     Cake,
     Camera,
-    Coffee
+    Coffee,
+    Beef,
+    Baby
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categories as categoriesData } from '../data/products';
@@ -212,6 +214,8 @@ const Recipes = () => {
                                 >
                                     {cat.id === 'raciones' && <Utensils size={14} />}
                                     {cat.id === 'bocatas' && <Sandwich size={14} />}
+                                    {cat.id === 'hamburguesas' && <Beef size={14} />}
+                                    {cat.id === 'platos_infantiles' && <Baby size={14} />}
                                     {cat.id === 'bebidas' && <Beer size={14} />}
                                     {cat.id === 'vinos' && <Beer size={14} />} {/* Using Beer for lack of Wine icon in current view but verified Wine is imported */}
                                     {cat.id === 'postres' && <Cake size={14} />}
@@ -368,6 +372,8 @@ const Recipes = () => {
                                         >
                                             <option value="raciones">Raciones</option>
                                             <option value="bocatas">Bocatas</option>
+                                            <option value="hamburguesas">Hamburguesas</option>
+                                            <option value="platos_infantiles">Platos Infantiles</option>
                                             <option value="bebidas">Bebidas</option>
                                             <option value="vinos">Vinos</option>
                                             <option value="cafes">Cafés</option>

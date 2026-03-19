@@ -637,6 +637,40 @@ export const OrderProvider = ({ children }) => {
         return null;
     };
 
+    const forceClearTable = (tableId) => {
+        setTableOrders(prev => {
+            const next = { ...prev };
+            delete next[tableId];
+            return next;
+        });
+        setTableBills(prev => {
+            const next = { ...prev };
+            delete next[tableId];
+            return next;
+        });
+
+        const tableObj = tables.find(t => t.id === tableId);
+        
+        setTables(prev => prev.map(t =>
+            (t.linkedTo === tableId || t.id === tableId)
+                ? { ...t, status: 'free', lastActionAt: null, linkedTo: null, name: t.originalName || t.name }
+                : t
+        ));
+
+        if (tableObj) {
+            setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+            supabase.from('kitchen_orders')
+                .update({ status: 'completed' })
+                .eq('table_name', tableObj.name)
+                .neq('status', 'completed')
+                .then();
+        }
+
+        if (currentTable && currentTable.id === tableId) {
+            setCurrentTable(null);
+        }
+    };
+
     const payPartialTable = async (tableId, partialItems, paymentMethod = 'Efectivo', tips = 0) => {
         const cardTips = parseFloat(tips) || 0;
         if (!partialItems || partialItems.length === 0) return null;
@@ -1379,6 +1413,7 @@ export const OrderProvider = ({ children }) => {
             updateKitchenItemStatus,
             markOrderReady,
             closeTable,
+            forceClearTable,
             payPartialTable,
             payValuePartialTable,
             calculateOrderTotal,

@@ -6,6 +6,8 @@ export const categories = [
         subcategories: ['embutidos', 'quesos', 'raciones frias', 'raciones calientes']
     },
     { id: 'bocatas', name: 'Bocatas', icon: 'Sandwich' },
+    { id: 'hamburguesas', name: 'Hamburguesas', icon: 'Beef' },
+    { id: 'platos_infantiles', name: 'Infantiles', icon: 'Baby' },
     {
         id: 'bebidas',
         name: 'Bebidas',

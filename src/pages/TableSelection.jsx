@@ -50,7 +50,7 @@ const iconMap = {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, closeTable, reservations, kitchenOrders, tableBills, transferTable, mergeTables, splitTable } = useOrder();
+    const { selectTable, tableOrders, tables, addTable, deleteTable, updateTableDetails, forceClearTable, reservations, kitchenOrders, tableBills, transferTable, mergeTables, splitTable } = useOrder();
     const [activeZone, setActiveZone] = useState('salon');
     
     // Unified UI Action States
@@ -440,6 +440,24 @@ const TableSelection = () => {
                             🤝 Agrupar con otra mesa
                         </button>
 
+                        {((tableOrders[selectedTable.id] && tableOrders[selectedTable.id].length > 0) || 
+                          (tableBills[selectedTable.id] && tableBills[selectedTable.id].length > 0) || 
+                          kitchenOrders.some(o => o.table === selectedTable.name) || 
+                          selectedTable.status === 'occupied') && (
+                            <button
+                                onClick={() => {
+                                    if (confirm('¿Forzar liberar mesa y borrar cuenta actual para SIEMPRE sin registrar venta?')) {
+                                        forceClearTable(selectedTable.id);
+                                        setActiveModal(null);
+                                        setSelectedTable(null);
+                                    }
+                                }}
+                                style={{ padding: '1rem', background: '#ef4444', border: 'none', color: 'white', borderRadius: '8px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 'bold' }}
+                            >
+                                🧹 Forzar Liberar Mesa
+                            </button>
+                        )}
+
                         {(selectedTable.linkedTo || tables.some(t => t.linkedTo === selectedTable.id)) && (
                             <button
                                 onClick={() => {
@@ -502,8 +520,8 @@ const TableSelection = () => {
                         {selectedTable.status === 'occupied' && (
                             <button
                                 onClick={() => {
-                                    if (confirm('¿Liberar mesa y borrar cuenta actual para SIEMPRE?')) {
-                                        closeTable(selectedTable.id);
+                                    if (confirm('¿Liberar mesa y vaciar cuenta sin grabar venta?')) {
+                                        forceClearTable(selectedTable.id);
                                         setActiveModal(null);
                                         setSelectedTable(null);
                                     }

@@ -19,7 +19,8 @@ import {
     GlassWater,
     Menu,
     ShoppingCart,
-    Check
+    Check,
+    Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomerAIAssistant from '../components/CustomerAIAssistant';
@@ -130,6 +131,8 @@ const QRMenu = () => {
     const categories = [
         { id: 'raciones', name: 'Raciones', icon: '🥘' },
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
+        { id: 'hamburguesas', name: 'Hamburguesas', icon: '🍔' },
+        { id: 'platos_infantiles', name: 'Infantiles', icon: '👶' },
         { id: 'vinos', name: 'Vinos', icon: '🍷' },
         { id: 'bebidas', name: 'Bebidas', icon: '🥤', subcategories: ['cervezas', 'copas de vino', 'refrescos', 'aguas', 'vermuts', 'combinados'] },
         { id: 'cafes', name: 'Cafés', icon: '☕' },
@@ -573,29 +576,54 @@ const QRMenu = () => {
                 }} />
 
                 {currentUser && (
-                    <button
-                        onClick={() => navigate('/')}
-                        style={{
-                            position: 'absolute',
-                            top: '1.5rem',
-                            left: '1.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            background: 'var(--color-primary)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.8rem 1.2rem',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            zIndex: 20,
-                            fontWeight: 'bold',
-                            fontSize: '1.1rem',
-                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-                        }}
-                    >
-                        <ArrowLeft size={24} /> Volver
-                    </button>
+                    <>
+                        <button
+                            onClick={() => navigate('/')}
+                            style={{
+                                position: 'absolute',
+                                top: '1.5rem',
+                                left: '1.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                background: 'var(--color-primary)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.8rem 1.2rem',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                zIndex: 20,
+                                fontWeight: 'bold',
+                                fontSize: '1.1rem',
+                                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                            }}
+                        >
+                            <ArrowLeft size={24} /> Volver
+                        </button>
+                        <button
+                            onClick={() => navigate('/print-menu')}
+                            style={{
+                                position: 'absolute',
+                                top: '1.5rem',
+                                right: '1.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                background: '#fbbf24',
+                                color: '#000',
+                                border: 'none',
+                                padding: '0.8rem 1.2rem',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                zIndex: 20,
+                                fontWeight: 'bold',
+                                fontSize: '1.1rem',
+                                boxShadow: '0 4px 15px rgba(251, 191, 36, 0.4)'
+                            }}
+                        >
+                            <Printer size={24} /> Imprimir Carta Física
+                        </button>
+                    </>
                 )}
 
                 <div style={{ position: 'relative', zIndex: 10, textAlign: 'center' }}>

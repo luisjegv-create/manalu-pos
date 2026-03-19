@@ -20,6 +20,7 @@ import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import QRMenu from './pages/QRMenu';
 import Bookings from './pages/Bookings';
+import PrintableMenu from './pages/PrintableMenu';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalQrAlert from './components/GlobalQrAlert';
 
@@ -53,6 +54,7 @@ function App() {
                       <Route path="/customers" element={<Customers />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/bookings" element={<Bookings />} />
+                      <Route path="/print-menu" element={<PrintableMenu />} />
                     </Route>
                   </Routes>
                 </div>
