@@ -30,6 +30,7 @@ import CustomerAIAssistant from '../components/CustomerAIAssistant';
 const ALLERGEN_ICONS = {
     gluten: { icon: Wheat, label: 'Gluten', color: '#f59e0b' },
     lacteos: { icon: Milk, label: 'Lácteos', color: '#3b82f6' },
+    lactosa: { icon: Milk, label: 'Lactosa', color: '#3b82f6' },
     huevos: { icon: Egg, label: 'Huevos', color: '#fbbf24' },
     pescado: { icon: Fish, label: 'Pescado', color: '#0ea5e9' },
     frutos_secos: { icon: Info, label: 'Frutos Secos', color: '#d97706' },

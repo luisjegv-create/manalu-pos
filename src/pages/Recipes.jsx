@@ -460,7 +460,7 @@ const Recipes = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', gridColumn: isMobile ? 'auto' : 'span 2' }}>
                                         <label>Alérgenos</label>
                                         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                            {['gluten', 'lacteos', 'huevos', 'pescado', 'frutos_secos', 'vegano'].map(all => (
+                                            {['gluten', 'lacteos', 'lactosa', 'huevos', 'pescado', 'frutos_secos', 'vegano'].map(all => (
                                                 <label key={all} style={{
                                                     display: 'flex', alignItems: 'center', gap: '0.25rem',
                                                     padding: '0.3rem 0.6rem', background: (productForm.allergens || []).includes(all) ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255,255,255,0.05)',
