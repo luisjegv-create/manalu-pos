@@ -5,25 +5,25 @@ import { ArrowLeft, Printer, Plus, Trash2 } from 'lucide-react';
 
 // Reusable UI for a product row in print (Centered Style)
 const PrintItem = ({ item }) => (
-    <div style={{ marginBottom: '0.4rem', breakInside: 'avoid', textAlign: 'center' }}>
-        <h3 style={{ margin: '0', fontSize: '0.9rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+    <div style={{ marginBottom: '0.3rem', breakInside: 'avoid', textAlign: 'center' }}>
+        <h3 style={{ margin: '0', fontSize: '0.85rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: '1.1' }}>
             {item.name}
         </h3>
         {item.description && (
-            <p style={{ margin: '0', fontSize: '0.7rem', color: '#e2e8f0', width: '90%', marginInline: 'auto', lineHeight: '1.1' }}>
+            <p style={{ margin: '0', fontSize: '0.65rem', color: '#e2e8f0', width: '95%', marginInline: 'auto', lineHeight: '1.0' }}>
                 {item.description}
             </p>
         )}
-        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
             {item.price.toFixed(2)}€
         </div>
     </div>
 );
 
 const SectionTitle = ({ title }) => (
-    <div style={{ textAlign: 'center', margin: '1rem 0 0.6rem 0', breakInside: 'avoid' }}>
+    <div style={{ textAlign: 'center', margin: '0.6rem 0 0.4rem 0', breakInside: 'avoid' }}>
         <h2 style={{ 
-            fontSize: '1.3rem', 
+            fontSize: '1.2rem', 
             margin: '0', 
             color: '#fbbf24', 
             textTransform: 'uppercase', 
@@ -172,7 +172,7 @@ const PrintableMenu = () => {
                     outline: 1px solid rgba(251, 191, 36, 0.4);
                     outline-offset: -6px;
                     border-radius: 8px;
-                    padding: 1.5cm 1.5cm;
+                    padding: 0.8cm 1.0cm;
                     box-sizing: border-box;
                     position: relative;
                 }
