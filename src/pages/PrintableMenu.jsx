@@ -5,25 +5,25 @@ import { ArrowLeft, Printer, Plus, Trash2 } from 'lucide-react';
 
 // Reusable UI for a product row in print (Centered Style)
 const PrintItem = ({ item }) => (
-    <div style={{ marginBottom: '1.2rem', breakInside: 'avoid', textAlign: 'center' }}>
-        <h3 style={{ margin: '0 0 0.2rem 0', fontSize: '1.2rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
+    <div style={{ marginBottom: '0.8rem', breakInside: 'avoid', textAlign: 'center' }}>
+        <h3 style={{ margin: '0 0 0.1rem 0', fontSize: '1.0rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>
             {item.name}
         </h3>
         {item.description && (
-            <p style={{ margin: '0 0 0.2rem 0', fontSize: '0.9rem', color: '#e2e8f0', width: '80%', marginInline: 'auto', lineHeight: '1.3' }}>
+            <p style={{ margin: '0 0 0.1rem 0', fontSize: '0.8rem', color: '#e2e8f0', width: '85%', marginInline: 'auto', lineHeight: '1.2' }}>
                 {item.description}
             </p>
         )}
-        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.2rem' }}>
+        <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
             {item.price.toFixed(2)}€
         </div>
     </div>
 );
 
 const SectionTitle = ({ title }) => (
-    <div style={{ textAlign: 'center', margin: '2rem 0 1.5rem 0', breakInside: 'avoid' }}>
+    <div style={{ textAlign: 'center', margin: '1.5rem 0 1rem 0', breakInside: 'avoid' }}>
         <h2 style={{ 
-            fontSize: '2rem', 
+            fontSize: '1.6rem', 
             margin: '0', 
             color: '#fbbf24', 
             textTransform: 'uppercase', 
@@ -40,7 +40,7 @@ const Separator = () => (
     <div style={{ 
         display: 'flex', 
         justifyContent: 'center', 
-        margin: '2rem 0',
+        margin: '1rem 0',
         opacity: 0.7,
         breakInside: 'avoid'
     }}>
