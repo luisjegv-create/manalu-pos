@@ -15,7 +15,14 @@ const PrintItem = ({ item }) => (
             </p>
         )}
         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
-            {item.price.toFixed(2)}€
+            {item.isGrouped ? (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                    {item.priceMontado != null && <span>Montado: {item.priceMontado.toFixed(2)}€</span>}
+                    {item.priceBocata != null && <span>Bocata: {item.priceBocata.toFixed(2)}€</span>}
+                </div>
+            ) : (
+                `${item.price.toFixed(2)}€`
+            )}
         </div>
     </div>
 );
@@ -90,13 +97,63 @@ const PrintableMenu = () => {
     });
     const racionesCalientes = raciones.filter(p => !racionesFrias.includes(p));
 
-    // --- PAGE 2: Bocatas, infantiles, postres ---
-    const bocatas = visibleProducts.filter(p => {
+    // --- PAGE 2: Bocatas y Montados ---
+    const bocatasYMontadosRaw = visibleProducts.filter(p => {
         const cat = norm(p.category);
         const sub = norm(p.subcategory);
-        return cat.includes('bocata') || sub.includes('bocata') || 
-               cat.includes('montado') || sub.includes('montado') || 
-               cat.includes('hamburguesa') || sub.includes('hamburguesa');
+        return (cat.includes('bocata') || sub.includes('bocata') || 
+               cat.includes('montado') || sub.includes('montado')) &&
+               !cat.includes('hamburguesa') && !sub.includes('hamburguesa');
+    });
+
+    const groupBocatasMontados = (items) => {
+        const grouped = {};
+        const standalone = [];
+
+        items.forEach(item => {
+            const lowerName = norm(item.name);
+            let baseName = item.name.trim();
+            let isMontado = lowerName.includes('montado') || norm(item.category).includes('montado') || norm(item.subcategory).includes('montado');
+            let isBocadillo = lowerName.includes('bocadillo') || lowerName.includes('bocata') || norm(item.category).includes('bocata') || norm(item.subcategory).includes('bocata');
+            
+            if (lowerName.startsWith('montado ')) { isMontado = true; isBocadillo = false; }
+            if (lowerName.startsWith('bocata ') || lowerName.startsWith('bocadillo ')) { isBocadillo = true; isMontado = false; }
+
+            if (isMontado || isBocadillo) {
+                baseName = baseName.replace(/^[Mm]ontado (de )?/, '').replace(/^[Bb]ocadillo (de )?/, '').replace(/^[Bb]ocata (de )?/, '').trim();
+                const key = norm(baseName);
+                
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        id: 'grp_' + key,
+                        name: baseName.charAt(0).toUpperCase() + baseName.slice(1),
+                        description: item.description,
+                        priceBocata: null,
+                        priceMontado: null,
+                        isGrouped: true,
+                        price: item.price 
+                    };
+                }
+                
+                if (isBocadillo) grouped[key].priceBocata = item.price;
+                if (isMontado) grouped[key].priceMontado = item.price;
+                if (item.description && (!grouped[key].description || item.description.length > grouped[key].description.length)) {
+                    grouped[key].description = item.description;
+                }
+            } else {
+                standalone.push(item);
+            }
+        });
+        return [...Object.values(grouped), ...standalone];
+    };
+
+    const bocatasAgrupados = groupBocatasMontados(bocatasYMontadosRaw);
+
+    // --- PAGE 3: Hamburguesas, infantiles, postres ---
+    const hamburguesas = visibleProducts.filter(p => {
+        const cat = norm(p.category);
+        const sub = norm(p.subcategory);
+        return cat.includes('hamburguesa') || sub.includes('hamburguesa');
     });
     
     const infantiles = visibleProducts.filter(p => {
@@ -289,27 +346,41 @@ const PrintableMenu = () => {
                     {/* PAGE 2 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
                         <div className="gold-border">
-                            {bocatas.length > 0 && (
+                            {bocatasAgrupados.length > 0 && (
                                 <>
                                     <SectionTitle title="BOCATAS Y MONTADOS" />
                                     <div style={{ textAlign: 'center', color: '#fbbf24', fontStyle: 'italic', marginBottom: '1rem', opacity: 0.9 }}>
                                         (Todos los bocatas se sirven en pan artesanal de obrador local)
                                     </div>
-                                    {bocatas.map(item => <PrintItem key={item.id} item={item} />)}
+                                    {bocatasAgrupados.map(item => <PrintItem key={item.id} item={item} />)}
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* PAGE 3 */}
+                    <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
+                        <div className="gold-border">
+                            {hamburguesas.length > 0 && (
+                                <>
+                                    <SectionTitle title="HAMBURGUESAS" />
+                                    {hamburguesas.map(item => <PrintItem key={item.id} item={item} />)}
                                 </>
                             )}
                             
+                            {(hamburguesas.length > 0 && infantiles.length > 0) && <Separator />}
+                            
                             {infantiles.length > 0 && (
                                 <>
-                                    <Separator />
                                     <SectionTitle title="PLATOS INFANTILES" />
                                     {infantiles.map(item => <PrintItem key={item.id} item={item} />)}
                                 </>
                             )}
 
+                            {((hamburguesas.length > 0 || infantiles.length > 0) && postres.length > 0) && <Separator />}
+
                             {postres.length > 0 && (
                                 <>
-                                    <Separator />
                                     <SectionTitle title="POSTRES" />
                                     {postres.map(item => <PrintItem key={item.id} item={item} />)}
                                 </>
@@ -317,7 +388,7 @@ const PrintableMenu = () => {
                         </div>
                     </div>
 
-                    {/* PAGE 3 */}
+                    {/* PAGE 4 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
                         <div className="gold-border">
                             {vinosBlancos.length > 0 && (
