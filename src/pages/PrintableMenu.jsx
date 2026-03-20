@@ -15,21 +15,7 @@ const PrintItem = ({ item }) => (
             </p>
         )}
         <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
-            {item.isGrouped ? (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
-                    {item.priceBocata != null && <span>Bocata {item.priceBocata.toFixed(2).replace(/\.00$/, '')}€</span>}
-                    {item.priceBocata != null && item.priceMontado != null && <span>/</span>}
-                    {item.priceMontado != null && <span>Montado {item.priceMontado.toFixed(2).replace(/\.00$/, '')}€</span>}
-                </div>
-            ) : item.isGroupedRacion ? (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
-                    {item.priceRacion != null && <span>Ración {item.priceRacion.toFixed(2).replace(/\.00$/, '')}€</span>}
-                    {item.priceRacion != null && item.priceMedia != null && <span>/</span>}
-                    {item.priceMedia != null && <span>Media {item.priceMedia.toFixed(2).replace(/\.00$/, '')}€</span>}
-                </div>
-            ) : (
-                `${item.price.toFixed(2).replace(/\.00$/, '')}€`
-            )}
+            {item.price.toFixed(2).replace(/\.00$/, '')}€
         </div>
     </div>
 );
@@ -96,9 +82,7 @@ const PrintableMenu = () => {
     const visibleProducts = salesProducts.filter(p => 
         p.isDigitalMenuVisible !== false && 
         !norm(p.name).includes('cucurucho de gamba')
-    );
-
-    const isBocataOrMontado = (p) => {
+    );    const isBocataOrMontado = (p) => {
         const cat = norm(p.category);
         const sub = norm(p.subcategory);
         const name = norm(p.name);
@@ -107,107 +91,19 @@ const PrintableMenu = () => {
                name.includes('bocata') || name.includes('montado') || name.includes('bocadillo');
     };
 
-    const groupRaciones = (items) => {
-        const grouped = {};
-
-        items.forEach(item => {
-            const lowerName = norm(item.name);
-            let baseName = item.name.trim();
-
-            let isMedia = lowerName.includes('media ') || lowerName.includes('1/2 ') || lowerName.includes('medio ');
-            const regexMedia = /^(?:media\s+raci[oó]n\s+de\s+|1\/2\s+raci[oó]n\s+de\s+|media\s+de\s+|1\/2\s+de\s+|media\s+|1\/2\s+)/i;
-            const regexRacion = /^(?:raci[oó]n\s+de\s+|porcion\s+de\s+)/i;
-
-            if (regexMedia.test(baseName)) { isMedia = true; }
-            else if (regexRacion.test(baseName)) { isMedia = false; }
-
-            baseName = baseName.replace(regexMedia, '').replace(regexRacion, '').trim();
-            const key = norm(baseName);
-
-            if (!grouped[key]) {
-                grouped[key] = {
-                    id: 'grp_rac_' + key,
-                    name: baseName.charAt(0).toUpperCase() + baseName.slice(1),
-                    description: item.description,
-                    priceRacion: null,
-                    priceMedia: null,
-                    isGroupedRacion: true,
-                    price: item.price,
-                    subcategory: item.subcategory,
-                    category: item.category
-                };
-            }
-
-            if (isMedia) { grouped[key].priceMedia = item.price; }
-            else { grouped[key].priceRacion = item.price; }
-
-            if (item.description && (!grouped[key].description || item.description.length > grouped[key].description.length)) {
-                grouped[key].description = item.description;
-            }
-        });
-
-        return Object.values(grouped);
-    };
-
     // --- PAGE 1: Raciones ---
-    // Make sure we forcefully exclude anywhere 'montado' appears, because it should go to Page 2
-    const racionesRaw = visibleProducts.filter(p => norm(p.category) === 'raciones' && !isBocataOrMontado(p));
-    
-    const racionesGrouped = groupRaciones(racionesRaw);
-
-    const racionesFrias = racionesGrouped.filter(p => {
+    // Exclude bocatas/montados just in case they were categorized incorrectly
+    const raciones = visibleProducts.filter(p => norm(p.category) === 'raciones' && !isBocataOrMontado(p));
+    const racionesFrias = raciones.filter(p => {
         const sub = norm(p.subcategory);
         return sub.includes('fria') || sub.includes('queso') || sub.includes('embutido') || sub.includes('ensalada');
     });
-    const racionesCalientes = racionesGrouped.filter(p => !racionesFrias.includes(p));
+    const racionesCalientes = raciones.filter(p => !racionesFrias.includes(p));
 
-    // --- PAGE 2: Bocatas y Montados ---
-    const bocatasYMontadosRaw = visibleProducts.filter(p => {
+    // --- PAGE 2: Bocatas, montados, hamburguesas, infantiles, postres ---
+    const bocatasYMontados = visibleProducts.filter(p => {
         return isBocataOrMontado(p) && !norm(p.category).includes('hamburguesa') && !norm(p.subcategory).includes('hamburguesa');
     });
-
-    const groupBocatasMontados = (items) => {
-        const grouped = {};
-        const standalone = [];
-
-        items.forEach(item => {
-            const lowerName = norm(item.name);
-            let baseName = item.name.trim();
-            let isMontado = lowerName.includes('montado') || norm(item.category).includes('montado') || norm(item.subcategory).includes('montado');
-            let isBocadillo = lowerName.includes('bocadillo') || lowerName.includes('bocata') || norm(item.category).includes('bocata') || norm(item.subcategory).includes('bocata');
-            
-            if (lowerName.startsWith('montado ')) { isMontado = true; isBocadillo = false; }
-            if (lowerName.startsWith('bocata ') || lowerName.startsWith('bocadillo ')) { isBocadillo = true; isMontado = false; }
-
-            if (isMontado || isBocadillo) {
-                baseName = baseName.replace(/^[Mm]ontado (de )?/, '').replace(/^[Bb]ocadillo (de )?/, '').replace(/^[Bb]ocata (de )?/, '').trim();
-                const key = norm(baseName);
-                
-                if (!grouped[key]) {
-                    grouped[key] = {
-                        id: 'grp_' + key,
-                        name: baseName.charAt(0).toUpperCase() + baseName.slice(1),
-                        description: item.description,
-                        priceBocata: null,
-                        priceMontado: null,
-                        isGrouped: true,
-                        price: item.price 
-                    };
-                }
-                
-                if (isBocadillo) grouped[key].priceBocata = item.price;
-                if (isMontado) grouped[key].priceMontado = item.price;
-                if (item.description && (!grouped[key].description || item.description.length > grouped[key].description.length)) {
-                    grouped[key].description = item.description;
-                }
-            } else {
-                standalone.push(item);
-            }
-        });
-        return [...Object.values(grouped), ...standalone];
-    };
-
-    const bocatasAgrupados = groupBocatasMontados(bocatasYMontadosRaw);
 
     // --- PAGE 3: Hamburguesas, infantiles, postres ---
     const hamburguesas = visibleProducts.filter(p => {
@@ -402,43 +298,48 @@ const PrintableMenu = () => {
 
                     {/* PAGE 2 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border">
-                            {bocatasAgrupados.length > 0 && (
-                                <>
-                                    <SectionTitle title="BOCATAS" />
-                                    <div style={{ textAlign: 'center', color: '#fbbf24', fontStyle: 'italic', marginBottom: '1rem', opacity: 0.9 }}>
-                                        (Todos los bocatas se sirven en pan artesanal de obrador local)
-                                    </div>
-                                    {bocatasAgrupados.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-                            
-                            {(bocatasAgrupados.length > 0 && hamburguesas.length > 0) && <Separator />}
-                            
-                            {hamburguesas.length > 0 && (
-                                <>
-                                    <SectionTitle title="HAMBURGUESAS" />
-                                    {hamburguesas.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-                            
-                            {(hamburguesas.length > 0 && infantiles.length > 0) && <Separator />}
-                            
-                            {infantiles.length > 0 && (
-                                <>
-                                    <SectionTitle title="PLATOS INFANTILES" />
-                                    {infantiles.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
+                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.8cm 0.5cm' }}>
+                            {/* Columna Izquierda: Bocatas */}
+                            <div>
+                                {bocatasYMontados.length > 0 && (
+                                    <>
+                                        <SectionTitle title="BOCATAS Y MONTADOS" />
+                                        <div style={{ textAlign: 'center', color: '#fbbf24', fontStyle: 'italic', marginBottom: '1rem', opacity: 0.9 }}>
+                                            (Todos los bocatas se sirven en pan artesanal de obrador local)
+                                        </div>
+                                        {bocatasYMontados.map(item => <PrintItem key={item.id} item={item} />)}
+                                    </>
+                                )}
+                            </div>
 
-                            {((hamburguesas.length > 0 || infantiles.length > 0) && postres.length > 0) && <Separator />}
+                            {/* Separador Vertical */}
+                            <div style={{ background: '#fbbf24', opacity: 0.5, margin: '1rem 0' }}></div>
 
-                            {postres.length > 0 && (
-                                <>
-                                    <SectionTitle title="POSTRES" />
-                                    {postres.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
+                            {/* Columna Derecha: Hamburguesas, Infantiles, Postres */}
+                            <div>
+                                {hamburguesas.length > 0 && (
+                                    <>
+                                        <SectionTitle title="HAMBURGUESAS" />
+                                        {hamburguesas.map(item => <PrintItem key={item.id} item={item} />)}
+                                        <Separator />
+                                    </>
+                                )}
+                                
+                                {infantiles.length > 0 && (
+                                    <>
+                                        <SectionTitle title="PLATOS INFANTILES" />
+                                        {infantiles.map(item => <PrintItem key={item.id} item={item} />)}
+                                        <Separator />
+                                    </>
+                                )}
+
+                                {postres.length > 0 && (
+                                    <>
+                                        <SectionTitle title="POSTRES" />
+                                        {postres.map(item => <PrintItem key={item.id} item={item} />)}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
 
