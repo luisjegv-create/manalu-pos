@@ -21,6 +21,12 @@ const PrintItem = ({ item }) => (
                     {item.priceBocata != null && item.priceMontado != null && <span>/</span>}
                     {item.priceMontado != null && <span>Montado {item.priceMontado.toFixed(2).replace(/\.00$/, '')}€</span>}
                 </div>
+            ) : item.isGroupedRacion ? (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
+                    {item.priceRacion != null && <span>Ración {item.priceRacion.toFixed(2).replace(/\.00$/, '')}€</span>}
+                    {item.priceRacion != null && item.priceMedia != null && <span>/</span>}
+                    {item.priceMedia != null && <span>Media {item.priceMedia.toFixed(2).replace(/\.00$/, '')}€</span>}
+                </div>
             ) : (
                 `${item.price.toFixed(2).replace(/\.00$/, '')}€`
             )}
@@ -92,21 +98,72 @@ const PrintableMenu = () => {
         !norm(p.name).includes('cucurucho de gamba')
     );
 
+    const isBocataOrMontado = (p) => {
+        const cat = norm(p.category);
+        const sub = norm(p.subcategory);
+        const name = norm(p.name);
+        return cat.includes('bocata') || sub.includes('bocata') || 
+               cat.includes('montado') || sub.includes('montado') ||
+               name.includes('bocata') || name.includes('montado') || name.includes('bocadillo');
+    };
+
+    const groupRaciones = (items) => {
+        const grouped = {};
+
+        items.forEach(item => {
+            const lowerName = norm(item.name);
+            let baseName = item.name.trim();
+
+            let isMedia = lowerName.includes('media ') || lowerName.includes('1/2 ') || lowerName.includes('medio ');
+            const regexMedia = /^(?:media\s+raci[oó]n\s+de\s+|1\/2\s+raci[oó]n\s+de\s+|media\s+de\s+|1\/2\s+de\s+|media\s+|1\/2\s+)/i;
+            const regexRacion = /^(?:raci[oó]n\s+de\s+|porcion\s+de\s+)/i;
+
+            if (regexMedia.test(baseName)) { isMedia = true; }
+            else if (regexRacion.test(baseName)) { isMedia = false; }
+
+            baseName = baseName.replace(regexMedia, '').replace(regexRacion, '').trim();
+            const key = norm(baseName);
+
+            if (!grouped[key]) {
+                grouped[key] = {
+                    id: 'grp_rac_' + key,
+                    name: baseName.charAt(0).toUpperCase() + baseName.slice(1),
+                    description: item.description,
+                    priceRacion: null,
+                    priceMedia: null,
+                    isGroupedRacion: true,
+                    price: item.price,
+                    subcategory: item.subcategory,
+                    category: item.category
+                };
+            }
+
+            if (isMedia) { grouped[key].priceMedia = item.price; }
+            else { grouped[key].priceRacion = item.price; }
+
+            if (item.description && (!grouped[key].description || item.description.length > grouped[key].description.length)) {
+                grouped[key].description = item.description;
+            }
+        });
+
+        return Object.values(grouped);
+    };
+
     // --- PAGE 1: Raciones ---
-    const raciones = visibleProducts.filter(p => norm(p.category) === 'raciones');
-    const racionesFrias = raciones.filter(p => {
+    // Make sure we forcefully exclude anywhere 'montado' appears, because it should go to Page 2
+    const racionesRaw = visibleProducts.filter(p => norm(p.category) === 'raciones' && !isBocataOrMontado(p));
+    
+    const racionesGrouped = groupRaciones(racionesRaw);
+
+    const racionesFrias = racionesGrouped.filter(p => {
         const sub = norm(p.subcategory);
         return sub.includes('fria') || sub.includes('queso') || sub.includes('embutido') || sub.includes('ensalada');
     });
-    const racionesCalientes = raciones.filter(p => !racionesFrias.includes(p));
+    const racionesCalientes = racionesGrouped.filter(p => !racionesFrias.includes(p));
 
     // --- PAGE 2: Bocatas y Montados ---
     const bocatasYMontadosRaw = visibleProducts.filter(p => {
-        const cat = norm(p.category);
-        const sub = norm(p.subcategory);
-        return (cat.includes('bocata') || sub.includes('bocata') || 
-               cat.includes('montado') || sub.includes('montado')) &&
-               !cat.includes('hamburguesa') && !sub.includes('hamburguesa');
+        return isBocataOrMontado(p) && !norm(p.category).includes('hamburguesa') && !norm(p.subcategory).includes('hamburguesa');
     });
 
     const groupBocatasMontados = (items) => {
