@@ -6,15 +6,15 @@ import { ArrowLeft, Printer, Plus, Trash2 } from 'lucide-react';
 // Reusable UI for a product row in print (Centered Style)
 const PrintItem = ({ item }) => (
     <div style={{ marginBottom: '0.3rem', breakInside: 'avoid', textAlign: 'center' }}>
-        <h3 style={{ margin: '0', fontSize: '0.85rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: '1.1' }}>
+        <h3 style={{ margin: '0', fontSize: '1.05rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: '1.1' }}>
             {item.name}
         </h3>
         {item.description && (
-            <p style={{ margin: '0', fontSize: '0.65rem', color: '#e2e8f0', width: '95%', marginInline: 'auto', lineHeight: '1.0' }}>
+            <p style={{ margin: '0', fontSize: '0.8rem', color: '#e2e8f0', width: '95%', marginInline: 'auto', lineHeight: '1.1' }}>
                 {item.description}
             </p>
         )}
-        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
+        <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
             {item.isGrouped ? (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
                     {item.priceBocata != null && <span>Bocata {item.priceBocata.toFixed(2).replace(/\.00$/, '')}€</span>}
@@ -31,7 +31,7 @@ const PrintItem = ({ item }) => (
 const SectionTitle = ({ title }) => (
     <div style={{ textAlign: 'center', margin: '0.6rem 0 0.4rem 0', breakInside: 'avoid' }}>
         <h2 style={{ 
-            fontSize: '1.2rem', 
+            fontSize: '1.4rem', 
             margin: '0', 
             color: '#fbbf24', 
             textTransform: 'uppercase', 
@@ -87,7 +87,10 @@ const PrintableMenu = () => {
     const norm = (str) => (str || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     // Filter visible products
-    const visibleProducts = salesProducts.filter(p => p.isDigitalMenuVisible !== false);
+    const visibleProducts = salesProducts.filter(p => 
+        p.isDigitalMenuVisible !== false && 
+        !norm(p.name).includes('cucurucho de gamba')
+    );
 
     // --- PAGE 1: Raciones ---
     const raciones = visibleProducts.filter(p => norm(p.category) === 'raciones');
