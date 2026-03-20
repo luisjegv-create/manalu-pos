@@ -16,12 +16,13 @@ const PrintItem = ({ item }) => (
         )}
         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
             {item.isGrouped ? (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                    {item.priceMontado != null && <span>Montado: {item.priceMontado.toFixed(2)}€</span>}
-                    {item.priceBocata != null && <span>Bocata: {item.priceBocata.toFixed(2)}€</span>}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.4rem' }}>
+                    {item.priceBocata != null && <span>Bocata {item.priceBocata.toFixed(2).replace(/\.00$/, '')}€</span>}
+                    {item.priceBocata != null && item.priceMontado != null && <span>/</span>}
+                    {item.priceMontado != null && <span>Montado {item.priceMontado.toFixed(2).replace(/\.00$/, '')}€</span>}
                 </div>
             ) : (
-                `${item.price.toFixed(2)}€`
+                `${item.price.toFixed(2).replace(/\.00$/, '')}€`
             )}
         </div>
     </div>
@@ -62,7 +63,7 @@ const Separator = () => (
 
 const PrintableMenu = () => {
     const navigate = useNavigate();
-    const { salesProducts, wines, restaurantInfo } = useInventory();
+    const { salesProducts } = useInventory();
     
     const [annexes, setAnnexes] = useState([]);
     
@@ -87,7 +88,6 @@ const PrintableMenu = () => {
 
     // Filter visible products
     const visibleProducts = salesProducts.filter(p => p.isDigitalMenuVisible !== false);
-    const visibleWines = wines.filter(w => w.isDigitalMenuVisible !== false);
 
     // --- PAGE 1: Raciones ---
     const raciones = visibleProducts.filter(p => norm(p.category) === 'raciones');
@@ -164,15 +164,7 @@ const PrintableMenu = () => {
 
     const postres = visibleProducts.filter(p => norm(p.category) === 'postres');
 
-    // --- PAGE 3: Vinos y Vermuts ---
-    const vinosBlancos = visibleWines.filter(w => norm(w.subcategory).includes('blanco') || norm(w.type).includes('blanco'));
-    const vinosTintos = visibleWines.filter(w => norm(w.subcategory).includes('tinto') || norm(w.type).includes('tinto') || (!norm(w.subcategory).includes('blanco') && !norm(w.type).includes('blanco'))); // Fallback for unspecified
-    
-    const vermuts = visibleProducts.filter(p => {
-        const cat = norm(p.category);
-        const sub = norm(p.subcategory);
-        return cat.includes('vermut') || sub.includes('vermut');
-    });
+    // --- Vinos y vermuts eliminados por petición del usuario ---
 
     return (
         <div style={{ minHeight: '100vh', background: '#f1f5f9', color: '#000', fontFamily: "'Outfit', sans-serif" }}>
@@ -322,24 +314,29 @@ const PrintableMenu = () => {
                     
                     {/* PAGE 1 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border">
-                            {racionesFrias.length > 0 && (
-                                <>
-                                    <SectionTitle title="RACIONES FRÍAS" />
-                                    {racionesFrias.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
+                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.8cm 0.5cm' }}>
+                            {/* Columna Izquierda: Frías */}
+                            <div>
+                                {racionesFrias.length > 0 && (
+                                    <>
+                                        <SectionTitle title="RACIONES FRÍAS" />
+                                        {racionesFrias.map(item => <PrintItem key={item.id} item={item} />)}
+                                    </>
+                                )}
+                            </div>
+                            
+                            {/* Separador Vertical */}
+                            <div style={{ background: '#fbbf24', opacity: 0.5, margin: '1rem 0' }}></div>
 
-                            {(racionesFrias.length > 0 && racionesCalientes.length > 0) && <Separator />}
-
-                            {racionesCalientes.length > 0 && (
-                                <>
-                                    <SectionTitle title="RACIONES CALIENTES" />
-                                    {racionesCalientes.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-
-                            {raciones.length === 0 && <p style={{ textAlign: 'center', color: '#94a3b8' }}>No hay raciones disponibles.</p>}
+                            {/* Columna Derecha: Calientes */}
+                            <div>
+                                {racionesCalientes.length > 0 && (
+                                    <>
+                                        <SectionTitle title="RACIONES CALIENTES" />
+                                        {racionesCalientes.map(item => <PrintItem key={item.id} item={item} />)}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -348,19 +345,16 @@ const PrintableMenu = () => {
                         <div className="gold-border">
                             {bocatasAgrupados.length > 0 && (
                                 <>
-                                    <SectionTitle title="BOCATAS Y MONTADOS" />
+                                    <SectionTitle title="BOCATAS" />
                                     <div style={{ textAlign: 'center', color: '#fbbf24', fontStyle: 'italic', marginBottom: '1rem', opacity: 0.9 }}>
                                         (Todos los bocatas se sirven en pan artesanal de obrador local)
                                     </div>
                                     {bocatasAgrupados.map(item => <PrintItem key={item.id} item={item} />)}
                                 </>
                             )}
-                        </div>
-                    </div>
-
-                    {/* PAGE 3 */}
-                    <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border">
+                            
+                            {(bocatasAgrupados.length > 0 && hamburguesas.length > 0) && <Separator />}
+                            
                             {hamburguesas.length > 0 && (
                                 <>
                                     <SectionTitle title="HAMBURGUESAS" />
@@ -383,35 +377,6 @@ const PrintableMenu = () => {
                                 <>
                                     <SectionTitle title="POSTRES" />
                                     {postres.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* PAGE 4 */}
-                    <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border">
-                            {vinosBlancos.length > 0 && (
-                                <>
-                                    <SectionTitle title="VINOS BLANCOS" />
-                                    {vinosBlancos.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-
-                            {(vinosBlancos.length > 0 && vinosTintos.length > 0) && <Separator />}
-
-                            {vinosTintos.length > 0 && (
-                                <>
-                                    <SectionTitle title="VINOS TINTOS" />
-                                    {vinosTintos.map(item => <PrintItem key={item.id} item={item} />)}
-                                </>
-                            )}
-
-                            {vermuts.length > 0 && (
-                                <>
-                                    <Separator />
-                                    <SectionTitle title="VERMUTS" />
-                                    {vermuts.map(item => <PrintItem key={item.id} item={item} />)}
                                 </>
                             )}
                         </div>
