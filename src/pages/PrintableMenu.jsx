@@ -86,6 +86,10 @@ const PrintableMenu = () => {
         const cat = norm(p.category);
         const sub = norm(p.subcategory);
         const name = norm(p.name);
+
+        // Excepción para platos insignia que llevan el nombre del local "tapas y bocatas"
+        if (name.includes('tapas y bocatas')) return false;
+
         return cat.includes('bocata') || sub.includes('bocata') || 
                cat.includes('montado') || sub.includes('montado') ||
                name.includes('bocata') || name.includes('montado') || name.includes('bocadillo');
