@@ -105,9 +105,11 @@ const PrintableMenu = () => {
     const racionesCalientes = raciones.filter(p => !racionesFrias.includes(p));
 
     // --- PAGE 2: Bocatas, montados, hamburguesas, infantiles, postres ---
-    const bocatasYMontados = visibleProducts.filter(p => {
+    const bocatasYMontadosAll = visibleProducts.filter(p => {
         return isBocataOrMontado(p) && !norm(p.category).includes('hamburguesa') && !norm(p.subcategory).includes('hamburguesa');
     });
+    // Eliminar los dos primeros (petición de usuario por duplicidad)
+    const bocatasYMontados = bocatasYMontadosAll.slice(2);
 
     // --- PAGE 3: Hamburguesas, infantiles, postres ---
     const hamburguesas = visibleProducts.filter(p => {
