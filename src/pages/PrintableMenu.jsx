@@ -5,23 +5,23 @@ import { ArrowLeft, Printer, Plus, Trash2 } from 'lucide-react';
 
 // Reusable UI for a product row in print (Centered Style)
 const PrintItem = ({ item }) => (
-    <div style={{ marginBottom: '0.3rem', breakInside: 'avoid', textAlign: 'center' }}>
-        <h3 style={{ margin: '0', fontSize: '1.05rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: '1.1' }}>
+    <div style={{ marginBottom: '0.15rem', breakInside: 'avoid', textAlign: 'center' }}>
+        <h3 style={{ margin: '0', fontSize: '1.0rem', fontWeight: 'bold', color: '#fef3c7', fontFamily: "'Playfair Display', serif", textShadow: '1px 1px 2px rgba(0,0,0,0.8)', lineHeight: '1.05' }}>
             {item.name}
         </h3>
         {item.description && (
-            <p style={{ margin: '0', fontSize: '0.8rem', color: '#e2e8f0', width: '95%', marginInline: 'auto', lineHeight: '1.1' }}>
+            <p style={{ margin: '0', fontSize: '0.75rem', color: '#e2e8f0', width: '95%', marginInline: 'auto', lineHeight: '1.05' }}>
                 {item.description}
             </p>
         )}
-        <div style={{ fontSize: '0.95rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.1rem' }}>
+        <div style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#fcd34d', textShadow: '1px 1px 2px rgba(0,0,0,0.8)', marginTop: '0.05rem' }}>
             {item.price.toFixed(2).replace(/\.00$/, '')}€
         </div>
     </div>
 );
 
 const SectionTitle = ({ title }) => (
-    <div style={{ textAlign: 'center', margin: '0.6rem 0 0.4rem 0', breakInside: 'avoid' }}>
+    <div style={{ textAlign: 'center', margin: '0.4rem 0 0.2rem 0', breakInside: 'avoid' }}>
         <h2 style={{ 
             fontSize: '1.4rem', 
             margin: '0', 
@@ -274,7 +274,7 @@ const PrintableMenu = () => {
                     
                     {/* PAGE 1 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.8cm 0.5cm' }}>
+                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.4cm 0.5cm' }}>
                             {/* Columna Izquierda: Frías */}
                             <div>
                                 {racionesFrias.length > 0 && (
@@ -302,7 +302,7 @@ const PrintableMenu = () => {
 
                     {/* PAGE 2 */}
                     <div className="print-page dark-wood-bg" style={{ overflow: 'hidden', pageBreakAfter: 'always' }}>
-                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.8cm 0.5cm' }}>
+                        <div className="gold-border" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '1rem', padding: '0.4cm 0.5cm' }}>
                             {/* Columna Izquierda: Bocatas */}
                             <div>
                                 {bocatasYMontados.length > 0 && (
