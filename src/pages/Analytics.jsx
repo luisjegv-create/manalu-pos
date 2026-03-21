@@ -126,6 +126,23 @@ const Analytics = () => {
         }
     };
 
+    const handleReprint = (sale) => {
+        const custData = sale.customer_data ? JSON.parse(sale.customer_data) : null;
+        printBillTicket(
+            (sale.tableId || 'Venta').toString().replace('table-', 'T'),
+            typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || []),
+            parseFloat(sale.total || sale.total_amount || 0),
+            restaurantInfo || {},
+            sale.discount_percent || 0,
+            sale.is_invitation || false,
+            sale.ticket_number || (sale.id || '').toString().slice(-8),
+            custData,
+            0.10, // Default tax
+            parseFloat(sale.total || 0), // Assuming amount received was at least the total 
+            parseFloat(sale.card_tips || 0)
+        );
+    };
+
     const filteredSales = useMemo(() => getFilteredSalesInRange(dateRange, 0), [getFilteredSalesInRange, dateRange]);
     const comparisonSales = useMemo(() => getFilteredSalesInRange(dateRange, 1), [getFilteredSalesInRange, dateRange]);
 
@@ -715,6 +732,14 @@ const Analytics = () => {
                                                         <FileText size={18} />
                                                     </button>
                                                     <button
+                                                        onClick={() => handleReprint(sale)}
+                                                        className="btn-icon"
+                                                        style={{ padding: '0.25rem', color: '#10b981' }}
+                                                        title="Reimprimir Ticket"
+                                                    >
+                                                        <Printer size={18} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleDeleteSale(sale.id)}
                                                         className="btn-icon"
                                                         style={{ padding: '0.25rem', color: '#ef4444' }}
@@ -786,6 +811,14 @@ const Analytics = () => {
                                                             title="Generar Factura"
                                                         >
                                                             <FileText size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReprint(sale)}
+                                                            className="btn-icon"
+                                                            style={{ color: '#10b981' }}
+                                                            title="Reimprimir Ticket"
+                                                        >
+                                                            <Printer size={18} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteSale(sale.id)}

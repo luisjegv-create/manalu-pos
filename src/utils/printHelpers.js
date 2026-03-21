@@ -17,7 +17,8 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
             <title>${headerTitle} - ${tableName}</title>
             <style>
                 body {
-                    font-family: 'Courier New', Courier, monospace;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
                     width: 300px; /* Ancho típico térmica */
                     margin: 0 auto;
                     padding: 10px;
@@ -174,7 +175,8 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
             <title>Comanda - ${tableName}</title>
             <style>
                 body {
-                    font-family: 'Courier New', Courier, monospace;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
                     width: 300px; /* Ancho típico térmica */
                     margin: 0 auto;
                     padding: 10px;
@@ -276,7 +278,8 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
             <title>Recibo de Depósito - ${depositData.customerName}</title>
             <style>
                 body {
-                    font-family: 'Courier New', Courier, monospace;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
                     width: 300px;
                     margin: 0 auto;
                     padding: 10px;
@@ -407,7 +410,8 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
             <title>Ticket - ${tableName}</title>
             <style>
                 body {
-                    font-family: 'Courier New', Courier, monospace;
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
                     width: 300px;
                     margin: 0 auto;
                     padding: 10px;
