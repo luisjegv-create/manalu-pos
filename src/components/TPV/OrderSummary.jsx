@@ -418,6 +418,23 @@ const OrderSummary = ({
                                                     {(item.price * item.quantity).toFixed(2)}€
                                                 </span>
                                                 <button
+                                                    onClick={() => addToOrder(item)}
+                                                    style={{
+                                                        background: 'rgba(16, 185, 129, 0.2)',
+                                                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                                                        color: '#10b981',
+                                                        padding: '4px',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}
+                                                    title="Repetir Producto (Añadir al pedido)"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                                <button
                                                     onClick={() => toggleItemInvitationInBill(item.uniqueId)}
                                                     style={{
                                                         background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255,255,255,0.05)',
