@@ -3,7 +3,6 @@ import { supabase } from '../utils/supabaseClient';
 import { printServiceTickets } from '../utils/printHelpers';
 import { useInventory } from './InventoryContext';
 import { useCustomers } from './CustomerContext';
-import { tables as initialTables } from '../data/tables';
 import { useEvents } from './EventContext';
 
 const OrderContext = createContext();
@@ -28,33 +27,22 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
-    // Tables state (Sync with Supabase in future if needed, for now local is okay for layout)
-    const [tables, setTables] = useState(() => {
-        const parsed = safeParse('manalu_tables', initialTables);
-        let changed = false;
-        
-        // Restore Mesa 1 and Mesa 2 if missing
-        if (!parsed.some(t => t.name === 'Mesa 1' || t.name === 'Mesa 1-2')) {
-            parsed.push(initialTables.find(t => t.name === 'Mesa 1'));
-            changed = true;
-        }
-        if (!parsed.some(t => t.name === 'Mesa 2' || t.name === 'Mesa 1-2')) {
-            parsed.push(initialTables.find(t => t.name === 'Mesa 2'));
-            changed = true;
-        }
-        
-        if (changed) {
-            parsed.sort((a,b) => (a.id > b.id) ? 1 : -1);
-            localStorage.setItem('manalu_tables', JSON.stringify(parsed));
-        }
-        
-        return parsed;
-    });
-
     // Active orders (Drafts) - Keep in localStorage for low latency/offline safety during rush
     const [tableOrders, setTableOrders] = useState(() => safeParse('manalu_table_orders', {}));
 
     const [tableBills, setTableBills] = useState(() => safeParse('manalu_table_bills', {}));
+
+    // Active Orders/Tickets state
+    const [tables, setTables] = useState(() => {
+        const parsed = safeParse('manalu_tables', []);
+        const currentOrders = safeParse('manalu_table_orders', {});
+        const currentBills = safeParse('manalu_table_bills', {});
+        
+        // Purge all old static 'free' tables, keeping only occupied ones (active tickets)
+        const activeTickets = parsed.filter(t => t.status !== 'free' || currentOrders[t.id] || currentBills[t.id]);
+        localStorage.setItem('manalu_tables', JSON.stringify(activeTickets));
+        return activeTickets;
+    });
 
     // Cloud Synchronized States
     const [kitchenOrders, setKitchenOrders] = useState([]);
@@ -415,11 +403,16 @@ export const OrderProvider = ({ children }) => {
     };
 
     const updateTableStatus = (tableId, status) => {
-        setTables(prev => prev.map(t =>
-            t.id === tableId
-                ? { ...t, status, lastActionAt: status === 'occupied' ? new Date().toISOString() : t.lastActionAt }
-                : t
-        ));
+        // En el nuevo sistema, si un ticket queda "libre", lo destruimos para limpiar pantalla
+        if (status === 'free') {
+            deleteTable(tableId);
+        } else {
+            setTables(prev => prev.map(t =>
+                t.id === tableId
+                    ? { ...t, status, lastActionAt: status === 'occupied' ? new Date().toISOString() : t.lastActionAt }
+                    : t
+            ));
+        }
     };
 
     const sendToKitchen = async () => {
@@ -571,7 +564,7 @@ export const OrderProvider = ({ children }) => {
                         recordSale(customerData.id, total);
                     }
 
-                    // Clear table
+                    // Clear table / Destroy Ticket
                     setTableOrders(prev => {
                         const next = { ...prev };
                         delete next[tableId];
@@ -582,11 +575,7 @@ export const OrderProvider = ({ children }) => {
                         delete next[tableId];
                         return next;
                     });
-                    setTables(prev => prev.map(t =>
-                        t.id === tableId
-                            ? { ...t, status: 'free', lastActionAt: null }
-                            : t
-                    ));
+                    setTables(prev => prev.filter(t => t.id !== tableId));
                     if (currentTable && currentTable.id === tableId) {
                         setCurrentTable(null);
                     }
@@ -602,12 +591,8 @@ export const OrderProvider = ({ children }) => {
                             .neq('status', 'completed')
                             .then();
                             
-                        // NEW: Also clear links and restore names if this was a master table
-                        setTables(prev => prev.map(t => 
-                            (t.linkedTo === tableId || t.id === tableId)
-                                ? { ...t, status: 'free', lastActionAt: null, linkedTo: null, name: t.originalName || t.name }
-                                : t
-                        ));
+                        // NEW: Also clear links and remove if this was a master table
+                        setTables(prev => prev.filter(t => t.id !== tableId && t.linkedTo !== tableId));
                     }
 
                     return newSale;
@@ -651,11 +636,8 @@ export const OrderProvider = ({ children }) => {
 
         const tableObj = tables.find(t => t.id === tableId);
         
-        setTables(prev => prev.map(t =>
-            (t.linkedTo === tableId || t.id === tableId)
-                ? { ...t, status: 'free', lastActionAt: null, linkedTo: null, name: t.originalName || t.name }
-                : t
-        ));
+        // Destruir ticket completamente
+        setTables(prev => prev.filter(t => t.id !== tableId && t.linkedTo !== tableId));
 
         if (tableObj) {
             setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
@@ -1016,13 +998,14 @@ export const OrderProvider = ({ children }) => {
 
     const addTable = (zoneId, name) => {
         const newTable = {
-            id: `table-${Date.now()}`,
-            name: name || `Nueva Mesa`,
-            zone: zoneId,
-            status: 'free',
-            seats: 4
+            id: `ticket-${Date.now()}`,
+            name: name || `Pedido ${tables.length + 1}`,
+            zone: 'pedidos',
+            status: 'occupied', // directly start as occupied/active
+            seats: 1
         };
         setTables(prev => [...prev, newTable]);
+        return newTable;
     };
 
     const deleteTable = (tableId) => {

@@ -390,7 +390,12 @@ const BarTapas = () => {
 
         await sendToKitchen();
         if (!isSilent) {
-            alert(withoutPrinting ? '¡Pedido guardado en la cuenta de la mesa! 💾' : '¡Pedido enviado a cocina e impreso! 👨‍🍳');
+            // Return to the active tickets screen so they can quickly serve the next customer
+            if (searchParams.get('mode') === 'quick') {
+                navigate('/bar-tapas?mode=quick');
+            } else {
+                navigate('/tables');
+            }
         }
     };
 
