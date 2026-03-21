@@ -1,6 +1,5 @@
-
 export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'ORDEN COCINA') => {
-    const printWindow = window.open('', '', 'width=400,height=600');
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
 
     if (!printWindow) {
         alert('Por favor, permite las ventanas emergentes para imprimir.');
@@ -124,18 +123,18 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
 };
 
 export const printServiceTickets = (tableName, foodItems, drinkItems) => {
+    const barItems = [...(foodItems || []), ...(drinkItems || [])];
+    const hasFood = foodItems && foodItems.length > 0;
+    const hasBar = barItems && barItems.length > 0;
+
     // 1. Imprimir ticket de cocina si hay comida
-    if (foodItems && foodItems.length > 0) {
+    if (hasFood) {
         printKitchenTicket(tableName, foodItems, '', 'ORDEN COCINA');
     }
 
     // 2. Imprimir ticket de barra con todo (comida + bebida) o solo bebida
-    const barItems = [...(foodItems || []), ...(drinkItems || [])];
-    if (barItems && barItems.length > 0) {
-        // Pequeño delay para asegurar que se abren dos ventanas distintas en orden
-        setTimeout(() => {
-            printKitchenTicket(tableName, barItems, '', 'ORDEN BARRA');
-        }, 100);
+    if (hasBar) {
+        printKitchenTicket(tableName, barItems, '', 'ORDEN BARRA');
     }
 };
 
