@@ -154,14 +154,15 @@ const TableSelection = () => {
                                     style={{
                                         padding: '1.5rem',
                                         cursor: 'pointer',
-                                        border: '1px solid var(--color-primary)',
-                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        border: '2px solid var(--color-primary)',
+                                        backgroundColor: '#1e293b',
+                                        color: '#f8fafc',
                                         position: 'relative',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         gap: '1.5rem',
                                         borderRadius: '16px',
-                                        boxShadow: '0 8px 30px rgba(0,0,0,0.15)'
+                                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
                                     }}
                                 >
                                     {minStartTime && <TableTimer startTime={minStartTime} />}
