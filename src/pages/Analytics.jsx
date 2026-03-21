@@ -54,8 +54,9 @@ const Analytics = () => {
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
     const [dateRange, setDateRange] = useState('today'); // today | week | month | all
 
-    // State for invoice generation
+    // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
+    const [expandedSale, setExpandedSale] = useState(null);
 
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -693,8 +694,9 @@ const Analytics = () => {
                                     </div>
                                 ) : (
                                     filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
-                                        <div key={sale.id} className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                        <React.Fragment key={sale.id}>
+                                        <div className="glass-panel" style={{ padding: '1rem', background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)', border: expandedSale === sale.id ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent', transition: 'all 0.2s' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
                                                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(sale.date).toLocaleString()}</span>
                                                 <div style={{ textAlign: 'right' }}>
                                                     {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>Desc: {sale.discount_percent ? `${sale.discount_percent}%` : `-${sale.discount_amount}€`}</div>}
@@ -708,7 +710,7 @@ const Analytics = () => {
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ fontSize: '0.9rem' }}>
+                                                <div style={{ fontSize: '0.9rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
                                                     Mesa: <b style={{ color: 'white' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -720,6 +722,13 @@ const Analytics = () => {
                                                     }}>
                                                         {sale.paymentMethod}
                                                     </span>
+                                                    <button
+                                                        onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
+                                                        className="btn-icon"
+                                                        style={{ padding: '0.25rem', color: '#94a3b8' }}
+                                                    >
+                                                        <Info size={18} />
+                                                    </button>
                                                     <button
                                                         onClick={() => {
                                                             const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
@@ -748,7 +757,27 @@ const Analytics = () => {
                                                     </button>
                                                 </div>
                                             </div>
+
+                                            <AnimatePresence>
+                                                {expandedSale === sale.id && (
+                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
+                                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>DETALLE DEL PEDIDO</div>
+                                                            { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                <div key={idx} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', fontSize: '0.85rem' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                                        <span style={{ fontWeight: 'bold' }}>{item.quantity}x {item.name}</span>
+                                                                        <span>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                    </div>
+                                                                    {item.notes && <div style={{ color: '#fbbf24', fontSize: '0.75rem', marginTop: '0.25rem' }}>📝 {item.notes}</div>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
                                         </div>
+                                        </React.Fragment>
                                     ))
                                 )}
                             </div>
@@ -773,7 +802,11 @@ const Analytics = () => {
                                         </tr>
                                     ) : (
                                         filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale, index) => (
-                                            <tr key={sale.id || `fallback-${index}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <React.Fragment key={sale.id || `fallback-${index}`}>
+                                            <tr 
+                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent', transition: 'background 0.2s' }}
+                                                onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
+                                            >
                                                 <td style={{ padding: '1rem' }}>{new Date(sale.date || 0).toLocaleString()}</td>
                                                 <td style={{ padding: '1rem', fontFamily: 'monospace' }}>{sale.ticket_number || (sale.id || '???').toString().slice(-8)}</td>
                                                 <td style={{ padding: '1rem' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
@@ -799,10 +832,11 @@ const Analytics = () => {
                                                         <span>{parseFloat(sale.total || 0).toFixed(2)}€</span>
                                                     </div>
                                                 </td>
-                                                <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                                <td style={{ padding: '1rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                                                     <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                                                         <button
-                                                            onClick={() => {
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
                                                                 setInvoiceModal({ isOpen: true, sale, customerData: custData });
                                                             }}
@@ -813,7 +847,7 @@ const Analytics = () => {
                                                             <FileText size={18} />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleReprint(sale)}
+                                                            onClick={(e) => { e.stopPropagation(); handleReprint(sale); }}
                                                             className="btn-icon"
                                                             style={{ color: '#10b981' }}
                                                             title="Reimprimir Ticket"
@@ -821,7 +855,7 @@ const Analytics = () => {
                                                             <Printer size={18} />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDeleteSale(sale.id)}
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.id); }}
                                                             className="btn-icon"
                                                             style={{ color: '#ef4444' }}
                                                         >
@@ -830,6 +864,25 @@ const Analytics = () => {
                                                     </div>
                                                 </td>
                                             </tr>
+                                            {expandedSale === sale.id && (
+                                                <tr>
+                                                    <td colSpan={6} style={{ padding: '1rem', background: 'rgba(0,0,0,0.3)' }}>
+                                                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 'bold', marginBottom: '0.75rem' }}>DETALLE DEL PEDIDO Y NOTAS:</div>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+                                                            { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                <div key={idx} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                                                                        <span>{item.quantity}x {item.name}</span>
+                                                                        <span style={{ color: '#10b981' }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                    </div>
+                                                                    {item.notes && <div style={{ color: '#fbbf24', fontSize: '0.75rem' }}>📝 {item.notes}</div>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                         ))
                                     )}
                                 </tbody>
@@ -1018,7 +1071,14 @@ const Analytics = () => {
                                         <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.25rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
                                         <div style={{ fontSize: '0.8rem', color: '#10b981' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</div>
                                         <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Tj: {parseFloat(close.tarjeta || 0).toFixed(2)}€</div>
-                                        <div style={{ fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.8 }}>{close.salesCount} Tickets</div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                                            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{close.salesCount} Tickets</div>
+                                            {close.notes && (
+                                                <div title={close.notes} style={{ fontSize: '0.7rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.2)', padding: '2px 6px', borderRadius: '4px', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    📝 {close.notes}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
