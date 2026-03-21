@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle, Users, UserPlus, X } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../utils/supabaseClient';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -109,6 +110,74 @@ const Settings = () => {
                 alert("Datos borrados. La aplicación se reiniciará.");
                 window.location.href = '/';
             }
+        }
+    };
+
+    const handleRecoverFromKDS = async () => {
+        if (!confirm("⚠️ ¿Intentar reconstruir las mesas abiertas en el TPV usando los pedidos que están pendientes en Cocina? (Las bebidas no se recuperarán).")) return;
+        
+        try {
+            const { data, error } = await supabase.from('kitchen_orders')
+                .select('*')
+                .or('status.eq.pending,status.eq.ready')
+                .order('created_at', { ascending: true });
+            
+            if (error) throw error;
+            
+            if (!data || data.length === 0) {
+                alert("No hay pedidos activos en cocina para recuperar.");
+                return;
+            }
+
+            const currentTables = JSON.parse(localStorage.getItem('manalu_tables') || '[]');
+            const currentBills = JSON.parse(localStorage.getItem('manalu_table_bills') || '{}');
+            
+            let recoveredCount = 0;
+
+            data.forEach(order => {
+                const tableName = order.table_name;
+                const items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+                
+                // Buscar si la mesa ya existe o crearla
+                let tableId = tableName.replace(/[^0-9]/g, '');
+                if (!tableId) tableId = `rec-${Date.now()}-${Math.floor(Math.random()*1000)}`;
+                tableId = parseInt(tableId) || tableId;
+
+                let tableObj = currentTables.find(t => t.name === tableName);
+                if (!tableObj) {
+                    tableObj = {
+                        id: tableId,
+                        name: tableName,
+                        status: 'occupied',
+                        lastActionAt: order.created_at
+                    };
+                    currentTables.push(tableObj);
+                }
+
+                // Asegurar que exista el array de la cuenta
+                if (!currentBills[tableObj.id]) currentBills[tableObj.id] = [];
+                
+                // Añadir items evitando duplicados exactos si ya los hay
+                items.forEach(item => {
+                    const exists = currentBills[tableObj.id].find(b => 
+                        b.id === item.id && b.uniqueId === item.uniqueId
+                    );
+                    if (!exists) {
+                        currentBills[tableObj.id].push({...item});
+                        recoveredCount++;
+                    }
+                });
+            });
+
+            localStorage.setItem('manalu_tables', JSON.stringify(currentTables));
+            localStorage.setItem('manalu_table_bills', JSON.stringify(currentBills));
+            
+            alert(`✅ Recuperación exitosa. Se han volcado ${recoveredCount} platos a las cuentas de las mesas. La app se recargará.`);
+            window.location.reload();
+
+        } catch (e) {
+            console.error("Recovery error:", e);
+            alert("Hubo un error al recuperar: " + e.message);
         }
     };
 
@@ -298,19 +367,32 @@ const Settings = () => {
 
                         <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)' }}>
                             <h4 style={{ margin: '0 0 1rem 0', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <AlertTriangle size={16} /> Zona de Peligro
+                                <AlertTriangle size={16} /> Zona de Peligro y Recuperación
                             </h4>
-                            <button
-                                onClick={handleResetData}
-                                style={{
-                                    width: '100%', padding: '0.75rem',
-                                    background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444',
-                                    border: '1px solid #ef4444', borderRadius: '8px',
-                                    cursor: 'pointer', fontSize: '0.85rem'
-                                }}
-                            >
-                                Borrar Todos los Datos de la App
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button
+                                    onClick={handleRecoverFromKDS}
+                                    style={{
+                                        width: '100%', padding: '0.75rem',
+                                        background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
+                                        border: '1px solid #3b82f6', borderRadius: '8px',
+                                        cursor: 'pointer', fontSize: '0.85rem'
+                                    }}
+                                >
+                                    🚑 Recuperar Mesas desde Cocina
+                                </button>
+                                <button
+                                    onClick={handleResetData}
+                                    style={{
+                                        width: '100%', padding: '0.75rem',
+                                        background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444',
+                                        border: '1px solid #ef4444', borderRadius: '8px',
+                                        cursor: 'pointer', fontSize: '0.85rem'
+                                    }}
+                                >
+                                    Borrar Todos los Datos de la App
+                                </button>
+                            </div>
                         </div>
                     </div>
 
