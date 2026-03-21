@@ -32,14 +32,23 @@ class ErrorBoundary extends React.Component {
                         </button>
                         <button
                             onClick={() => { 
-                                if(confirm("CUIDADO: Esto borrará todas las mesas y pedidos no guardados. ¿Estás seguro de que quieres borrar la memoria?")) {
-                                    localStorage.clear(); 
+                                if(confirm("CUIDADO: ¿Limpiar la caché de la aplicación? Esto MANTENDRÁ tus mesas activas pero limpiará configuraciones posiblemente corruptas.")) {
+                                    const tables = localStorage.getItem('manalu_tables');
+                                    const orders = localStorage.getItem('manalu_table_orders');
+                                    const bills = localStorage.getItem('manalu_table_bills');
+                                    
+                                    localStorage.clear();
+                                    
+                                    if(tables) localStorage.setItem('manalu_tables', tables);
+                                    if(orders) localStorage.setItem('manalu_table_orders', orders);
+                                    if(bills) localStorage.setItem('manalu_table_bills', bills);
+                                      
                                     window.location.reload(); 
                                 }
                             }}
                             style={{ padding: '0.75rem 1.5rem', background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer' }}
                         >
-                            Borrar Memoria Local (Último Recurso)
+                            Limpiar Caché Temporal (Seguro)
                         </button>
                     </div>
                 </div>

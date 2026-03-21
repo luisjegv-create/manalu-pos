@@ -164,41 +164,7 @@ const Staff = () => {
                     </div>
                 </div>
 
-                {/* --- Danger Zone --- */}
-                <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.05)' }}>
-                    <h3 style={{ marginBottom: '1rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <AlertCircle size={20} /> Zona de Peligro
-                    </h3>
-                    <p style={{ color: '#ef4444', marginBottom: '1rem' }}>Estas acciones son irreversibles. Úsalas solo si sabes lo que haces.</p>
-
-                    <button
-                        onClick={() => {
-                            if (confirm('⚠️ ¿ESTÁS SEGURO? \n\nEsto borrará TODOS los datos de la aplicación (productos, clientes, ventas, inventario) y la dejará como nueva.\n\nEsta acción NO se puede deshacer.')) {
-                                if (confirm('¿Realmente seguro? ¡Perderás todo!')) {
-                                    localStorage.clear();
-                                    window.location.reload();
-                                }
-                            }
-                        }}
-                        style={{
-                            width: '100%',
-                            padding: '1rem',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem'
-                        }}
-                    >
-                        <Trash2 size={20} /> BORRAR TODOS LOS DATOS (RESET)
-                    </button>
                 </div>
-            </div>
 
             {/* --- Add Employee Modal --- */}
             {showAddModal && (

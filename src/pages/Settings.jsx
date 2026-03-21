@@ -104,12 +104,13 @@ const Settings = () => {
     };
 
     const handleResetData = () => {
-        if (confirm("⚠️ ADVERTENCIA: Se borrarán todos los productos, ventas, ingredientes y configuraciones. ¿Estás SEGURO?")) {
-            if (confirm("Segunda confirmación: ¿Realmente quieres borrar TODA la base de datos local?")) {
-                localStorage.clear();
-                alert("Datos borrados. La aplicación se reiniciará.");
-                window.location.href = '/';
-            }
+        const userInput = prompt("⚠️ PELIGRO: Vas a borrar todos los datos de la aplicación. Escribe 'BORRAR' en mayúsculas para confirmar:");
+        if (userInput === 'BORRAR') {
+            localStorage.clear();
+            alert("Datos borrados. La aplicación se reiniciará.");
+            window.location.href = '/';
+        } else if (userInput !== null) {
+            alert("Operación cancelada. Palabra de seguridad incorrecta.");
         }
     };
 
