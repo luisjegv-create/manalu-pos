@@ -124,137 +124,19 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
 };
 
 export const printServiceTickets = (tableName, foodItems, drinkItems) => {
-    const printWindow = window.open('', '', 'width=400,height=600');
-
-    if (!printWindow) {
-        alert('Por favor, permite las ventanas emergentes para imprimir.');
-        return;
+    // 1. Imprimir ticket de cocina si hay comida
+    if (foodItems && foodItems.length > 0) {
+        printKitchenTicket(tableName, foodItems, '', 'ORDEN COCINA');
     }
 
-    const date = new Date().toLocaleDateString();
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const generateTicketHtml = (title, items) => {
-        if (!items || items.length === 0) return '';
-
-        return `
-            <div class="ticket-section">
-                <div class="header">
-                    <h1 class="title">${title}</h1>
-                    <div class="meta">${date} - ${time}</div>
-                </div>
-                
-                <div class="table-name">
-                    ${tableName}
-                </div>
-
-                <table class="items">
-                    ${items.map(item => `
-                        <tr class="item-row" ${item.isIndividual ? 'style="border-bottom: 2px dashed black;"' : ''}>
-                            <td class="qty"><span style="${item.isIndividual ? 'font-size: 1.4rem; padding-bottom: 10px; display: inline-block;' : ''}">${item.quantity}</span></td>
-                            <td class="name" style="${item.isIndividual ? 'padding-bottom: 15px;' : ''}">
-                                ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
-                                <span style="${item.isIndividual ? 'font-size: 1.3rem; font-weight: 900;' : ''}">${item.name}</span>
-                                ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
-                                ${item.isIndividual ? '<div style="font-size:1.1rem; font-weight:900; color: black; background: white; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[INDIVIDUAL - NO COMPARTIR] 👤</div>' : ''}
-                                ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
-                                ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px; margin-top: 4px;">NOTA: ${item.notes}</div>` : ''}
-                                ${item.isIndividual ? '<div style="margin-top: 10px; border-bottom: 2px solid black;"></div>' : ''}
-                            </td>
-                        </tr>
-                    `).join('')}
-                </table>
-            </div>
-        `;
-    };
-
-    const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Comanda - ${tableName}</title>
-            <style>
-                body {
-                    font-family: Arial, Helvetica, sans-serif;
-                    font-weight: bold;
-                    width: 300px; /* Ancho típico térmica */
-                    margin: 0 auto;
-                    padding: 10px;
-                    color: black;
-                }
-                .ticket-section {
-                    page-break-after: always;
-                    margin-bottom: 20px;
-                }
-                /* Do not page break after the last section */
-                .ticket-section:last-child {
-                    page-break-after: auto;
-                    margin-bottom: 0;
-                }
-                .header {
-                    text-align: center;
-                    border-bottom: 2px dashed black;
-                    padding-bottom: 10px;
-                    margin-bottom: 10px;
-                }
-                .title {
-                    font-size: 1.2rem;
-                    font-weight: bold;
-                    margin: 0;
-                }
-                .meta {
-                    font-size: 0.9rem;
-                    margin-top: 5px;
-                }
-                .table-name {
-                    font-size: 1.5rem;
-                    font-weight: 900;
-                    margin: 10px 0;
-                    text-align: center;
-                    border: 2px solid black;
-                    padding: 5px;
-                }
-                .items {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 15px;
-                }
-                .item-row {
-                    border-bottom: 1px dashed #ccc;
-                }
-                .qty {
-                    font-weight: bold;
-                    font-size: 1.2rem;
-                    width: 40px;
-                    text-align: center;
-                    vertical-align: top;
-                }
-                .name {
-                    font-size: 1.1rem;
-                    padding-left: 10px;
-                    font-weight: bold;
-                }
-                @media print {
-                    @page { margin: 0; size: auto; }
-                    body { margin: 10px; }
-                }
-            </style>
-        </head>
-        <body>
-            ${generateTicketHtml('ORDEN COCINA', foodItems)}
-            ${generateTicketHtml('ORDEN BARRA', [...(foodItems || []), ...(drinkItems || [])])}
-            <script>
-                window.onload = function() {
-                    window.print();
-                    setTimeout(function() { window.close(); }, 500);
-                }
-            </script>
-        </body>
-        </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
+    // 2. Imprimir ticket de barra con todo (comida + bebida) o solo bebida
+    const barItems = [...(foodItems || []), ...(drinkItems || [])];
+    if (barItems && barItems.length > 0) {
+        // Pequeño delay para asegurar que se abren dos ventanas distintas en orden
+        setTimeout(() => {
+            printKitchenTicket(tableName, barItems, '', 'ORDEN BARRA');
+        }, 100);
+    }
 };
 
 import { format } from 'date-fns';

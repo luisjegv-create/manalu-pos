@@ -38,7 +38,7 @@ const ProductTimer = ({ startTime, isReady, dark = false }) => {
     );
 };
 
-const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [] }) => {
+const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [], onItemToggle }) => {
     // Defense: ensure we have arrays
     const safeTableOrders = Array.isArray(tableOrders) ? tableOrders : [];
     const safeKitchenOrders = Array.isArray(kitchenOrders) ? kitchenOrders : [];
@@ -48,7 +48,9 @@ const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [] }) => {
     const draftItems = safeTableOrders.map(item => ({ ...item, itemStatus: 'draft' }));
 
     // 2. Items sent to kitchen
-    const kitchenItems = safeKitchenOrders.flatMap(o => o?.items || []);
+    const kitchenItems = safeKitchenOrders.flatMap(o => 
+        (o?.items || []).map(item => ({ ...item, orderId: o.id }))
+    );
 
     const allItems = [...draftItems, ...kitchenItems];
 
@@ -82,16 +84,40 @@ const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [] }) => {
                         fontWeight: '600',
                         borderBottom: idx === allItems.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-                            <div style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                flexShrink: 0,
-                                backgroundColor: isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444',
-                                boxShadow: `0 0 4px ${isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444'}80`
-                            }} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isDraft && onItemToggle) {
+                                        onItemToggle(item);
+                                    }
+                                }}
+                                style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    borderRadius: '50%',
+                                    flexShrink: 0,
+                                    border: 'none',
+                                    cursor: isDraft ? 'default' : 'pointer',
+                                    backgroundColor: isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444',
+                                    boxShadow: `0 0 6px ${isReady ? '#10b981' : isDraft ? '#f59e0b' : '#ef4444'}80`,
+                                    padding: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transaction: 'all 0.2s'
+                                }}
+                                title={isDraft ? "Borrador" : isReady ? "Servido (Click para deshacer)" : "En cocina (Click si servido)"}
+                            >
+                                {isReady && <span style={{ color: 'white', fontSize: '10px' }}>✓</span>}
+                            </button>
+                            <span 
+                                style={{ 
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    textDecoration: isReady ? 'line-through' : 'none',
+                                    opacity: isReady ? 0.6 : 1
+                                }}
+                            >
                                 {item.quantity}x {item.name}
                             </span>
                         </div>

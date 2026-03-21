@@ -43,7 +43,7 @@ const TableTimer = ({ startTime }) => {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { tables, selectTable, addTable, forceClearTable, tableOrders, kitchenOrders, tableBills } = useOrder();
+    const { tables, selectTable, addTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus } = useOrder();
     
     // Mostramos directamente todas las "Mesas" que ahora son nuestros Tickets/Pedidos Abiertos
     const activeTickets = tables;
@@ -144,6 +144,11 @@ const TableSelection = () => {
 
                             const isTotallyEmpty = tableOrderItems.length === 0 && tableBillItems.length === 0 && tableKitchenOrders.length === 0;
 
+                            const kitchenItems = tableKitchenOrders.flatMap(o => o?.items || []);
+                            const hasKitchenItems = kitchenItems.length > 0;
+                            const allKitchenReady = hasKitchenItems && kitchenItems.every(i => i.itemStatus === 'ready');
+                            const isAllServed = tableOrderItems.length === 0 && allKitchenReady;
+
                             return (
                                 <motion.div
                                     key={ticket.id}
@@ -154,18 +159,29 @@ const TableSelection = () => {
                                     style={{
                                         padding: '1.5rem',
                                         cursor: 'pointer',
-                                        border: '2px solid var(--color-primary)',
-                                        backgroundColor: '#1e293b',
+                                        border: isAllServed ? '2px solid #10b981' : '2px solid var(--color-primary)',
+                                        backgroundColor: isAllServed ? '#064e3b' : '#1e293b',
                                         color: '#f8fafc',
                                         position: 'relative',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         gap: '1.5rem',
                                         borderRadius: '16px',
-                                        boxShadow: '0 8px 25px rgba(0,0,0,0.2)'
+                                        boxShadow: isAllServed ? '0 8px 25px rgba(16, 185, 129, 0.3)' : '0 8px 25px rgba(0,0,0,0.2)',
+                                        transition: 'all 0.3s ease'
                                     }}
                                 >
-                                    {minStartTime && <TableTimer startTime={minStartTime} />}
+                                    {isAllServed && (
+                                        <div style={{
+                                            position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)',
+                                            background: '#10b981', color: 'white', padding: '4px 12px', borderRadius: '12px',
+                                            fontSize: '0.8rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.4)',
+                                            zIndex: 10, display: 'flex', alignItems: 'center', gap: '4px'
+                                        }}>
+                                            ✓ TODOS SERVIDOS
+                                        </div>
+                                    )}
+                                    {minStartTime && !isAllServed && <TableTimer startTime={minStartTime} />}
                                     
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#fef3c7', paddingRight: '3rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{ticket.name}</h3>
@@ -191,6 +207,12 @@ const TableSelection = () => {
                                             tableOrders={tableOrderItems}
                                             tableBills={tableBillItems}
                                             kitchenOrders={tableKitchenOrders}
+                                            onItemToggle={(item) => {
+                                                if (item.orderId && item.uniqueId) {
+                                                    const newStatus = item.itemStatus === 'ready' ? 'pending' : 'ready';
+                                                    updateKitchenItemStatus(item.orderId, item.uniqueId, newStatus);
+                                                }
+                                            }}
                                         />
                                     </div>
                                     
