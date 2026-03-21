@@ -297,8 +297,10 @@ const Analytics = () => {
     const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
     const [countedCash, setCountedCash] = useState('');
     const [closeNotes, setCloseNotes] = useState('');
+    const [startingCash, setStartingCash] = useState(''); // Fondo de caja (cambio)
 
-    const discrepancy = parseFloat(countedCash || 0) - dashboardStats.cashRaw;
+    const expectedCash = dashboardStats.cashRaw + parseFloat(startingCash || 0);
+    const discrepancy = parseFloat(countedCash || 0) - expectedCash;
 
     return (
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#0f172a', color: 'white', overflow: 'hidden' }}>
@@ -329,16 +331,29 @@ const Analytics = () => {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div>
-                                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Efectivo Contado (€)</label>
-                                    <input
-                                        type="number"
-                                        className="glass-panel"
-                                        placeholder={`Esperado: ${dashboardStats.cashRaw.toFixed(2)}€`}
-                                        style={{ width: '100%', padding: '1rem', fontSize: '1.5rem', textAlign: 'center', color: '#10b981', border: '1px solid rgba(255,255,255,0.1)' }}
-                                        value={countedCash}
-                                        onChange={(e) => setCountedCash(e.target.value)}
-                                    />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Fondo de Caja (Cambio)</label>
+                                        <input
+                                            type="number"
+                                            className="glass-panel"
+                                            placeholder="Ej: 200"
+                                            style={{ width: '100%', padding: '1rem', fontSize: '1.2rem', textAlign: 'center', color: '#60a5fa', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            value={startingCash}
+                                            onChange={(e) => setStartingCash(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Efectivo Contado (€)</label>
+                                        <input
+                                            type="number"
+                                            className="glass-panel"
+                                            placeholder={`Esperado: ${expectedCash.toFixed(2)}€`}
+                                            style={{ width: '100%', padding: '1rem', fontSize: '1.2rem', textAlign: 'center', color: '#10b981', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            value={countedCash}
+                                            onChange={(e) => setCountedCash(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div style={{
@@ -375,6 +390,8 @@ const Analytics = () => {
                                         onClick={async () => {
                                             const finalClose = {
                                                 efectivo: parseFloat(countedCash || 0),
+                                                efectivo_esperado: expectedCash,
+                                                fondo_caja: parseFloat(startingCash || 0),
                                                 tarjeta: dashboardStats.cardRaw,
                                                 cardTips: dashboardStats.cardTipsRaw,
                                                 total: dashboardStats.totalRevenue,
@@ -1001,9 +1018,22 @@ const Analytics = () => {
                                         <span>En Tarjeta</span>
                                         <span style={{ fontWeight: 'bold' }}>{dashboardStats.cardRaw.toFixed(2)}€</span>
                                     </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px dashed #3b82f6', fontSize: '0.9rem' }}>
+                                        <span style={{ color: '#60a5fa' }}>Fondo de Caja (Cambio)</span>
+                                        <input 
+                                            type="number" 
+                                            value={startingCash} 
+                                            onChange={(e) => setStartingCash(e.target.value)} 
+                                            placeholder="0.00"
+                                            style={{ width: '80px', textAlign: 'right', background: 'transparent', border: 'none', borderBottom: '1px solid #60a5fa', color: '#60a5fa', fontWeight: 'bold' }}
+                                        />
+                                    </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid #10b981', fontSize: '0.9rem' }}>
-                                        <span style={{ color: '#10b981' }}>Efectivo Esperado</span>
-                                        <span style={{ fontWeight: 'bold', color: '#10b981' }}>{dashboardStats.cashRaw.toFixed(2)}€</span>
+                                        <span style={{ color: '#10b981' }}>Efectivo TOTAL Esperado</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                            <span style={{ fontWeight: 'bold', color: '#10b981', fontSize: '1.1rem' }}>{expectedCash.toFixed(2)}€</span>
+                                            <span style={{ fontSize: '0.7rem', color: '#10b981', opacity: 0.8 }}>(Ventas {dashboardStats.cashRaw.toFixed(2)} + Fondo)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1071,6 +1101,7 @@ const Analytics = () => {
                                         <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.25rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
                                         <div style={{ fontSize: '0.8rem', color: '#10b981' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</div>
                                         <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Tj: {parseFloat(close.tarjeta || 0).toFixed(2)}€</div>
+                                        {close.fondo_caja > 0 && <div style={{ fontSize: '0.75rem', color: '#60a5fa', marginTop: '2px' }}>Fondo inicial: {parseFloat(close.fondo_caja).toFixed(2)}€</div>}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
                                             <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{close.salesCount} Tickets</div>
                                             {close.notes && (

@@ -997,7 +997,7 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
 
             <div class="section">
                 <div class="row">
-                    <span class="label">Total Tarjeta:</span>
+                    <span class="label">Ventas Tarjeta:</span>
                     <span class="value">${(closeData.tarjeta || 0).toFixed(2)}€</span>
                 </div>
                 ${closeData.cardTips > 0 ? `
@@ -1007,11 +1007,20 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
                     </div>
                 ` : ''}
                 <div class="row">
-                    <span class="label">Total Efectivo:</span>
+                    <span class="label">Fondo Inic. (Cambio):</span>
+                    <span class="value">${(closeData.fondo_caja || 0).toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span class="label">Efectivo en Caja:</span>
                     <span class="value">${(closeData.efectivo || 0).toFixed(2)}€</span>
                 </div>
+                ${closeData.efectivo_esperado ? `
+                <div class="row" style="font-size: 0.85rem; font-style: italic; color: #333;">
+                    <span class="label">- Efectivo esperado:</span>
+                    <span class="value">${(closeData.efectivo_esperado || 0).toFixed(2)}€</span>
+                </div>` : ''}
                 <div class="row total-row">
-                    <span class="label">TOTAL VENTAS:</span>
+                    <span class="label">TOTAL VENTAS (Facturado):</span>
                     <span class="value">${(closeData.total || 0).toFixed(2)}€</span>
                 </div>
             </div>
