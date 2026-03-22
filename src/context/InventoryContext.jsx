@@ -43,6 +43,7 @@ export const InventoryProvider = ({ children }) => {
     const [expenses, setExpenses] = useState([]);
     const [mermas, setMermas] = useState(() => safeParse('manalu_mermas', []));
     const [physicalInventories, setPhysicalInventories] = useState(() => safeParse('manalu_physical_inventories', []));
+    const [soldOutItems, setSoldOutItems] = useState(() => safeParse('manalu_sold_out', []));
     const [restaurantInfo, setRestaurantInfo] = useState({
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
         address: 'Calle Principal, 123',
@@ -63,6 +64,14 @@ export const InventoryProvider = ({ children }) => {
     useEffect(() => {
         safeSetItem('manalu_physical_inventories', JSON.stringify(physicalInventories));
     }, [physicalInventories]);
+
+    useEffect(() => {
+        safeSetItem('manalu_sold_out', JSON.stringify(soldOutItems));
+    }, [soldOutItems]);
+
+    const toggleSoldOut = (productId) => {
+        setSoldOutItems(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+    };
 
     // --- INITIAL LOAD & MIGRATION ---
     useEffect(() => {
@@ -671,9 +680,7 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const checkProductAvailability = (productId) => {
-        // MODO EMERGENCIA/APERTURA RÁPIDA: Siempre devuelve true.
-        // Esto permite vender cualquier producto o vino en TPV y Menú QR
-        // sin importar si tiene stock, receta o ingredientes.
+        if (soldOutItems.includes(productId)) return false;
         return true;
     };
 
@@ -918,7 +925,9 @@ export const InventoryProvider = ({ children }) => {
             // New professional Bodega functions
             receiveInventory,
             incrementTicketNumber,
-            checkProductAvailability
+            checkProductAvailability,
+            toggleSoldOut,
+            soldOutItems
             // ... (rest of simple delete actions)
         }}>
             {children}

@@ -1,7 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInventory } from '../../context/InventoryContext';
 
-const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => {
+const ProductGrid = ({ products, onProductClick }) => {
+    const { checkProductAvailability, toggleSoldOut, soldOutItems } = useInventory();
     return (
         <div style={{
             flex: 1,
@@ -21,11 +23,18 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        onClick={() => onProductClick(product)}
+                        onClick={() => {
+                            if (!soldOutItems.includes(product.id)) {
+                                onProductClick(product);
+                            } else {
+                                alert("⚠️ Este producto está marcado como AGOTADO. Vuelve a activarlo (botón 👁️) para poder venderlo.");
+                            }
+                        }}
                         className="glass-panel"
                         style={{
                             padding: '1rem',
-                            cursor: 'pointer',
+                            cursor: soldOutItems.includes(product.id) ? 'not-allowed' : 'pointer',
+                            opacity: soldOutItems.includes(product.id) ? 0.6 : 1,
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -44,6 +53,36 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                         }}
                         whileTap={{ scale: 0.95 }}
                     >
+                        {/* Agotado Toggle Button */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSoldOut(product.id);
+                            }}
+                            title={soldOutItems.includes(product.id) ? "Quitar Agotado" : "Marcar Agotado"}
+                            style={{
+                                position: 'absolute',
+                                top: '0.5rem',
+                                left: '0.5rem',
+                                background: soldOutItems.includes(product.id) ? '#22c55e' : 'rgba(0,0,0,0.5)',
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                borderRadius: '50%',
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                zIndex: 10,
+                                fontSize: '1.2rem',
+                                padding: '0',
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+                            }}
+                        >
+                            {soldOutItems.includes(product.id) ? '👁️' : '🚫'}
+                        </button>
+
                         {/* Improved Stock Indicator */}
                         {(() => {
                             const isAvailable = checkProductAvailability ? checkProductAvailability(product.id) : true;

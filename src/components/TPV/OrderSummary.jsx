@@ -217,16 +217,45 @@ const OrderSummary = ({
                     </h2>
                     <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cuenta de Mesa</span>
                 </div>
-                <div style={{
-                    fontSize: '0.85rem',
-                    color: 'var(--color-primary)',
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    fontWeight: 'bold',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
-                }}>
-                    {order.length + (bill?.length || 0)} {(order.length + (bill?.length || 0)) === 1 ? 'item' : 'items'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {order.length > 0 && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm("🗑️ ¿Seguro que quieres borrar toda la comanda actual (sin enviar)?")) {
+                                    const itemsToRemove = [...order];
+                                    itemsToRemove.forEach(item => removeFromOrder(item.uniqueId || item.id));
+                                }
+                            }}
+                            title="Borrar toda la comanda"
+                            style={{
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                color: '#f87171',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: 'bold',
+                                boxShadow: '0 2px 5px rgba(239, 68, 68, 0.2)'
+                            }}
+                        >
+                            <Trash2 size={14} /> BORRAR
+                        </button>
+                    )}
+                    <div style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--color-primary)',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontWeight: 'bold',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                    }}>
+                        {order.length + (bill?.length || 0)} {(order.length + (bill?.length || 0)) === 1 ? 'item' : 'items'}
+                    </div>
                 </div>
             </div>
 
