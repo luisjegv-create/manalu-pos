@@ -4,6 +4,7 @@ import { useInventory } from '../context/InventoryContext';
 import { useOrder } from '../context/OrderContext';
 import { Wine, ArrowLeft, Plus, Search, Trash2, Edit3, Save, X, Info, TrendingUp, Camera, History, Package, BarChart3, TrendingDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { compressImage } from '../utils/imageHelpers';
 
 const Bodega = () => {
     const navigate = useNavigate();
@@ -60,23 +61,29 @@ const Bodega = () => {
         return history.sort((a, b) => new Date(b.saleDate) - new Date(a.saleDate));
     }, [salesHistory]);
 
-    const handleImageUpload = (e, isEditing = false) => {
+    const handleImageUpload = async (e, isEditing = false) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 800 * 1024) {
-                alert("La imagen es demasiado grande (máx 800KB)");
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result;
+            try {
+                const compressedBase64 = await compressImage(file, 400, 0.6);
                 if (isEditing) {
-                    setEditingWine(prev => ({ ...prev, image: result, imageFile: file }));
+                    setEditingWine(prev => ({ ...prev, image: compressedBase64, imageFile: file }));
                 } else {
-                    setNewWine(prev => ({ ...prev, image: result, imageFile: file }));
+                    setNewWine(prev => ({ ...prev, image: compressedBase64, imageFile: file }));
                 }
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.error("Error compressing image:", err);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result;
+                    if (isEditing) {
+                        setEditingWine(prev => ({ ...prev, image: result, imageFile: file }));
+                    } else {
+                        setNewWine(prev => ({ ...prev, image: result, imageFile: file }));
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 

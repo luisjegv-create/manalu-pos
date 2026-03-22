@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printBillTicket, printServiceTickets } from '../utils/printHelpers';
+import { compressImage } from '../utils/imageHelpers';
 
 // Modular Components
 import CategoryTabs from '../components/TPV/CategoryTabs';
@@ -332,18 +333,25 @@ const BarTapas = () => {
         });
     };
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) { // Increased limit as we compress anyway
-                alert("La imagen es demasiado grande (máx 2MB).");
+            if (file.size > 5 * 1024 * 1024) { // Allow up to 5MB for upload as we'll compress it
+                alert("La imagen es demasiado grande (máx 5MB).");
                 return;
             }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setNewProductForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
-            };
-            reader.readAsDataURL(file);
+            try {
+                const compressedBase64 = await compressImage(file, 400, 0.6);
+                setNewProductForm(prev => ({ ...prev, image: compressedBase64, imageFile: file }));
+            } catch (err) {
+                console.error("Error compressing image:", err);
+                // Fallback to reader if compression fails
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setNewProductForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 

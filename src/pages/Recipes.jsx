@@ -23,6 +23,7 @@ import {
     Baby
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { compressImage } from '../utils/imageHelpers';
 import { categories as categoriesData } from '../data/products';
 
 const Recipes = () => {
@@ -93,19 +94,20 @@ const Recipes = () => {
         updateRecipe(dbId, newRecipe);
     };
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            // Limit to ~500KB to avoid localStorage quota issues
-            if (file.size > 500 * 1024) {
-                alert("La imagen es demasiado grande. Por favor usa una imagen menor de 500KB.");
-                return;
+            try {
+                const compressedBase64 = await compressImage(file, 400, 0.6);
+                setProductForm(prev => ({ ...prev, image: compressedBase64 }));
+            } catch (err) {
+                console.error("Error compressing image:", err);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setProductForm(prev => ({ ...prev, image: reader.result }));
+                };
+                reader.readAsDataURL(file);
             }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProductForm(prev => ({ ...prev, image: reader.result }));
-            };
-            reader.readAsDataURL(file);
         }
     };
 

@@ -27,7 +27,7 @@ const Inventory = () => {
     const {
         ingredients, addIngredient, updateIngredient, deleteIngredient,
         suppliers, addSupplier, updateSupplier, deleteSupplier,
-        invoices, addInvoice, deleteInvoice
+        invoices
     } = useInventory();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('alimentos');
@@ -45,11 +45,9 @@ const Inventory = () => {
         category: 'alimentos'
     });
 
-    // Supplier Mode State
     const [selectedSupplierId, setSelectedSupplierId] = useState(null);
     const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', notes: '', cif: '', paymentTerms: '', deliveryDays: [] });
-    const [isAddingInvoice, setIsAddingInvoice] = useState(false);
-    const [invoiceForm, setInvoiceForm] = useState({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
+    // isAddingInvoice and invoiceForm were unused so removed to clear lint errors.
 
     // Professional Modules State
     const [showReception, setShowReception] = useState(false);
@@ -107,28 +105,7 @@ const Inventory = () => {
         }
     };
 
-    const handleImageUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setInvoiceForm(prev => ({ ...prev, image: reader.result }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSaveInvoice = () => {
-        if (!invoiceForm.amount) return alert("Importe requerido");
-        addInvoice({
-            supplierId: selectedSupplierId,
-            amount: parseFloat(invoiceForm.amount),
-            date: invoiceForm.date,
-            image: invoiceForm.image
-        });
-        setIsAddingInvoice(false);
-        setInvoiceForm({ amount: '', date: new Date().toISOString().split('T')[0], image: null });
-    };
+    // handleImageUpload and handleSaveInvoice were removed as they were not being used in the render.
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>

@@ -46,6 +46,7 @@ export const compressImage = (file, maxWidth = 800, quality = 0.7) => {
  * @returns {Promise<string>}
  */
 export const uploadImage = async (file, bucket = 'product-images', folder = 'items') => {
+    // Fallback if file is a Blob without a name
     const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;

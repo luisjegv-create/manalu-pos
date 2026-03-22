@@ -4,6 +4,8 @@ import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Datab
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../utils/supabaseClient';
+import { compressImage, compressImageFromUrl } from '../utils/imageHelpers';
+import { uploadImage } from '../utils/storageUtils';
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -11,6 +13,7 @@ const Settings = () => {
     const { employees, addEmployee, deleteEmployee, currentUser } = useAuth();
     const [saved, setSaved] = useState(false);
     const [storageUsage, setStorageUsage] = useState(0);
+    const [optProgress, setOptProgress] = useState({ active: false, current: 0, total: 0, status: '' });
 
     const [showAddEmployee, setShowAddEmployee] = useState(false);
     const [newEmployee, setNewEmployee] = useState({ name: '', pin: '', role: 'staff' });
@@ -75,25 +78,34 @@ const Settings = () => {
         setTimeout(() => setSaved(false), 3000);
     };
 
-    const handleImageUpload = (e, field) => {
+    const handleImageUpload = async (e, field) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 500 * 1024) {
-                alert("La imagen es demasiado grande (máx 500KB)");
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result;
+            try {
+                // Settings images (logo, QR) should be small and clear
+                const compressedBase64 = await compressImage(file, 500, 0.7);
                 if (field === 'logo') {
-                    setFormData(prev => ({ ...prev, logo: result }));
+                    setFormData(prev => ({ ...prev, logo: compressedBase64 }));
                 } else if (field === 'qr') {
-                    setCustomQR(result);
-                    localStorage.setItem('manalu_custom_qr', result);
+                    setCustomQR(compressedBase64);
+                    localStorage.setItem('manalu_custom_qr', compressedBase64);
                 }
                 calculateStorage();
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.error("Error compressing image:", err);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result;
+                    if (field === 'logo') {
+                        setFormData(prev => ({ ...prev, logo: result }));
+                    } else if (field === 'qr') {
+                        setCustomQR(result);
+                        localStorage.setItem('manalu_custom_qr', result);
+                    }
+                    calculateStorage();
+                };
+                reader.readAsDataURL(file);
+            }
         }
     };
 
@@ -179,6 +191,92 @@ const Settings = () => {
         } catch (e) {
             console.error("Recovery error:", e);
             alert("Hubo un error al recuperar: " + e.message);
+        }
+    };
+
+    const optimizeExistingImages = async () => {
+        if (!confirm("⚠️ Esta acción comprimirá TODAS las fotos de productos y vinos para ahorrar espacio. ¿Deseas continuar?")) return;
+
+        setOptProgress({ active: true, current: 0, total: 0, status: 'Iniciando mantenimiento...' });
+
+        try {
+            // 1. Fetch all with images
+            const { data: prods } = await supabase.from('products').select('id, name, image').not('image', 'is', null);
+            const { data: wines } = await supabase.from('wines').select('id, name, image').not('image', 'is', null);
+            
+            const prodList = (prods || []).filter(p => !p.image.startsWith('http') || p.image.includes('supabase.co'));
+            const wineList = (wines || []).filter(w => !w.image.startsWith('http') || w.image.includes('supabase.co'));
+            
+            const total = prodList.length + wineList.length + 1; // +1 for logo
+            setOptProgress(prev => ({ ...prev, total, status: 'Analizando catálogo...' }));
+
+            let count = 0;
+
+            // Process Products
+            for (const p of prodList) {
+                try {
+                    setOptProgress(prev => ({ ...prev, status: `Comprimiendo: ${p.name}` }));
+                    const compressedBase64 = await compressImageFromUrl(p.image, 500, 0.6);
+                    
+                    // Conversion to blob for storage
+                    const res = await fetch(compressedBase64);
+                    const blob = await res.blob();
+                    
+                    const storageUrl = await uploadImage(blob, 'product-images', 'optimized');
+                    await supabase.from('products').update({ image: storageUrl }).eq('id', p.id);
+                    
+                    count++;
+                    setOptProgress(prev => ({ ...prev, current: count }));
+                } catch (e) {
+                    console.error(`Error optimizando ${p.name}:`, e);
+                }
+            }
+
+            // Process Wines
+            for (const w of wineList) {
+                try {
+                    setOptProgress(prev => ({ ...prev, status: `Comprimiendo: ${w.name}` }));
+                    const compressedBase64 = await compressImageFromUrl(w.image, 400, 0.6);
+                    
+                    const res = await fetch(compressedBase64);
+                    const blob = await res.blob();
+                    
+                    const storageUrl = await uploadImage(blob, 'product-images', 'wines-optimized');
+                    await supabase.from('wines').update({ image: storageUrl }).eq('id', w.id);
+                    
+                    count++;
+                    setOptProgress(prev => ({ ...prev, current: count }));
+                } catch (e) {
+                    console.error(`Error optimizando vino ${w.name}:`, e);
+                }
+            }
+
+            // Process Restaurant Logo if it's base64
+            if (formData.logo && formData.logo.startsWith('data:image')) {
+                try {
+                    setOptProgress(prev => ({ ...prev, status: `Comprimiendo: Logo Principal` }));
+                    const compressedBase64 = await compressImageFromUrl(formData.logo, 500, 0.7);
+                    
+                    const res = await fetch(compressedBase64);
+                    const blob = await res.blob();
+                    
+                    const storageUrl = await uploadImage(blob, 'product-images', 'branding');
+                    await updateRestaurantInfo({ ...restaurantInfo, logo: storageUrl });
+                    
+                    count++;
+                    setOptProgress(prev => ({ ...prev, current: count }));
+                } catch (e) {
+                    console.error(`Error optimizando logo:`, e);
+                }
+            }
+
+            setOptProgress(prev => ({ ...prev, status: 'Finalizado' }));
+            alert("✅ Optimización completada. La base de datos está ahora mucho más ligera.");
+            window.location.reload();
+        } catch (error) {
+            console.error("Optimization failed:", error);
+            alert("Error durante la optimización.");
+            setOptProgress({ active: false, current: 0, total: 0, status: '' });
         }
     };
 
@@ -367,10 +465,41 @@ const Settings = () => {
                         </div>
 
                         <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)' }}>
-                            <h4 style={{ margin: '0 0 1rem 0', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <AlertTriangle size={16} /> Zona de Peligro y Recuperación
+                            <h4 style={{ margin: '0 0 1rem 0', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Database size={16} /> Mantenimiento de Datos
                             </h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button
+                                    onClick={optimizeExistingImages}
+                                    disabled={optProgress.active}
+                                    style={{
+                                        width: '100%', padding: '0.75rem',
+                                        background: optProgress.active ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.1)', 
+                                        color: optProgress.active ? 'gray' : '#10b981',
+                                        border: '1px solid ' + (optProgress.active ? 'gray' : '#10b981'), 
+                                        borderRadius: '8px',
+                                        cursor: optProgress.active ? 'default' : 'pointer', 
+                                        fontSize: '0.85rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}
+                                >
+                                    <span>{optProgress.active ? 'Optimización en curso...' : '🖼️ Optimizar Imágenes Existentes'}</span>
+                                    {optProgress.active && (
+                                        <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                width: `${(optProgress.current / optProgress.total) * 100}%`, 
+                                                height: '100%', 
+                                                background: '#10b981',
+                                                transition: 'width 0.3s'
+                                            }} />
+                                        </div>
+                                    )}
+                                    {optProgress.active && <span style={{ fontSize: '0.7rem' }}>{optProgress.status} ({optProgress.current}/{optProgress.total})</span>}
+                                </button>
+                                
                                 <button
                                     onClick={handleRecoverFromKDS}
                                     style={{
