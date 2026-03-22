@@ -8,8 +8,8 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
             overflowY: 'auto',
             padding: '1rem',
             display: 'grid',
-            gridTemplateColumns: window.innerWidth < 640 ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: '0.75rem',
+            gridTemplateColumns: window.innerWidth < 640 ? 'repeat(3, 1fr)' : 'repeat(auto-fill, minmax(160px, 1fr))',
+            gap: '1rem',
             alignContent: 'start',
             paddingBottom: '2rem'
         }}>
@@ -24,7 +24,7 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                         onClick={() => onProductClick(product)}
                         className="glass-panel"
                         style={{
-                            padding: '0.75rem',
+                            padding: '1rem',
                             cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
@@ -88,8 +88,8 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                             return null;
                         })()}
                         <div style={{
-                            width: '80px',
-                            height: '75px',
+                            width: '95px',
+                            height: '85px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -102,7 +102,7 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                                 ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 : product.image || '🍽️'}
                         </div>
-                        <div style={{ fontWeight: '600', fontSize: '0.85rem', lineHeight: '1.2' }}>{product.name}</div>
+                        <div style={{ fontWeight: '700', fontSize: '0.95rem', lineHeight: '1.2' }}>{product.name}</div>
 
                         <div style={{
                             display: 'flex',
@@ -116,7 +116,7 @@ const ProductGrid = ({ products, onProductClick, checkProductAvailability }) => 
                                 padding: '2px 8px',
                                 borderRadius: '12px',
                                 fontWeight: 'bold',
-                                fontSize: '0.9rem'
+                                fontSize: '1rem'
                             }}>
                                 {product.price.toFixed(2)}€
                             </div>

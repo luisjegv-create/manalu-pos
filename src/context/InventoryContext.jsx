@@ -18,6 +18,17 @@ const safeParse = (key, fallback) => {
     }
 };
 
+const safeSetItem = (key, value) => {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        console.error(`Error saving ${key}:`, e);
+        if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            alert(`⚠️ ALMACENAMIENTO LLENO ⚠️\nEspacio insuficiente en el navegador. Por favor, limpia fotos antiguas en Configuración para evitar problemas.`);
+        }
+    }
+};
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useInventory = () => useContext(InventoryContext);
 
@@ -46,11 +57,11 @@ export const InventoryProvider = ({ children }) => {
     });
 
     useEffect(() => {
-        localStorage.setItem('manalu_mermas', JSON.stringify(mermas));
+        safeSetItem('manalu_mermas', JSON.stringify(mermas));
     }, [mermas]);
 
     useEffect(() => {
-        localStorage.setItem('manalu_physical_inventories', JSON.stringify(physicalInventories));
+        safeSetItem('manalu_physical_inventories', JSON.stringify(physicalInventories));
     }, [physicalInventories]);
 
     // --- INITIAL LOAD & MIGRATION ---
@@ -110,7 +121,7 @@ export const InventoryProvider = ({ children }) => {
                         console.log("Detectada API Key en gem_url. Moviendo a localStorage y restaurando URL...");
                         const existingLocalKey = localStorage.getItem('manalu_gemini_api_key');
                         if (!existingLocalKey) {
-                            localStorage.setItem('manalu_gemini_api_key', finalGemUrl);
+                            safeSetItem('manalu_gemini_api_key', finalGemUrl);
                         }
                         finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
                         // Fix it in Supabase

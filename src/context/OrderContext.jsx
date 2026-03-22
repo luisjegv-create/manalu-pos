@@ -27,6 +27,18 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
+    // Helper for safe storage (prevent QuotaExceededError crashes)
+    const safeSetItem = (key, value) => {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            console.error(`Error saving ${key} to localStorage:`, e);
+            if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                alert(`⚠️ ALMACENAMIENTO LLENO ⚠️\n\nEl sistema no puede guardar más datos y funcionará lento.\nVe a Configuración y borra fotos pasadas o datos innecesarios para continuar trabajando sin perder información.`);
+            }
+        }
+    };
+
     // Active orders (Drafts) - Keep in localStorage for low latency/offline safety during rush
     const [tableOrders, setTableOrders] = useState(() => safeParse('manalu_table_orders', {}));
 
@@ -40,7 +52,7 @@ export const OrderProvider = ({ children }) => {
         
         // Purge all old static 'free' tables, keeping only occupied ones (active tickets)
         const activeTickets = parsed.filter(t => t.status !== 'free' || currentOrders[t.id] || currentBills[t.id]);
-        localStorage.setItem('manalu_tables', JSON.stringify(activeTickets));
+        safeSetItem('manalu_tables', JSON.stringify(activeTickets));
         return activeTickets;
     });
 
@@ -314,15 +326,15 @@ export const OrderProvider = ({ children }) => {
 
     // Persistence Effects for local-only state (Drafts)
     useEffect(() => {
-        localStorage.setItem('manalu_tables', JSON.stringify(tables));
+        safeSetItem('manalu_tables', JSON.stringify(tables));
     }, [tables]);
 
     useEffect(() => {
-        localStorage.setItem('manalu_table_orders', JSON.stringify(tableOrders));
+        safeSetItem('manalu_table_orders', JSON.stringify(tableOrders));
     }, [tableOrders]);
 
     useEffect(() => {
-        localStorage.setItem('manalu_table_bills', JSON.stringify(tableBills));
+        safeSetItem('manalu_table_bills', JSON.stringify(tableBills));
     }, [tableBills]);
 
     const [currentTable, setCurrentTable] = useState(null);

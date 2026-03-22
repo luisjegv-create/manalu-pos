@@ -10,10 +10,22 @@ export const AuthProvider = ({ children }) => {
     const safeParse = (key, fallback) => {
         try {
             const saved = localStorage.getItem(key);
-            return saved ? JSON.parse(saved) : fallback;
+            if (!saved) return fallback;
+            return JSON.parse(saved);
         } catch (e) {
             console.error(`Error parsing ${key}:`, e);
             return fallback;
+        }
+    };
+
+    const safeSetItem = (key, value) => {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            console.error(`Error saving ${key}:`, e);
+            if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                alert(`⚠️ ALMACENAMIENTO LLENO ⚠️\nEspacio insuficiente. Ve a Configuración y borra fotos pasadas.`);
+            }
         }
     };
 
@@ -34,11 +46,11 @@ export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
 
     useEffect(() => {
-        localStorage.setItem('manalu_employees', JSON.stringify(employees));
+        safeSetItem('manalu_employees', JSON.stringify(employees));
     }, [employees]);
 
     useEffect(() => {
-        localStorage.setItem('manalu_shifts', JSON.stringify(shifts));
+        safeSetItem('manalu_shifts', JSON.stringify(shifts));
     }, [shifts]);
 
     // --- Actions ---

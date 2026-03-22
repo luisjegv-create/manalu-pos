@@ -82,8 +82,8 @@ const Stool = ({ table, allTables, handleTableSelect, isTransferMode, sourceTabl
                 position: 'absolute',
                 top: table.top,
                 left: table.left,
-                width: '75px',
-                height: '75px',
+                width: '90px',
+                height: '90px',
                 borderRadius: '50%',
                 background: bgColor,
                 border: (isTransferMode && sourceTable?.id === table.id) ? '3px solid white' : '2px solid rgba(255,255,255,0.5)',
@@ -104,8 +104,8 @@ const Stool = ({ table, allTables, handleTableSelect, isTransferMode, sourceTabl
                 </div>
             )}
             {isOccupied && minStartTime && <TableTimer startTime={minStartTime} />}
-            <Wine size={20} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', marginTop: '2px', textAlign: 'center', lineHeight: '1' }}>
+            <Wine size={24} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 'bold', marginTop: '2px', textAlign: 'center', lineHeight: '1' }}>
                 {table.name.replace('Barra ', 'B')}
             </span>
             {hasActiveOrder && (
@@ -116,12 +116,12 @@ const Stool = ({ table, allTables, handleTableSelect, isTransferMode, sourceTabl
                     background: 'white',
                     color: bgColor,
                     borderRadius: '50%',
-                    width: '20px',
-                    height: '20px',
+                    width: '24px',
+                    height: '24px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.7rem',
+                    fontSize: '0.8rem',
                     fontWeight: 'bold',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}>

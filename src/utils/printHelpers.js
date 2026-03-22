@@ -127,15 +127,90 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
     const hasFood = foodItems && foodItems.length > 0;
     const hasBar = barItems && barItems.length > 0;
 
-    // 1. Imprimir ticket de cocina si hay comida
-    if (hasFood) {
-        printKitchenTicket(tableName, foodItems, '', 'ORDEN COCINA');
+    if (!hasFood && !hasBar) return;
+
+    const printWindow = window.open('', '_blank', 'width=400,height=800');
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir los tickets.');
+        return;
     }
 
-    // 2. Imprimir ticket de barra con todo (comida + bebida) o solo bebida
-    if (hasBar) {
-        printKitchenTicket(tableName, barItems, '', 'ORDEN BARRA');
-    }
+    const date = new Date().toLocaleDateString();
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const generateTicketBody = (items, headerTitle) => {
+        return `
+            <div class="ticket-container" style="page-break-after: always; margin-bottom: 20px;">
+                <div class="header" style="text-align: center; border-bottom: 2px dashed black; padding-bottom: 10px; margin-bottom: 10px;">
+                    <h1 class="title" style="font-size: 1.2rem; font-weight: bold; margin: 0;">${headerTitle}</h1>
+                    <div class="meta" style="font-size: 0.9rem; margin-top: 5px;">${date} - ${time}</div>
+                </div>
+                
+                <div class="table-name" style="font-size: 1.5rem; font-weight: 900; margin: 10px 0; text-align: center; border: 2px solid black; padding: 5px;">
+                    ${tableName}
+                </div>
+
+                <table class="items" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                    ${items.map(item => `
+                        <tr class="item-row" style="border-bottom: 1px dashed #ccc; ${item.isIndividual ? 'border-bottom: 2px dashed black;' : ''}">
+                            <td class="qty" style="font-weight: bold; font-size: 1.2rem; width: 40px; text-align: center; vertical-align: top;">
+                                <span style="${item.isIndividual ? 'font-size: 1.4rem; padding-bottom: 10px; display: inline-block;' : ''}">${item.quantity}</span>
+                            </td>
+                            <td class="name" style="font-size: 1.1rem; padding-left: 10px; font-weight: bold; ${item.isIndividual ? 'padding-bottom: 15px;' : ''}">
+                                ${item.isPriority ? '<div style="color: red; font-weight: bold; font-size: 1.1rem; margin-bottom: 2px;">*** URGENTE *** ⚡</div>' : ''}
+                                <span style="${item.isIndividual ? 'font-size: 1.3rem; font-weight: 900;' : ''}">${item.name}</span>
+                                ${item.isShared ? '<div style="font-size:1.1rem; font-weight:900; color: white; background: black; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[PARA COMPARTIR] 🍽️</div>' : ''}
+                                ${item.isIndividual ? '<div style="font-size:1.1rem; font-weight:900; color: black; background: white; padding: 4px; border-radius: 4px; text-align: center; margin-top: 4px; border: 2px solid black; letter-spacing: 1px;">[INDIVIDUAL - NO COMPARTIR] 👤</div>' : ''}
+                                ${item.selectedModifiers ? `<div style="font-size:0.8rem; font-weight:normal; color: #333;">• ${Object.values(item.selectedModifiers).join(', ')}</div>` : ''}
+                                ${item.notes ? `<div style="font-size:0.9rem; font-weight:bold; color: black; background: #eee; padding: 2px; margin-top: 4px;">NOTA: ${item.notes}</div>` : ''}
+                                ${item.isIndividual ? '<div style="margin-top: 10px; border-bottom: 2px solid black;"></div>' : ''}
+                            </td>
+                        </tr>
+                    `).join('')}
+                </table>
+                <div style="text-align: center; border-top: 2px dashed black; padding-top: 10px; margin-top: 10px;">--- CORTAR AQUÍ ---</div>
+            </div>
+        `;
+    };
+
+    let bodyContent = '';
+    if (hasFood) bodyContent += generateTicketBody(foodItems, 'ORDEN COCINA');
+    if (hasBar) bodyContent += generateTicketBody(barItems, 'ORDEN BARRA');
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Tickets de Servicio - ${tableName}</title>
+            <style>
+                body {
+                    font-family: Arial, Helvetica, sans-serif;
+                    font-weight: bold;
+                    width: 300px;
+                    margin: 0 auto;
+                    padding: 10px;
+                    color: black;
+                }
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { margin: 10px; }
+                }
+            </style>
+        </head>
+        <body>
+            ${bodyContent}
+            <script>
+                window.onload = function() {
+                    window.print();
+                    setTimeout(function() { window.close(); }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
 };
 
 import { format } from 'date-fns';

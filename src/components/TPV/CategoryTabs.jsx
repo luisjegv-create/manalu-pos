@@ -14,7 +14,7 @@ const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile 
     return (
         <div
             style={{
-                width: isMobile ? '100%' : '90px',
+                width: isMobile ? '100%' : '110px',
                 backgroundColor: 'var(--color-surface)',
                 display: 'flex',
                 flexDirection: isMobile ? 'row' : 'column',
@@ -37,7 +37,7 @@ const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile 
                         key={cat.id}
                         onClick={() => setActiveCategory(cat.id)}
                         style={{
-                            padding: isMobile ? '0.6rem 0.5rem' : '1rem 0.25rem',
+                            padding: isMobile ? '0.8rem 0.5rem' : '1.2rem 0.5rem',
                             border: 'none',
                             background: isActive
                                 ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.05))'
@@ -49,13 +49,13 @@ const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile 
                             justifyContent: 'center',
                             gap: '0.35rem',
                             cursor: 'pointer',
-                            fontSize: isMobile ? '0.75rem' : '0.65rem',
+                            fontSize: isMobile ? '0.85rem' : '0.8rem',
                             fontWeight: isActive ? '800' : '600',
                             borderRadius: isMobile ? '12px' : '0',
                             borderLeft: !isMobile && isActive ? '4px solid var(--color-primary)' : 'none',
                             borderBottom: isMobile && isActive ? '3px solid var(--color-primary)' : 'none',
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            minWidth: isMobile ? '80px' : 'auto',
+                            minWidth: isMobile ? '90px' : 'auto',
                             whiteSpace: 'nowrap',
                             opacity: isActive ? 1 : 0.7,
                             transform: isActive ? 'scale(1.02)' : 'scale(1)'
