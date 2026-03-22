@@ -128,7 +128,9 @@ const KitchenDisplay = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                                     <div>
                                         <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--color-primary)' }}>MESA {order.table}</div>
-                                        <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{order.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                                            {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                         <ElapsedTime timestamp={order.timestamp} />

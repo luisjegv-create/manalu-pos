@@ -856,30 +856,42 @@ export const OrderProvider = ({ children }) => {
     };
     const { returnStockForItems } = useInventory(); // Ensure it's available
 
-    const removeProductFromBill = (tableId, uniqueId, quantityToRemove) => {
+    const updateBillQuantity = (tableId, uniqueId, delta) => {
         setTableBills(prev => {
             const currentBill = prev[tableId] || [];
-            const itemToRemove = currentBill.find(item => item.uniqueId === uniqueId);
+            const item = currentBill.find(i => i.uniqueId === uniqueId);
 
-            if (itemToRemove) {
-                // Return stock
-                const returningItems = [{ ...itemToRemove, quantity: Math.min(itemToRemove.quantity, quantityToRemove) }];
-                returnStockForItems(returningItems);
+            if (!item) return prev;
 
-                const nextBill = currentBill.map(item => {
-                    if (item.uniqueId === uniqueId) {
-                        return { ...item, quantity: item.quantity - quantityToRemove };
-                    }
-                    return item;
-                }).filter(item => item.quantity > 0);
+            const newQuantity = item.quantity + delta;
 
+            if (newQuantity <= 0) {
+                // Return stock for the remaining quantity
+                returnStockForItems([{ ...item, quantity: item.quantity }]);
+                
+                const nextBill = currentBill.filter(i => i.uniqueId !== uniqueId);
                 if (nextBill.length === 0 && (!tableOrders[tableId] || tableOrders[tableId].length === 0)) {
                     updateTableStatus(tableId, 'free');
                 }
                 return { ...prev, [tableId]: nextBill };
+            } else {
+                // Update stock based on delta
+                if (delta > 0) {
+                    deductStockForOrder([{ ...item, quantity: delta }]);
+                } else if (delta < 0) {
+                    returnStockForItems([{ ...item, quantity: Math.abs(delta) }]);
+                }
+
+                const nextBill = currentBill.map(i =>
+                    i.uniqueId === uniqueId ? { ...i, quantity: newQuantity } : i
+                );
+                return { ...prev, [tableId]: nextBill };
             }
-            return prev;
         });
+    };
+
+    const removeProductFromBill = (tableId, uniqueId, quantityToRemove) => {
+        updateBillQuantity(tableId, uniqueId, -quantityToRemove);
     };
 
     const selectCustomer = (customer) => {
@@ -1413,6 +1425,7 @@ export const OrderProvider = ({ children }) => {
             payValuePartialTable,
             calculateOrderTotal,
             removeProductFromBill,
+            updateBillQuantity,
             removeOrder,
             addTable,
             deleteTable,

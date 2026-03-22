@@ -142,7 +142,6 @@ const TableSelection = () => {
                                 }
                             });
 
-                            const isTotallyEmpty = tableOrderItems.length === 0 && tableBillItems.length === 0 && tableKitchenOrders.length === 0;
 
                             const kitchenItems = tableKitchenOrders.flatMap(o => o?.items || []);
                             const hasKitchenItems = kitchenItems.length > 0;
@@ -185,21 +184,21 @@ const TableSelection = () => {
                                     
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#fef3c7', paddingRight: '3rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{ticket.name}</h3>
-                                        {isTotallyEmpty && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm(`🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de "${ticket.name}"? Esta acción borrará el borrador y lo enviado a cocina.`)) {
                                                     forceClearTable(ticket.id);
-                                                }}
-                                                style={{
-                                                    background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
-                                                    color: '#ef4444', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer',
-                                                    fontSize: '0.8rem', fontWeight: 'bold'
-                                                }}
-                                            >
-                                                Eliminar
-                                            </button>
-                                        )}
+                                                }
+                                            }}
+                                            style={{
+                                                background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#ef4444', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer',
+                                                fontSize: '0.86rem', fontWeight: 'bold'
+                                            }}
+                                        >
+                                            Eliminar
+                                        </button>
                                     </div>
                                     
                                     <div style={{ flex: 1, minHeight: '100px' }}>

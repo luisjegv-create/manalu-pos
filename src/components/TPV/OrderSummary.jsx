@@ -38,7 +38,9 @@ const OrderSummary = ({
     setPartialPaymentModal,
     handlePrintPreTicket,
     handleCloseTable,
-    currentTable
+    currentTable,
+    forceClearTable,
+    updateBillQuantity
 }) => {
     const [openQuickNotes, setOpenQuickNotes] = React.useState({});
 
@@ -218,15 +220,20 @@ const OrderSummary = ({
                     <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cuenta de Mesa</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {order.length > 0 && (
+                    {(order.length > 0 || (bill && bill.length > 0)) && (
                         <button
                             onClick={() => {
-                                if (window.confirm("🗑️ ¿Seguro que quieres borrar toda la comanda actual (sin enviar)?")) {
-                                    const itemsToRemove = [...order];
-                                    itemsToRemove.forEach(item => removeFromOrder(item.uniqueId || item.id));
+                                if (window.confirm("🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de esta mesa (incluyendo lo enviado)? Esta acción es irreversible.")) {
+                                    if (typeof forceClearTable === 'function') {
+                                        forceClearTable(currentTable?.id);
+                                    } else {
+                                        // Fallback manual if for some reason forceClearTable isn't passed yet
+                                        const itemsToRemove = [...order];
+                                        itemsToRemove.forEach(item => removeFromOrder(item.uniqueId || item.id));
+                                    }
                                 }
                             }}
-                            title="Borrar toda la comanda"
+                            title="Borrar Mesa/Comanda"
                             style={{
                                 background: 'rgba(239, 68, 68, 0.15)',
                                 color: '#f87171',
@@ -242,7 +249,7 @@ const OrderSummary = ({
                                 boxShadow: '0 2px 5px rgba(239, 68, 68, 0.2)'
                             }}
                         >
-                            <Trash2 size={14} /> BORRAR
+                            <Trash2 size={14} /> ELIMINAR
                         </button>
                     )}
                     <div style={{
@@ -332,24 +339,25 @@ const OrderSummary = ({
                                             <div style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                gap: '0.2rem',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                borderRadius: '25px',
-                                                padding: '2px',
-                                                border: '1px solid rgba(255,255,255,0.1)'
+                                                gap: '0.4rem',
+                                                background: 'rgba(0,0,0,0.4)',
+                                                borderRadius: '30px',
+                                                padding: '4px',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
                                             }}>
                                                 <button
                                                     onClick={() => item.quantity === 1 ? removeFromOrder(item.uniqueId || item.id) : updateQuantity(item.uniqueId || item.id, -1)}
-                                                    style={{ width: '28px', height: '28px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ width: '36px', height: '36px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                 >
-                                                    {item.quantity === 1 ? <Trash2 size={16} /> : <Minus size={16} />}
+                                                    {item.quantity === 1 ? <Trash2 size={20} /> : <Minus size={20} />}
                                                 </button>
-                                                <span style={{ minWidth: '20px', textAlign: 'center', fontWeight: '900', color: 'white', fontSize: '0.9rem' }}>{item.quantity}</span>
+                                                <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '900', color: 'white', fontSize: '1.1rem' }}>{item.quantity}</span>
                                                 <button
                                                     onClick={() => updateQuantity(item.uniqueId || item.id, 1)}
-                                                    style={{ width: '28px', height: '28px', border: 'none', background: 'none', color: '#4ade80', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                    style={{ width: '36px', height: '36px', border: 'none', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '50%', color: '#4ade80', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                 >
-                                                    <Plus size={16} />
+                                                    <Plus size={20} />
                                                 </button>
                                             </div>
                                         </div>
@@ -442,35 +450,41 @@ const OrderSummary = ({
                                                 </span>
                                                 {item.isInvitation && <div style={{ fontSize: '0.8rem', color: '#8b5cf6', fontWeight: 'bold' }}>Invitación (0.00€)</div>}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <span style={{ fontWeight: 'bold', color: item.isInvitation ? '#8b5cf6' : 'inherit', textDecoration: item.isInvitation ? 'line-through' : 'none', opacity: item.isInvitation ? 0.7 : 1 }}>
-                                                    {(item.price * item.quantity).toFixed(2)}€
-                                                </span>
-                                                <button
-                                                    onClick={() => addToOrder(item)}
-                                                    style={{
-                                                        background: 'rgba(16, 185, 129, 0.2)',
-                                                        border: '1px solid rgba(16, 185, 129, 0.3)',
-                                                        color: '#10b981',
-                                                        padding: '4px',
-                                                        borderRadius: '6px',
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}
-                                                    title="Repetir Producto (Añadir al pedido)"
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.2rem',
+                                                    background: 'rgba(0,0,0,0.3)',
+                                                    borderRadius: '20px',
+                                                    padding: '2px',
+                                                    border: '1px solid rgba(255,255,255,0.1)'
+                                                }}>
+                                                    <button
+                                                        onClick={() => updateBillQuantity(currentTable.id, item.uniqueId, -1)}
+                                                        style={{ width: '32px', height: '32px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        title="Bajar cantidad / Eliminar"
+                                                    >
+                                                        {item.quantity === 1 ? <Trash2 size={16} /> : <Minus size={16} />}
+                                                    </button>
+                                                    <span style={{ minWidth: '18px', textAlign: 'center', fontWeight: '800', fontSize: '0.95rem' }}>{item.quantity}</span>
+                                                    <button
+                                                        onClick={() => updateBillQuantity(currentTable.id, item.uniqueId, 1)}
+                                                        style={{ width: '32px', height: '32px', border: 'none', background: 'none', color: '#4ade80', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        title="Subir cantidad"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+
                                                 <button
                                                     onClick={() => toggleItemInvitationInBill(item.uniqueId)}
                                                     style={{
                                                         background: item.isInvitation ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255,255,255,0.05)',
                                                         border: item.isInvitation ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
                                                         color: item.isInvitation ? '#a78bfa' : '#94a3b8',
-                                                        padding: '4px',
-                                                        borderRadius: '6px',
+                                                        padding: '6px',
+                                                        borderRadius: '8px',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
