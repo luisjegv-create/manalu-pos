@@ -15,6 +15,24 @@ export const OrderProvider = ({ children }) => {
     const { recordSale } = useCustomers();
     const { reservations } = useEvents();
 
+    const stripItem = (item) => {
+        if (!item) return item;
+        // Solo conservamos lo estrictamente necesario para la comanda y el ticket
+        // Eliminamos la propiedad 'image' que es la que ocupa el 99% del espacio
+        const { 
+            id, name, price, category, quantity, uniqueId, 
+            selectedModifiers, isModified, itemStatus, startTime, 
+            isInvitation, isTip, isNote, timestamp, subcategory,
+            allergens, quantitySet // Algunos metadatos pequeños son aceptables
+        } = item;
+        return { 
+            id, name, price, category, quantity, uniqueId, 
+            selectedModifiers, isModified, itemStatus, startTime, 
+            isInvitation, isTip, isNote, timestamp, subcategory,
+            allergens, quantitySet
+        };
+    };
+
     // Helper for safe parsing
     const safeParse = (key, fallback) => {
         try {
@@ -156,11 +174,12 @@ export const OrderProvider = ({ children }) => {
                                     const currentBill = prev[req.table_id] || [];
                                     const newBill = [...currentBill];
                                     cartItems.forEach(newItem => {
-                                        const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                                        const cleanItem = stripItem(newItem);
+                                        const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
                                         if (existingInBill) {
-                                            existingInBill.quantity += newItem.quantity;
+                                            existingInBill.quantity += cleanItem.quantity;
                                         } else {
-                                            newBill.push({ ...newItem });
+                                            newBill.push(cleanItem);
                                         }
                                     });
                                     return { ...prev, [req.table_id]: newBill };
@@ -283,11 +302,12 @@ export const OrderProvider = ({ children }) => {
                                 );
 
                                 if (!alreadyExists) {
-                                    const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                                    const cleanItem = stripItem(newItem);
+                                    const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
                                     if (existingInBill) {
-                                        existingInBill.quantity += newItem.quantity;
+                                        existingInBill.quantity += cleanItem.quantity;
                                     } else {
-                                        newBill.push({ ...newItem });
+                                        newBill.push(cleanItem);
                                     }
                                     modified = true;
                                 }
@@ -322,6 +342,51 @@ export const OrderProvider = ({ children }) => {
             supabase.removeChannel(salesSubscription);
             supabase.removeChannel(serviceSubscription);
         };
+    }, []);
+
+    // --- ONE-TIME CLEANUP FOR LOCALSTORAGE (REMOVE IMAGES FROM ORDERS) ---
+    useEffect(() => {
+        const cleanupOldOrders = () => {
+            let modified = false;
+            
+            // Cleanup tableOrders
+            const currentOrders = safeParse('manalu_table_orders', {});
+            const newOrders = {};
+            Object.keys(currentOrders).forEach(tableId => {
+                newOrders[tableId] = currentOrders[tableId].map(item => {
+                    if (item.image) {
+                        modified = true;
+                        return stripItem(item);
+                    }
+                    return item;
+                });
+            });
+            if (modified) setTableOrders(newOrders);
+
+            // Cleanup tableBills
+            const currentBills = safeParse('manalu_table_bills', {});
+            const newBills = {};
+            let billsModified = false;
+            Object.keys(currentBills).forEach(tableId => {
+                newBills[tableId] = currentBills[tableId].map(item => {
+                    if (item.image) {
+                        billsModified = true;
+                        return stripItem(item);
+                    }
+                    return item;
+                });
+            });
+            if (billsModified) {
+                setTableBills(newBills);
+                modified = true;
+            }
+
+            if (modified) console.log("🧹 Mantenimiento de almacenamiento: Imágenes eliminadas de comandas activas.");
+        };
+
+        // Run after a short delay to ensure initial state is loaded
+        const timer = setTimeout(cleanupOldOrders, 2000);
+        return () => clearTimeout(timer);
     }, []);
 
     // Persistence Effects for local-only state (Drafts)
@@ -364,16 +429,17 @@ export const OrderProvider = ({ children }) => {
                 return { ...prev, [tableId]: [...currentTableOrder, newItem] };
             }
 
-            const existingItem = currentTableOrder.find(item => item.id === product.id && !item.isModified);
+            const cleanProduct = stripItem(product);
+            const existingItem = currentTableOrder.find(item => item.id === cleanProduct.id && !item.isModified);
             let nextOrder;
             if (existingItem) {
                 nextOrder = currentTableOrder.map(item =>
-                    (item.id === product.id && !item.isModified)
+                    (item.id === cleanProduct.id && !item.isModified)
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             } else {
-                nextOrder = [...currentTableOrder, { ...product, quantity: 1, uniqueId: `${product.id}-${Date.now()}` }];
+                nextOrder = [...currentTableOrder, { ...cleanProduct, quantity: 1, uniqueId: `${cleanProduct.id}-${Date.now()}` }];
             }
             return { ...prev, [tableId]: nextOrder };
         });
@@ -484,11 +550,12 @@ export const OrderProvider = ({ children }) => {
                 const currentBill = prev[currentTable.id] || [];
                 const newBill = [...currentBill];
                 order.forEach(newItem => {
-                    const existingInBill = newBill.find(b => b.id === newItem.id && !b.isModified && !newItem.isModified);
+                    const cleanItem = stripItem(newItem);
+                    const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
                     if (existingInBill) {
-                        existingInBill.quantity += newItem.quantity;
+                        existingInBill.quantity += cleanItem.quantity;
                     } else {
-                        newBill.push({ ...newItem });
+                        newBill.push(cleanItem);
                     }
                 });
                 return { ...prev, [currentTable.id]: newBill };
