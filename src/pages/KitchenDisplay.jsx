@@ -1,6 +1,6 @@
 import React from 'react';
 import { useOrder } from '../context/OrderContext';
-import { ArrowLeft, Clock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -130,7 +130,33 @@ const KitchenDisplay = () => {
                                         <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--color-primary)' }}>MESA {order.table}</div>
                                         <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>{order.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                     </div>
-                                    <ElapsedTime timestamp={order.timestamp} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <ElapsedTime timestamp={order.timestamp} />
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm(`⚠️ ¿Seguro que quieres eliminar completamente la comanda de MESA ${order.table}?`)) {
+                                                    removeOrder(order.id);
+                                                }
+                                            }}
+                                            title="Eliminar Comanda Permanentemente"
+                                            style={{
+                                                background: 'rgba(239, 68, 68, 0.1)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#ef4444',
+                                                padding: '6px',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div style={{ flex: 1 }}>
