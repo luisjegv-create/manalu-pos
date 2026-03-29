@@ -21,8 +21,11 @@ import {
     Printer,
     Receipt,
     Calendar,
-    X as CloseIcon
+    X as CloseIcon,
+    Calculator,
+    Coins
 } from 'lucide-react';
+import CashCalculator from '../components/CashCalculator';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
 import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
@@ -330,6 +333,7 @@ const Analytics = () => {
     }, [salesHistory, salesProducts, getProductCost]); // Using full history for better classification sample size? Or filtered? Let's keep separate logic if needed.
 
     const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+    const [showCalculator, setShowCalculator] = useState(false);
     const [countedCash, setCountedCash] = useState('');
     const [closeNotes, setCloseNotes] = useState('');
     const [startingCash, setStartingCash] = useState(''); // Fondo de caja (cambio)
@@ -352,133 +356,175 @@ const Analytics = () => {
                 {isCloseModalOpen && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
                         <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
                             style={{ 
-                                maxWidth: '500px', width: '100%', padding: '2.5rem', 
+                                maxWidth: showCalculator ? '900px' : '550px', 
+                                width: '100%', 
+                                padding: '2rem', 
                                 background: colors.surface, borderRadius: '24px',
-                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
-                                border: `1px solid ${colors.border}`
+                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                                border: `1px solid ${colors.border}`,
+                                maxHeight: '90vh',
+                                overflowY: 'auto',
+                                transition: 'max-width 0.3s ease'
                             }}
                         >
-                            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.75rem', fontWeight: '800' }}>Resumen de Cierre</h2>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '2.5rem' }}>
-                                <div style={{ padding: '1.25rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
-                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600', marginBottom: '0.5rem' }}>Total Sistema</div>
-                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
-                                </div>
-                                <div style={{ padding: '1.25rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
-                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600', marginBottom: '0.5rem' }}>Tarjeta</div>
-                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: colors.primary }}>{dashboardStats.cardRaw.toFixed(2)}€</div>
-                                    {dashboardStats.cardTipsRaw > 0 && (
-                                        <div style={{ fontSize: '0.75rem', color: colors.warning, marginTop: '0.35rem', fontWeight: '700' }}>Inc. {dashboardStats.cardTipsRaw.toFixed(2)}€ propina</div>
-                                    )}
-                                </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: colors.text, margin: 0 }}>Cierre de Caja (Z)</h2>
+                                <button 
+                                    onClick={() => setIsCloseModalOpen(false)}
+                                    style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}
+                                >
+                                    <CloseIcon size={24} />
+                                </button>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: showCalculator ? '1fr 1fr' : '1fr', gap: '2rem' }}>
+                                {/* Left Side: Summaries and Inputs */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
+                                            <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>Ventas Sistema</div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: '900', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
+                                        </div>
+                                        <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
+                                            <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>Cobro Tarjeta</div>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: '900', color: colors.primary }}>{dashboardStats.cardRaw.toFixed(2)}€</div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div>
+                                            <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: '700' }}>FONDO INICIAL (CAMBIO)</label>
+                                            <input
+                                                type="number"
+                                                style={{ 
+                                                    width: '100%', padding: '0.85rem', fontSize: '1.1rem', textAlign: 'center', 
+                                                    background: '#f8fafc', border: `2px solid ${colors.border}`, 
+                                                    borderRadius: '12px', color: colors.primary, outline: 'none', fontWeight: '800'
+                                                }}
+                                                value={startingCash}
+                                                onChange={(e) => setStartingCash(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                                <label style={{ color: colors.textMuted, fontSize: '0.8rem', fontWeight: '700' }}>EFECTIVO CONTADO</label>
+                                                <button 
+                                                    onClick={() => setShowCalculator(!showCalculator)}
+                                                    style={{ 
+                                                        background: showCalculator ? colors.primary : 'transparent', 
+                                                        border: `1px solid ${colors.primary}`,
+                                                        color: showCalculator ? 'white' : colors.primary,
+                                                        borderRadius: '6px', padding: '2px 8px', fontSize: '0.7rem',
+                                                        fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                                                    }}
+                                                >
+                                                    <Calculator size={12} /> {showCalculator ? 'Ocultar' : 'Calcular'}
+                                                </button>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                placeholder={`Esperado: ${expectedCash.toFixed(2)}€`}
+                                                style={{ 
+                                                    width: '100%', padding: '0.85rem', fontSize: '1.1rem', textAlign: 'center', 
+                                                    background: '#f8fafc', border: `2px solid ${Math.abs(discrepancy) < 0.05 ? colors.success : (countedCash ? colors.danger : colors.border)}`, 
+                                                    borderRadius: '12px', color: colors.success, outline: 'none', fontWeight: '900'
+                                                }}
+                                                value={countedCash}
+                                                onChange={(e) => setCountedCash(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{
+                                        padding: '1rem',
+                                        background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                                        borderRadius: '16px',
+                                        textAlign: 'center',
+                                        border: `1px dashed ${Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger}`
+                                    }}>
+                                        <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '700' }}>DESCUADRE DE CAJA</div>
+                                        <div style={{ fontSize: '1.75rem', fontWeight: '900', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
+                                            {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(2)}€
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Fondo de Caja (Cambio)</label>
-                                        <input
-                                            type="number"
-                                            placeholder="Ej: 200"
+                                        <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: '700' }}>NOTAS / OBSERVACIONES</label>
+                                        <textarea
                                             style={{ 
-                                                width: '100%', padding: '1rem', fontSize: '1.25rem', textAlign: 'center', 
-                                                background: '#f8fafc', border: `2px solid ${colors.border}`, 
-                                                borderRadius: '12px', color: colors.primary, outline: 'none', fontWeight: '800'
+                                                width: '100%', padding: '0.85rem', height: '80px', background: '#f8fafc', 
+                                                border: `1px solid ${colors.border}`, borderRadius: '12px', outline: 'none', 
+                                                resize: 'none', color: colors.text, fontSize: '0.9rem' 
                                             }}
-                                            value={startingCash}
-                                            onChange={(e) => setStartingCash(e.target.value)}
+                                            value={closeNotes}
+                                            onChange={(e) => setCloseNotes(e.target.value)}
+                                            placeholder="Ej: Fallo en el cambio de lotería..."
                                         />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Efectivo Contado (€)</label>
-                                        <input
-                                            type="number"
-                                            placeholder={`Esperado: ${expectedCash.toFixed(2)}€`}
+
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                        <button
+                                            onClick={() => setIsCloseModalOpen(false)}
                                             style={{ 
-                                                width: '100%', padding: '1rem', fontSize: '1.25rem', textAlign: 'center', 
-                                                background: '#f8fafc', border: `2px solid ${colors.border}`, 
-                                                borderRadius: '12px', color: colors.success, outline: 'none', fontWeight: '800'
+                                                flex: 1, padding: '1rem', background: 'white', 
+                                                border: `1px solid ${colors.border}`, borderRadius: '12px', 
+                                                color: colors.textMuted, cursor: 'pointer', fontWeight: '700' 
                                             }}
-                                            value={countedCash}
-                                            onChange={(e) => setCountedCash(e.target.value)}
+                                        >
+                                            Cerrar
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                const finalClose = {
+                                                    efectivo: parseFloat(countedCash || 0),
+                                                    efectivo_esperado: expectedCash,
+                                                    fondo_caja: parseFloat(startingCash || 0),
+                                                    tarjeta: dashboardStats.cardRaw,
+                                                    cardTips: dashboardStats.cardTipsRaw,
+                                                    total: dashboardStats.totalRevenue,
+                                                    notes: closeNotes,
+                                                    salesCount: dashboardStats.ticketCount
+                                                };
+                                                const result = await performCashClose(finalClose);
+                                                if (result && !result.error) {
+                                                    printCashCloseTicket(result, restaurantInfo);
+                                                    setIsCloseModalOpen(false);
+                                                    alert("✅ Cierre Z guardado e impreso correctamente");
+                                                } else {
+                                                    alert(`❌ Error al guardar el cierre: ${result?.error || "Desconocido"}`);
+                                                }
+                                            }}
+                                            disabled={!countedCash}
+                                            style={{ 
+                                                flex: 2, padding: '1rem', background: colors.success, 
+                                                border: 'none', borderRadius: '12px', color: 'white', 
+                                                fontWeight: '900', cursor: 'pointer',
+                                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                                                opacity: !countedCash ? 0.5 : 1
+                                            }}
+                                        >
+                                            REALIZAR CIERRE Z
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Calculator (Conditional) */}
+                                {showCalculator && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        style={{ borderLeft: `1px solid ${colors.border}`, paddingLeft: '1rem' }}
+                                    >
+                                        <CashCalculator 
+                                            colors={colors} 
+                                            onTotalChange={(total) => setCountedCash(total > 0 ? total.toString() : '')} 
                                         />
-                                    </div>
-                                </div>
-
-                                <div style={{
-                                    padding: '1.25rem',
-                                    background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                                    borderRadius: '16px',
-                                    textAlign: 'center',
-                                    border: `1px dashed ${Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger}`
-                                }}>
-                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600' }}>Descuadre</div>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
-                                        {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(2)}€
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Notas / Observaciones</label>
-                                    <textarea
-                                        style={{ 
-                                            width: '100%', padding: '1rem', height: '100px', background: '#f8fafc', 
-                                            border: `1px solid ${colors.border}`, borderRadius: '12px', outline: 'none', 
-                                            resize: 'none', color: colors.text, fontSize: '0.95rem' 
-                                        }}
-                                        value={closeNotes}
-                                        onChange={(e) => setCloseNotes(e.target.value)}
-                                        placeholder="Ej: Descuadre de 2€ por cambio..."
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '1rem' }}>
-                                    <button
-                                        onClick={() => setIsCloseModalOpen(false)}
-                                        style={{ 
-                                            flex: 1, padding: '1rem', background: 'white', 
-                                            border: `1px solid ${colors.border}`, borderRadius: '12px', 
-                                            color: colors.textMuted, cursor: 'pointer', fontWeight: '700' 
-                                        }}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            const finalClose = {
-                                                efectivo: parseFloat(countedCash || 0),
-                                                efectivo_esperado: expectedCash,
-                                                fondo_caja: parseFloat(startingCash || 0),
-                                                tarjeta: dashboardStats.cardRaw,
-                                                cardTips: dashboardStats.cardTipsRaw,
-                                                total: dashboardStats.totalRevenue,
-                                                notes: closeNotes,
-                                                salesCount: dashboardStats.ticketCount
-                                            };
-                                            const result = await performCashClose(finalClose);
-                                            if (result) {
-                                                printCashCloseTicket(result, restaurantInfo);
-                                                setIsCloseModalOpen(false);
-                                                alert("✅ Cierre Z guardado e impreso correctamente");
-                                            } else {
-                                                alert("❌ Error al guardar el cierre");
-                                            }
-                                        }}
-                                        style={{ 
-                                            flex: 2, padding: '1rem', background: colors.success, 
-                                            border: 'none', borderRadius: '12px', color: 'white', 
-                                            fontWeight: '800', cursor: 'pointer',
-                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                                        }}
-                                    >
-                                        Confirmar Cierre
-                                    </button>
-                                </div>
+                                    </motion.div>
+                                )}
                             </div>
                         </motion.div>
                     </div>

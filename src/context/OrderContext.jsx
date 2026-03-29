@@ -1146,30 +1146,54 @@ export const OrderProvider = ({ children }) => {
 
     const performCashClose = async (totals) => {
         try {
-            const { data, error } = await supabase.from('cash_closes').insert([{
-                total_efectivo: totals.efectivo || 0,
-                total_tarjeta: totals.tarjeta || 0,
-                total_ventas: totals.total || 0,
-                sales_count: totals.salesCount || 0,
+            console.log("DEBUG - performCashClose starting with:", totals);
+            const closeRecord = {
+                total_efectivo: parseFloat(totals.efectivo || 0),
+                total_tarjeta: parseFloat(totals.tarjeta || 0),
+                total_ventas: parseFloat(totals.total || 0),
+                sales_count: parseInt(totals.salesCount || 0),
                 notes: totals.notes || '',
-                fondo_caja: totals.fondo_caja || 0
-            }]).select();
+                fondo_caja: parseFloat(totals.fondo_caja || 0)
+            };
 
-            if (!error && data) {
+            let { data, error } = await supabase.from('cash_closes').insert([closeRecord]).select();
+
+            // Fallback for missing columns (fondo_caja or sales_count)
+            if (error && (error.message.includes('fondo_caja') || error.message.includes('sales_count')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                console.warn("Fallback: missing column in cash_closes table, retrying without new columns...");
+                const retryRecord = { 
+                    total_efectivo: closeRecord.total_efectivo,
+                    total_tarjeta: closeRecord.total_tarjeta,
+                    total_ventas: closeRecord.total_ventas,
+                    notes: closeRecord.notes + (totals.fondo_caja ? ` | Fondo: ${totals.fondo_caja}€` : '')
+                };
+                const { data: retryData, error: retryError } = await supabase.from('cash_closes').insert([retryRecord]).select();
+                data = retryData;
+                error = retryError;
+            }
+
+            if (error) {
+                console.error("DEBUG - performCashClose Supabase Error:", error);
+                throw error;
+            }
+
+            if (data && data.length > 0) {
                 const newClose = {
                     ...data[0],
                     date: new Date(data[0].created_at),
                     efectivo: data[0].total_efectivo,
                     tarjeta: data[0].total_tarjeta,
                     total: data[0].total_ventas,
-                    salesCount: data[0].sales_count,
-                    fondo_caja: data[0].fondo_caja
+                    salesCount: data[0].sales_count || totals.salesCount,
+                    fondo_caja: data[0].fondo_caja || totals.fondo_caja
                 };
                 setCashCloses(prev => [newClose, ...prev]);
                 return newClose;
             }
         } catch (err) {
-            console.error(err);
+            console.error("DEBUG - performCashClose Failure:", err);
+            // Return error object for UI feedback
+            return { error: err.message || "Error desconocido al guardar el cierre" };
         }
         return null;
     };
