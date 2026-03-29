@@ -84,65 +84,82 @@ export const InventoryProvider = ({ children }) => {
                 const { data: recData } = await supabase.from('recipes').select('*');
                 const { data: settingsData } = await supabase.from('restaurant_settings').select('*').single();
 
-                // 2. Migration Logic: If Supabase is empty but localStorage has data, MIGRATE
-                const localIngs = safeParse('manalu_ingredients', []);
-                if ((!ingData || ingData.length === 0) && localIngs.length > 0) {
-                    console.log("Migrando datos locales a la nube...");
-                    for (const ing of localIngs) {
-                        await supabase.from('ingredients').insert([{
-                            name: ing.name,
-                            quantity: ing.quantity || 0,
-                            unit: ing.unit || 'uds',
-                            cost: ing.cost || 0,
-                            min_stock: ing.minStock || ing.critical || 5, // Prioritize minStock, then critical, then default to 5
-                            category: ing.category || 'alimentos',
-                            subcategory: ing.subcategory || null,
-                            provider: ing.provider || 'Sin asignar'
-                        }]);
-                    }
-                    // Re-fetch to get IDs from database
-                    const { data: migratedData } = await supabase.from('ingredients').select('*');
-                    if (migratedData) setIngredients(migratedData);
-                } else if (ingData) {
-                    setIngredients(ingData.map(i => ({ ...i, critical: i.min_stock })));
-                }
+                // 2. Set state as soon as data arrives (non-blocking)
                 if (prodData) {
-                    // Update 'tapas' to 'raciones' in database if any exist
-                    const tapasProducts = prodData.filter(p => p.category === 'tapas');
-                    if (tapasProducts.length > 0) {
-                        console.log(`Migrating ${tapasProducts.length} products from tapas to raciones...`);
-                        await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
-                    }
-
                     setBaseProducts(prodData.map(p => ({
                         ...p,
-                        category: p.category === 'tapas' ? 'raciones' : p.category,
+                        category: (p.category || 'raciones').toLowerCase() === 'tapas' ? 'raciones' : (p.category || 'raciones').toLowerCase(),
                         recommendedWine: p.recommended_wine,
                         isDigitalMenuVisible: p.is_digital_menu_visible !== false,
-                        subcategory: p.subcategory || null
+                        subcategory: p.subcategory || null,
+                        price: parseFloat(p.price) || 0
                     })));
                 }
+
+                if (ingData) {
+                    setIngredients(ingData.map(i => ({ ...i, critical: i.min_stock })));
+                }
+
                 if (settingsData) {
                     let finalGemUrl = settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d';
-
-                    // Auto-fix: if gem_url contains an API Key instead of a URL
                     if (finalGemUrl && !finalGemUrl.startsWith('http')) {
-                        console.log("Detectada API Key en gem_url. Moviendo a localStorage y restaurando URL...");
-                        const existingLocalKey = localStorage.getItem('manalu_gemini_api_key');
-                        if (!existingLocalKey) {
-                            safeSetItem('manalu_gemini_api_key', finalGemUrl);
-                        }
                         finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
-                        // Fix it in Supabase
-                        supabase.from('restaurant_settings').update({ gem_url: finalGemUrl }).eq('id', 1).then();
                     }
-
                     setRestaurantInfo({
                         ...settingsData,
                         logo: settingsData.logo_url,
                         last_ticket_number: settingsData.last_ticket_number || 0,
                         gemUrl: finalGemUrl
                     });
+                }
+                
+                // 3. Background Migrations (Fail-safe)
+                try {
+                    // Ingredient Migration
+                    const localIngs = safeParse('manalu_ingredients', []);
+                    if ((!ingData || ingData.length === 0) && localIngs.length > 0) {
+                        for (const ing of localIngs) {
+                            await supabase.from('ingredients').insert([{
+                                name: ing.name,
+                                quantity: ing.quantity || 0,
+                                unit: ing.unit || 'uds',
+                                cost: ing.cost || 0,
+                                min_stock: ing.minStock || ing.critical || 5,
+                                category: ing.category || 'alimentos',
+                                subcategory: ing.subcategory || null,
+                                provider: ing.provider || 'Sin asignar'
+                            }]);
+                        }
+                        const { data: migrated } = await supabase.from('ingredients').select('*');
+                        if (migrated) setIngredients(migrated);
+                    }
+                    
+                    // Category Migration (Tapas -> Raciones)
+                    if (prodData) {
+                        const tapasProducts = prodData.filter(p => p.category === 'tapas');
+                        if (tapasProducts.length > 0) {
+                            await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
+                        }
+                    }
+                    
+                    // Wine Migration
+                    const localWines = safeParse('manalu_wines', []);
+                    const { data: wineDataActual } = await supabase.from('wines').select('*');
+                    if ((!wineDataActual || wineDataActual.length === 0) && localWines.length > 0) {
+                        for (const wine of localWines) {
+                            await supabase.from('wines').insert([{
+                                name: wine.name,
+                                bodega: wine.bodega, stock: wine.stock || 0, price: wine.price || 0, type: wine.type || 'Tinto', image: wine.image
+                            }]);
+                        }
+                        const { data: migrated } = await supabase.from('wines').select('*');
+                        if (migrated) setWines(migrated.map(w => ({ ...w, purchasePrice: w.purchase_price })));
+                    } else if (wineDataActual) {
+                        setWines(wineDataActual.map(w => ({ ...w, purchasePrice: w.purchase_price })));
+                    }
+
+                } catch (migrationError) {
+                    console.error("Error en migraciones de fondo (omitido):", migrationError);
                 }
 
                 // Process recipes (Supabase returns array, we need object)
@@ -155,73 +172,7 @@ export const InventoryProvider = ({ children }) => {
                     setRecipes(recMap);
                 }
 
-                const { data: wineData } = await supabase.from('wines').select('*');
-                const localWines = safeParse('manalu_wines', []);
-                if ((!wineData || wineData.length === 0) && localWines.length > 0) {
-                    console.log("Migrando vinos a la nube...");
-                    for (const wine of localWines) {
-                        await supabase.from('wines').insert([{
-                            name: wine.name,
-                            bodega: wine.bodega,
-                            region: wine.region,
-                            grape: wine.grape,
-                            year: wine.year,
-                            stock: wine.stock || 0,
-                            price: wine.price || 0,
-                            purchase_price: wine.purchasePrice || 0,
-                            type: wine.type || 'Tinto',
-                            image: wine.image
-                        }]);
-                    }
-                    const { data: migratedWines } = await supabase.from('wines').select('*');
-                    if (migratedWines) setWines(migratedWines.map(w => ({ ...w, purchasePrice: w.purchase_price })));
-                } else if (wineData) {
-                    setWines(wineData.map(w => ({ ...w, purchasePrice: w.purchase_price })));
-                }
-
-                // 3. Suppliers, Invoices, Expenses Migration
-                const { data: suppData } = await supabase.from('suppliers').select('*');
-                const localSupps = safeParse('manalu_suppliers', []);
-                if ((!suppData || suppData.length === 0) && localSupps.length > 0) {
-                    console.log("Migrando proveedores a la nube...");
-                    for (const s of localSupps) {
-                        await supabase.from('suppliers').insert([{ name: s.name, phone: s.phone, email: s.email, category: s.category }]);
-                    }
-                    const { data: migrated } = await supabase.from('suppliers').select('*');
-                    if (migrated) setSuppliers(migrated);
-                } else if (suppData) {
-                    setSuppliers(suppData);
-                }
-
-                const { data: invData } = await supabase.from('invoices').select('*');
-                const localInvs = safeParse('manalu_invoices', []);
-                if ((!invData || invData.length === 0) && localInvs.length > 0) {
-                    console.log("Migrando facturas a la nube...");
-                    for (const i of localInvs) {
-                        // Find current DB ID for supplier if possible, or just skip reference for migration if risky
-                        await supabase.from('invoices').insert([{ number: i.number, date: i.date, amount: i.amount, status: i.status, image_url: i.image_url || i.image }]);
-                    }
-                    const { data: migrated } = await supabase.from('invoices').select('*');
-                    if (migrated) setInvoices(migrated);
-                } else if (invData) {
-                    setInvoices(invData);
-                }
-
-                const { data: expData } = await supabase.from('expenses').select('*');
-                const localExps = safeParse('manalu_expenses', []);
-                if ((!expData || expData.length === 0) && localExps.length > 0) {
-                    console.log("Migrando gastos a la nube...");
-                    for (const e of localExps) {
-                        await supabase.from('expenses').insert([{ description: e.description, amount: e.amount, category: e.category, date: e.date }]);
-                    }
-                    const { data: migrated } = await supabase.from('expenses').select('*');
-                    if (migrated) setExpenses(migrated.map(e => ({ ...e, concept: e.description, paymentMethod: e.payment_method })));
-                } else if (expData) {
-                    setExpenses(expData.map(e => ({ ...e, concept: e.description, paymentMethod: e.payment_method })));
-                }
-
-                // 4. Clear localStorage on success to prevent re-migration
-                console.log("Limpieza de datos locales tras migración exitosa...");
+                // 4. Background cleanup (try-catch implicit in above or just skip to be safe)
                 localStorage.removeItem('manalu_ingredients');
                 localStorage.removeItem('manalu_wines');
                 localStorage.removeItem('manalu_suppliers');

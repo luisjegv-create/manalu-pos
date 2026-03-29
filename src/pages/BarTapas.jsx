@@ -41,7 +41,7 @@ import ProductEditorModal from '../components/TPV/ProductEditorModal';
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo, checkProductAvailability } = useInventory();
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo, checkProductAvailability, loading: inventoryLoading } = useInventory();
 
     // Safety fallback for restaurant info
     const restaurantInfo = contextRestaurantInfo || {
@@ -906,6 +906,41 @@ const BarTapas = () => {
                                             />
                                         )}
                                     </>
+                                )}
+                                
+                                {!inventoryLoading && filteredProducts.length === 0 && searchQuery.trim() === '' && (
+                                    <div style={{
+                                        flex: 1,
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '1.5rem',
+                                        padding: '2rem',
+                                        textAlign: 'center',
+                                        color: 'var(--color-text-muted)'
+                                    }}>
+                                        <div style={{ fontSize: '4rem', opacity: 0.3 }}>🍽️</div>
+                                        <div>
+                                            <h3 style={{ color: 'var(--color-text-dark)', marginBottom: '0.5rem' }}>No hay productos en "{activeCategory}"</h3>
+                                            <p style={{ maxWidth: '300px', margin: '0 auto' }}>Si crees que esto es un error, comprueba tu conexión a internet o intenta recargar la página.</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => window.location.reload()}
+                                            style={{
+                                                padding: '0.75rem 2rem',
+                                                background: 'var(--color-primary)',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '12px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                            }}
+                                        >
+                                            🔄 Recargar Aplicación
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
