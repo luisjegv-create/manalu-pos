@@ -1107,11 +1107,6 @@ export const OrderProvider = ({ children }) => {
             delete next[tableId];
             return next;
         });
-        setTableBills(prev => {
-            const next = { ...prev };
-            delete next[tableId];
-            return next;
-        });
     };
 
     const performCashClose = async (totals) => {
@@ -1121,7 +1116,8 @@ export const OrderProvider = ({ children }) => {
                 total_tarjeta: totals.tarjeta || 0,
                 total_ventas: totals.total || 0,
                 sales_count: totals.salesCount || 0,
-                notes: totals.notes || ''
+                notes: totals.notes || '',
+                fondo_caja: totals.fondo_caja || 0
             }]).select();
 
             if (!error && data) {
@@ -1131,7 +1127,8 @@ export const OrderProvider = ({ children }) => {
                     efectivo: data[0].total_efectivo,
                     tarjeta: data[0].total_tarjeta,
                     total: data[0].total_ventas,
-                    salesCount: data[0].sales_count
+                    salesCount: data[0].sales_count,
+                    fondo_caja: data[0].fondo_caja
                 };
                 setCashCloses(prev => [newClose, ...prev]);
                 return newClose;
@@ -1142,6 +1139,18 @@ export const OrderProvider = ({ children }) => {
         return null;
     };
 
+    const deleteCashClose = async (closeId) => {
+        if (!confirm("⚠️ ¿Estás seguro de que quieres borrar este registro de cierre? Esto NO borrará las ventas, solo permitirá que los datos vuelvan a aparecer en los reportes del día.")) return false;
+        try {
+            const { error } = await supabase.from('cash_closes').delete().eq('id', closeId);
+            if (error) throw error;
+            setCashCloses(prev => prev.filter(c => c.id !== closeId));
+            return true;
+        } catch (err) {
+            console.error("Error deleting cash close:", err);
+            return false;
+        }
+    };
 
     const deleteSale = async (saleId) => {
         try {
@@ -1499,7 +1508,6 @@ export const OrderProvider = ({ children }) => {
             deleteSale,
             updateTableDetails,
             syncStatus,
-            performCashClose,
             isLoading,
             salesHistory,
             cashCloses,
@@ -1511,7 +1519,9 @@ export const OrderProvider = ({ children }) => {
             setActiveQrAlert,
             transferTable,
             mergeTables,
-            splitTable
+            splitTable,
+            deleteCashClose,
+            performCashClose
         }}>
             {children}
         </OrderContext.Provider>

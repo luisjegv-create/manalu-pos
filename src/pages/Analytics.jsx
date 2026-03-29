@@ -20,6 +20,7 @@ import {
     Trash2,
     Printer,
     Receipt,
+    Calendar,
     X as CloseIcon
 } from 'lucide-react';
 import { useOrder } from '../context/OrderContext';
@@ -48,11 +49,12 @@ const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection })
 
 const Analytics = () => {
     const navigate = useNavigate();
-    const { salesHistory, cashCloses, performCashClose, deleteSale } = useOrder();
+    const { salesHistory, cashCloses, performCashClose, deleteSale, deleteCashClose } = useOrder();
     const { salesProducts, getProductCost, expenses, restaurantInfo } = useInventory(); // Added restaurantInfo
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
-    const [dateRange, setDateRange] = useState('today'); // today | week | month | all
+    const [dateRange, setDateRange] = useState('today');
+    const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]); // today | week | month | all
 
     // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
@@ -76,45 +78,54 @@ const Analytics = () => {
     }, [salesHistory]);
 
     // --- SHARED HELPERS ---
-    const getFilteredSalesInRange = useCallback((unit = 'today', offset = 0) => {
+    const getFilteredSalesInRange = useCallback((unit = 'today', offset = 0, specificDate = null) => {
         if (!salesHistory || !Array.isArray(salesHistory)) return [];
 
         const now = new Date();
-        const start = new Date(now);
-        const end = new Date(now);
+        let start = new Date();
+        let end = new Date();
 
-        if (unit === 'today') {
+        if (unit === 'shift') {
+            // "Jornada Actual" - since the last Z-report
+            if (cashCloses && cashCloses.length > 0) {
+                const latestClose = [...cashCloses].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                start = new Date(latestClose.date);
+            } else {
+                start = new Date(now);
+                start.setHours(0, 0, 0, 0);
+            }
+            end = new Date(now);
+        } else if (unit === 'custom' && (specificDate || customDate)) {
+            const dateToUse = specificDate || customDate;
+            start = new Date(dateToUse);
+            start.setHours(0,0,0,0);
+            end = new Date(dateToUse);
+            end.setHours(23,59,59,999);
+        } else if (unit === 'today') {
             start.setDate(now.getDate() - offset);
             start.setHours(0, 0, 0, 0);
             end.setDate(now.getDate() - offset);
             end.setHours(23, 59, 59, 999);
-
-            return salesHistory.filter(s => {
-                const d = new Date(s.date);
-                return d >= start && d <= end;
-            });
-        }
-
-        if (unit === 'all') return salesHistory;
-
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-
-        if (unit === 'week') {
-            start.setDate(now.getDate() - 7 - (offset * 7));
-            end.setDate(now.getDate() - (offset * 7));
+        } else if (unit === 'all') {
+            return salesHistory;
+        } else if (unit === 'week') {
+            const weekOffset = offset * 7;
+            start.setDate(now.getDate() - 7 - weekOffset);
+            start.setHours(0, 0, 0, 0);
+            end.setDate(now.getDate() - weekOffset);
+            end.setHours(23, 59, 59, 999);
         } else if (unit === 'month') {
-            start.setMonth(now.getMonth() - offset);
-            start.setDate(1);
-            end.setMonth(now.getMonth() - offset + 1);
-            end.setDate(0);
+            start.setMonth(now.getMonth() - offset - 1);
+            start.setHours(0, 0, 0, 0);
+            end.setMonth(now.getMonth() - offset);
+            end.setHours(23, 59, 59, 999);
         }
 
         return salesHistory.filter(s => {
             const d = new Date(s.date);
-            return d >= start && d <= end;
+            return unit === 'all' || (d >= start && d <= end);
         });
-    }, [salesHistory]);
+    }, [salesHistory, customDate, cashCloses]);
 
     const handleDeleteSale = async (id) => {
         if (confirm("¿Estás seguro de que quieres borrar esta venta? Esta acción no se puede deshacer.")) {
@@ -144,8 +155,18 @@ const Analytics = () => {
         );
     };
 
-    const filteredSales = useMemo(() => getFilteredSalesInRange(dateRange, 0), [getFilteredSalesInRange, dateRange]);
-    const comparisonSales = useMemo(() => getFilteredSalesInRange(dateRange, 1), [getFilteredSalesInRange, dateRange]);
+    const filteredSales = useMemo(() => {
+        if (dateRange === 'shift') return getFilteredSalesInRange('shift');
+        if (dateRange === 'yesterday') return getFilteredSalesInRange('today', 1);
+        if (dateRange === 'custom') return getFilteredSalesInRange('custom', 0, customDate);
+        return getFilteredSalesInRange(dateRange, 0);
+    }, [dateRange, customDate, getFilteredSalesInRange]);
+
+    const comparisonSales = useMemo(() => {
+        if (dateRange === 'yesterday') return getFilteredSalesInRange('today', 2);
+        if (dateRange === 'custom') return [];
+        return getFilteredSalesInRange(dateRange, 1);
+    }, [dateRange, getFilteredSalesInRange]);
 
     // --- DASHBOARD DATA ---
     const dashboardStats = useMemo(() => {
@@ -550,24 +571,36 @@ const Analytics = () => {
                                 <Download size={16} /> Exportar
                             </button>
                         )}
-                        <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
-                            {['today', 'week', 'month', 'all'].map(r => (
+                        <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem', flexWrap: 'wrap' }}>
+                            {['shift', 'today', 'yesterday', 'week', 'month', 'all', 'custom'].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setDateRange(r)}
                                     style={{
-                                        flex: 1,
+                                        flex: dateRange === r ? '1.5' : '1',
                                         padding: '0.5rem',
-                                        background: dateRange === r ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                        color: dateRange === r ? 'white' : '#64748b',
+                                        background: dateRange === r ? 'var(--color-primary)' : 'transparent',
+                                        color: dateRange === r ? 'black' : '#94a3b8',
                                         border: 'none', borderRadius: '6px', cursor: 'pointer', textTransform: 'capitalize',
-                                        fontSize: '0.85rem'
+                                        fontSize: '0.8rem', fontWeight: 'bold'
                                     }}
                                 >
-                                    {r === 'today' ? 'Hoy' : r === 'week' ? '7 D' : r === 'month' ? 'Mes' : 'Todo'}
+                                    {r === 'shift' ? '✨ Turno' : r === 'today' ? 'Hoy' : r === 'yesterday' ? 'Ayer' : r === 'week' ? '7 D' : r === 'month' ? 'Mes' : r === 'all' ? 'Todo' : '📅'}
                                 </button>
                             ))}
                         </div>
+
+                        {dateRange === 'custom' && (
+                            <div className="glass-panel" style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Calendar size={16} color="#94a3b8" />
+                                <input 
+                                    type="date" 
+                                    value={customDate}
+                                    onChange={(e) => setCustomDate(e.target.value)}
+                                    style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.85rem', outline: 'none', width: '120px' }}
+                                />
+                            </div>
+                        )}
                     </div>
                 </header>
 
@@ -1096,7 +1129,26 @@ const Analytics = () => {
                                     >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(close.date).toLocaleDateString()}</div>
-                                            <Printer size={14} color="#64748b" />
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <Printer 
+                                                    size={14} 
+                                                    color="#64748b" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`¿Deseas reimprimir el Cierre Z del día ${new Date(close.date).toLocaleDateString()}?`)) {
+                                                            printCashCloseTicket(close, restaurantInfo);
+                                                        }
+                                                    }}
+                                                />
+                                                <Trash2 
+                                                    size={14} 
+                                                    color="#ef4444" 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        deleteCashClose(close.id);
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
                                         <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.25rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
                                         <div style={{ fontSize: '0.8rem', color: '#10b981' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</div>
