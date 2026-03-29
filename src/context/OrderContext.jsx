@@ -389,6 +389,41 @@ export const OrderProvider = ({ children }) => {
         return () => clearTimeout(timer);
     }, []);
 
+    // --- AUTO-BACKUP SYSTEM ---
+    useEffect(() => {
+        const autoBackup = () => {
+            const hasData = tables.length > 0 || Object.keys(tableOrders).length > 0 || Object.keys(tableBills).length > 0;
+            if (!hasData) return;
+
+            const snapshot = {
+                tables,
+                tableOrders,
+                tableBills,
+                timestamp: new Date().toISOString()
+            };
+            // Local snapshot (Level 1)
+            localStorage.setItem('manalu_last_good_state', JSON.stringify(snapshot));
+            
+            // Cloud mirror (Level 2) - Only every 5 minutes to avoid spamming
+            const lastCloudBackup = localStorage.getItem('manalu_last_cloud_backup');
+            const now = new Date();
+            if (!lastCloudBackup || (now - new Date(lastCloudBackup)) > 300000) {
+                supabase.from('service_requests').insert([{
+                    table_id: 'SYSTEM',
+                    table_name: 'AUTO_MIRROR',
+                    type: 'system_backup',
+                    payload: JSON.stringify(snapshot),
+                    status: 'pending'
+                }]).then(() => {
+                    localStorage.setItem('manalu_last_cloud_backup', now.toISOString());
+                });
+            }
+        };
+
+        const timer = setTimeout(autoBackup, 5000); // Wait 5s after any change to stabilize
+        return () => clearTimeout(timer);
+    }, [tables, tableOrders, tableBills]);
+
     // Persistence Effects for local-only state (Drafts)
     useEffect(() => {
         safeSetItem('manalu_tables', JSON.stringify(tables));
@@ -1521,7 +1556,38 @@ export const OrderProvider = ({ children }) => {
             mergeTables,
             splitTable,
             deleteCashClose,
-            performCashClose
+            performCashClose,
+            // --- BACKUP & RECOVERY ---
+            saveEmergencyBackup: () => {
+                const snapshot = {
+                    tables,
+                    tableOrders,
+                    tableBills,
+                    timestamp: new Date().toISOString()
+                };
+                safeSetItem('manalu_emergency_backup', JSON.stringify(snapshot));
+                // Optional: Mirror to cloud
+                supabase.from('service_requests').insert([{
+                    table_id: 'SYSTEM',
+                    table_name: 'BACKUP_SNAPSHOT',
+                    type: 'system_backup',
+                    payload: JSON.stringify(snapshot),
+                    status: 'pending'
+                }]).then();
+                console.log("💾 Backup de emergencia guardado.");
+            },
+            restoreFromBackup: (backupData) => {
+                if (!backupData) return false;
+                try {
+                    if (backupData.tables) setTables(backupData.tables);
+                    if (backupData.tableOrders) setTableOrders(backupData.tableOrders);
+                    if (backupData.tableBills) setTableBills(backupData.tableBills);
+                    return true;
+                } catch (e) {
+                    console.error("Error al restaurar backup:", e);
+                    return false;
+                }
+            }
         }}>
             {children}
         </OrderContext.Provider>

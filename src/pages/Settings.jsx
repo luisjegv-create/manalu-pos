@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle, Users, UserPlus, X } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
+import { useOrder } from '../context/OrderContext';
 import { supabase } from '../utils/supabaseClient';
 import { compressImage, compressImageFromUrl } from '../utils/imageHelpers';
 import { uploadImage } from '../utils/storageUtils';
@@ -10,6 +11,7 @@ import { uploadImage } from '../utils/storageUtils';
 const Settings = () => {
     const navigate = useNavigate();
     const { restaurantInfo, updateRestaurantInfo } = useInventory();
+    const { restoreFromBackup } = useOrder();
     const { employees, addEmployee, deleteEmployee, currentUser } = useAuth();
     const [saved, setSaved] = useState(false);
     const [storageUsage, setStorageUsage] = useState(0);
@@ -191,6 +193,50 @@ const Settings = () => {
         } catch (e) {
             console.error("Recovery error:", e);
             alert("Hubo un error al recuperar: " + e.message);
+        }
+    };
+    
+    const handleRestoreLocalState = () => {
+        const saved = localStorage.getItem('manalu_last_good_state');
+        if (!saved) {
+            alert("No se encontró ningún backup local reciente.");
+            return;
+        }
+        
+        const backup = JSON.parse(saved);
+        if (confirm(`⚠️ ¿Restaurar estado del ${new Date(backup.timestamp).toLocaleString()}? Esto sobreescribirá las mesas actuales.`)) {
+            if (restoreFromBackup(backup)) {
+                alert("✅ Estado restaurado con éxito.");
+                window.location.reload();
+            }
+        }
+    };
+
+    const handleRestoreCloudState = async () => {
+        if (!confirm("⚠️ ¿Consultar nubes en busca de copias de seguridad de las comandas?")) return;
+        
+        try {
+            const { data, error } = await supabase.from('service_requests')
+                .select('*')
+                .eq('type', 'system_backup')
+                .order('created_at', { ascending: false })
+                .limit(1);
+            
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                alert("No se encontraron backups en la nube.");
+                return;
+            }
+
+            const backup = typeof data[0].payload === 'string' ? JSON.parse(data[0].payload) : data[0].payload;
+            if (confirm(`✅ Backup en la nube encontrado (${new Date(data[0].created_at).toLocaleString()}). ¿Deseas restaurar todas las mesas y comandas activas?`)) {
+                if (restoreFromBackup(backup)) {
+                    alert("✅ Recuperación desde la nube completada.");
+                    window.location.reload();
+                }
+            }
+        } catch (e) {
+            alert("Error al recuperar desde la nube: " + e.message);
         }
     };
 
@@ -509,8 +555,41 @@ const Settings = () => {
                                         cursor: 'pointer', fontSize: '0.85rem'
                                     }}
                                 >
-                                    🚑 Recuperar Mesas desde Cocina
+                                    🚑 Recuperar Mesas desde Cocina (Parcial)
                                 </button>
+                                
+                                <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px dashed #3b82f6' }}>
+                                    <h5 style={{ margin: '0 0 0.75rem 0', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 'bold' }}>SISTEMA DE RECUPERACIÓN TOTAL</h5>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                        <button
+                                            onClick={handleRestoreLocalState}
+                                            style={{
+                                                padding: '0.75rem',
+                                                background: '#3b82f6', color: 'white',
+                                                border: 'none', borderRadius: '8px',
+                                                cursor: 'pointer', fontSize: '0.8rem',
+                                                fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem'
+                                            }}
+                                        >
+                                            <Database size={16} /> Local Backup
+                                        </button>
+                                        <button
+                                            onClick={handleRestoreCloudState}
+                                            style={{
+                                                padding: '0.75rem',
+                                                background: '#10b981', color: 'white',
+                                                border: 'none', borderRadius: '8px',
+                                                cursor: 'pointer', fontSize: '0.8rem',
+                                                fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem'
+                                            }}
+                                        >
+                                            <Server size={16} /> Cloud Mirror
+                                        </button>
+                                    </div>
+                                    <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
+                                        Usa estas opciones solo si se han perdido las comandas tras un cierre accidental.
+                                    </p>
+                                </div>
                                 <button
                                     onClick={handleResetData}
                                     style={{
