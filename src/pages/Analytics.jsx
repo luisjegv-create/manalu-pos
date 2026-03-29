@@ -28,17 +28,18 @@ import { useInventory } from '../context/InventoryContext';
 import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
 import ExpenseManagement from '../components/Inventory/ExpenseManagement';
 
-const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection }) => (
+const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection, colors }) => (
     <button
         onClick={() => setActiveSection(id)}
         style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem',
             width: '100%', padding: '1rem',
-            background: activeSection === id ? 'var(--color-primary)' : 'transparent',
-            color: activeSection === id ? 'black' : 'var(--color-text-muted)',
-            border: 'none', borderRadius: '8px', cursor: 'pointer',
-            fontWeight: activeSection === id ? 'bold' : 'normal',
-            transition: 'all 0.2s'
+            background: activeSection === id ? colors.primary : 'transparent',
+            color: activeSection === id ? 'white' : colors.textMuted,
+            border: 'none', borderRadius: '12px', cursor: 'pointer',
+            fontWeight: activeSection === id ? '700' : '500',
+            transition: 'all 0.2s',
+            boxShadow: activeSection === id ? '0 4px 12px rgba(59, 130, 246, 0.25)' : 'none'
         }}
     >
         <Icon size={20} />
@@ -59,6 +60,19 @@ const Analytics = () => {
     // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
     const [expandedSale, setExpandedSale] = useState(null);
+
+    // Light Theme Colors
+    const colors = {
+        bg: '#f1f5f9',
+        surface: '#ffffff',
+        text: '#1e293b',
+        textMuted: '#64748b',
+        border: 'rgba(0,0,0,0.08)',
+        primary: '#3b82f6',
+        success: '#10b981',
+        danger: '#ef4444',
+        warning: '#f59e0b'
+    };
 
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -324,53 +338,72 @@ const Analytics = () => {
     const discrepancy = parseFloat(countedCash || 0) - expectedCash;
 
     return (
-        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: '#0f172a', color: 'white', overflow: 'hidden' }}>
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: isMobile ? 'column' : 'row', 
+            height: '100vh', 
+            background: colors.bg, 
+            color: colors.text, 
+            overflow: 'hidden',
+            fontFamily: "'Inter', sans-serif"
+        }}>
 
             <AnimatePresence>
                 {isCloseModalOpen && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', backdropFilter: 'blur(8px)' }}>
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="glass-panel"
-                            style={{ maxWidth: '500px', width: '100%', padding: '2rem', border: '1px solid var(--color-primary)' }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            style={{ 
+                                maxWidth: '500px', width: '100%', padding: '2.5rem', 
+                                background: colors.surface, borderRadius: '24px',
+                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+                                border: `1px solid ${colors.border}`
+                            }}
                         >
-                            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Resumen de Cierre</h2>
+                            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.75rem', fontWeight: '800' }}>Resumen de Cierre</h2>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-                                <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Total Sistema</div>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '2.5rem' }}>
+                                <div style={{ padding: '1.25rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600', marginBottom: '0.5rem' }}>Total Sistema</div>
+                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
                                 </div>
-                                <div className="glass-panel" style={{ padding: '1rem', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{dashboardStats.cardRaw.toFixed(2)}€</div>
+                                <div style={{ padding: '1.25rem', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600', marginBottom: '0.5rem' }}>Tarjeta</div>
+                                    <div style={{ fontSize: '1.4rem', fontWeight: '800', color: colors.primary }}>{dashboardStats.cardRaw.toFixed(2)}€</div>
                                     {dashboardStats.cardTipsRaw > 0 && (
-                                        <div style={{ fontSize: '0.7rem', color: '#fbbf24', marginTop: '0.25rem' }}>Inc. {dashboardStats.cardTipsRaw.toFixed(2)}€ propina</div>
+                                        <div style={{ fontSize: '0.75rem', color: colors.warning, marginTop: '0.35rem', fontWeight: '700' }}>Inc. {dashboardStats.cardTipsRaw.toFixed(2)}€ propina</div>
                                     )}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                                     <div>
-                                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Fondo de Caja (Cambio)</label>
+                                        <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Fondo de Caja (Cambio)</label>
                                         <input
                                             type="number"
-                                            className="glass-panel"
                                             placeholder="Ej: 200"
-                                            style={{ width: '100%', padding: '1rem', fontSize: '1.2rem', textAlign: 'center', color: '#60a5fa', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            style={{ 
+                                                width: '100%', padding: '1rem', fontSize: '1.25rem', textAlign: 'center', 
+                                                background: '#f8fafc', border: `2px solid ${colors.border}`, 
+                                                borderRadius: '12px', color: colors.primary, outline: 'none', fontWeight: '800'
+                                            }}
                                             value={startingCash}
                                             onChange={(e) => setStartingCash(e.target.value)}
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Efectivo Contado (€)</label>
+                                        <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Efectivo Contado (€)</label>
                                         <input
                                             type="number"
-                                            className="glass-panel"
                                             placeholder={`Esperado: ${expectedCash.toFixed(2)}€`}
-                                            style={{ width: '100%', padding: '1rem', fontSize: '1.2rem', textAlign: 'center', color: '#10b981', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            style={{ 
+                                                width: '100%', padding: '1rem', fontSize: '1.25rem', textAlign: 'center', 
+                                                background: '#f8fafc', border: `2px solid ${colors.border}`, 
+                                                borderRadius: '12px', color: colors.success, outline: 'none', fontWeight: '800'
+                                            }}
                                             value={countedCash}
                                             onChange={(e) => setCountedCash(e.target.value)}
                                         />
@@ -378,22 +411,26 @@ const Analytics = () => {
                                 </div>
 
                                 <div style={{
-                                    padding: '1rem',
-                                    background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                    borderRadius: '8px',
-                                    textAlign: 'center'
+                                    padding: '1.25rem',
+                                    background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                                    borderRadius: '16px',
+                                    textAlign: 'center',
+                                    border: `1px dashed ${Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger}`
                                 }}>
-                                    <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descuadre</div>
-                                    <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: Math.abs(discrepancy) < 0.05 ? '#10b981' : '#ef4444' }}>
+                                    <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '600' }}>Descuadre</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: '900', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
                                         {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(2)}€
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Notas / Observaciones</label>
+                                    <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.9rem', marginBottom: '0.6rem', fontWeight: '700' }}>Notas / Observaciones</label>
                                     <textarea
-                                        className="glass-panel"
-                                        style={{ width: '100%', padding: '0.75rem', height: '80px', background: 'transparent', resize: 'none', color: 'white' }}
+                                        style={{ 
+                                            width: '100%', padding: '1rem', height: '100px', background: '#f8fafc', 
+                                            border: `1px solid ${colors.border}`, borderRadius: '12px', outline: 'none', 
+                                            resize: 'none', color: colors.text, fontSize: '0.95rem' 
+                                        }}
                                         value={closeNotes}
                                         onChange={(e) => setCloseNotes(e.target.value)}
                                         placeholder="Ej: Descuadre de 2€ por cambio..."
@@ -403,7 +440,11 @@ const Analytics = () => {
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <button
                                         onClick={() => setIsCloseModalOpen(false)}
-                                        style={{ flex: 1, padding: '1rem', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '8px', color: '#94a3b8', cursor: 'pointer' }}
+                                        style={{ 
+                                            flex: 1, padding: '1rem', background: 'white', 
+                                            border: `1px solid ${colors.border}`, borderRadius: '12px', 
+                                            color: colors.textMuted, cursor: 'pointer', fontWeight: '700' 
+                                        }}
                                     >
                                         Cancelar
                                     </button>
@@ -428,8 +469,12 @@ const Analytics = () => {
                                                 alert("❌ Error al guardar el cierre");
                                             }
                                         }}
-                                        className="btn-primary"
-                                        style={{ flex: 2, padding: '1rem', background: '#10b981' }}
+                                        style={{ 
+                                            flex: 2, padding: '1rem', background: colors.success, 
+                                            border: 'none', borderRadius: '12px', color: 'white', 
+                                            fontWeight: '800', cursor: 'pointer',
+                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                        }}
                                     >
                                         Confirmar Cierre
                                     </button>
@@ -440,19 +485,22 @@ const Analytics = () => {
                 )}
             </AnimatePresence>
 
+
             {/* MOBILE TOP BAR */}
             {isMobile && (
                 <div style={{
-                    padding: '1rem',
-                    background: 'rgba(255,255,255,0.03)',
-                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    padding: '0.75rem 1rem',
+                    background: colors.surface,
+                    borderBottom: `1px solid ${colors.border}`,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
+                    zIndex: 1100,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                 }}>
                     <button
                         onClick={() => setShowMobileMenu(true)}
-                        style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', color: colors.text, cursor: 'pointer' }}
                     >
                         <Menu size={24} />
                     </button>
@@ -464,7 +512,7 @@ const Analytics = () => {
             {/* SIDEBAR */}
             <div style={{
                 width: isMobile ? '280px' : '260px',
-                borderRight: '1px solid rgba(255,255,255,0.1)',
+                borderRight: `1px solid ${colors.border}`,
                 padding: '1.5rem',
                 display: isMobile ? (showMobileMenu ? 'flex' : 'none') : 'flex',
                 flexDirection: 'column',
@@ -472,9 +520,9 @@ const Analytics = () => {
                 top: 0,
                 left: 0,
                 height: '100%',
-                background: '#0f172a',
+                background: colors.surface,
                 zIndex: 1000,
-                boxShadow: isMobile ? '10px 0 20px rgba(0,0,0,0.5)' : 'none'
+                boxShadow: isMobile ? '4px 0 20px rgba(0,0,0,0.1)' : 'none'
             }}>
 
                 {isMobile && (
@@ -493,29 +541,33 @@ const Analytics = () => {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: '#fbbf24', paddingLeft: '0.5rem' }}>
-                    <TrendingUp size={20} />
-                    <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Business Intel</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.5rem', color: colors.primary, paddingLeft: '0.5rem' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <TrendingUp size={18} />
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Manalu Intel</h2>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                    <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeSection={activeSection} setActiveSection={setActiveSection} />
-                    <SidebarItem id="sales" icon={FileText} label="Ventas" activeSection={activeSection} setActiveSection={setActiveSection} />
-                    <SidebarItem id="menu" icon={UtensilsCrossed} label="Menú Mix" activeSection={activeSection} setActiveSection={setActiveSection} />
-                    <SidebarItem id="cash" icon={Wallet} label="Cierre de Caja" activeSection={activeSection} setActiveSection={setActiveSection} />
-                    <SidebarItem id="expenses" icon={Receipt} label="Gastos Generales" activeSection={activeSection} setActiveSection={setActiveSection} />
+                    <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="sales" icon={Receipt} label="Ventas" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="menu" icon={UtensilsCrossed} label="Ingeniería Menú" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="cash" icon={Wallet} label="Caja y Z" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="expenses" icon={DollarSign} label="Gastos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                 </div>
 
                 <button
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/tables')}
                     style={{
                         marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem',
-                        background: 'var(--color-primary)', border: 'none', color: '#ffffff',
-                        padding: '1.2rem', borderRadius: '12px', cursor: 'pointer',
-                        fontWeight: 'bold', fontSize: '1.1rem',
-                        boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-                    }}>
-                    <ArrowLeft size={24} /> Volver al TPV
+                        background: 'transparent', border: `1px solid ${colors.border}`, color: colors.textMuted,
+                        padding: '1rem', borderRadius: '12px', cursor: 'pointer',
+                        fontWeight: '700', fontSize: '1rem', transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = colors.text; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = colors.textMuted; }}
+                >
+                    <ArrowLeft size={18} /> Volver al TPV
                 </button>
             </div>
 
@@ -535,69 +587,80 @@ const Analytics = () => {
                     display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
                     justifyContent: 'space-between',
-                    alignItems: isMobile ? 'flex-start' : 'center',
-                    marginBottom: '2rem',
-                    gap: '1rem'
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    marginBottom: '2.5rem',
+                    gap: '1.5rem'
                 }}>
                     <div>
-                        <h1 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2rem' }}>
-                            {activeSection === 'dashboard' && 'Visión General'}
+                        <h1 style={{ margin: 0, fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: colors.text, letterSpacing: '-0.02em' }}>
+                            {activeSection === 'dashboard' && 'Panel Principal'}
                             {activeSection === 'sales' && 'Reporte de Ventas'}
                             {activeSection === 'menu' && 'Ingeniería de Menú'}
                             {activeSection === 'cash' && 'Gestión de Efectivo'}
-                            {activeSection === 'expenses' && 'Gastos Generales (Taberna)'}
+                            {activeSection === 'expenses' && 'Control de Gastos'}
                         </h1>
-                        <p style={{ color: '#94a3b8', marginTop: '0.25rem', fontSize: isMobile ? '0.8rem' : '1rem' }}>
-                            {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        <p style={{ color: colors.textMuted, marginTop: '0.35rem', fontSize: '1rem', fontWeight: '500' }}>
+                           {dateRange === 'shift' ? '✨ Turno en curso' : `Periodo: ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`}
                         </p>
                     </div>
 
                     <div style={{
                         display: 'flex',
                         flexDirection: isMobile ? 'column' : 'row',
-                        gap: '0.75rem',
-                        alignItems: isMobile ? 'stretch' : 'center',
-                        width: isMobile ? '100%' : 'auto'
+                        gap: '1rem',
+                        alignItems: 'center'
                     }}>
-                        {!isMobile && (
+                        {!isMobile && activeSection === 'sales' && (
                             <button
                                 onClick={exportToCSV}
                                 style={{
-                                    padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8',
-                                    borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    padding: '0.75rem 1.25rem', background: 'white',
+                                    color: colors.text, border: `1px solid ${colors.border}`,
+                                    borderRadius: '12px', cursor: 'pointer', fontWeight: '700',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.04)', transition: 'all 0.2s',
+                                    fontSize: '0.9rem'
                                 }}
                             >
-                                <Download size={16} /> Exportar
+                                <Download size={18} /> Exportar
                             </button>
                         )}
-                        <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem', flexWrap: 'wrap' }}>
+                        <div style={{ 
+                            display: 'flex', padding: '0.35rem', gap: '0.35rem', flexWrap: 'wrap',
+                            background: colors.surface, borderRadius: '14px', border: `1px solid ${colors.border}`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                        }}>
                             {['shift', 'today', 'yesterday', 'week', 'month', 'all', 'custom'].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setDateRange(r)}
                                     style={{
-                                        flex: dateRange === r ? '1.5' : '1',
-                                        padding: '0.5rem',
-                                        background: dateRange === r ? 'var(--color-primary)' : 'transparent',
-                                        color: dateRange === r ? 'black' : '#94a3b8',
-                                        border: 'none', borderRadius: '6px', cursor: 'pointer', textTransform: 'capitalize',
-                                        fontSize: '0.8rem', fontWeight: 'bold'
+                                        padding: '0.5rem 1rem',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        background: dateRange === r ? colors.primary : 'transparent',
+                                        color: dateRange === r ? 'white' : colors.textMuted,
+                                        fontSize: '0.8rem', fontWeight: '700',
+                                        cursor: 'pointer', transition: 'all 0.2s', textTransform: 'capitalize'
                                     }}
                                 >
-                                    {r === 'shift' ? '✨ Turno' : r === 'today' ? 'Hoy' : r === 'yesterday' ? 'Ayer' : r === 'week' ? '7 D' : r === 'month' ? 'Mes' : r === 'all' ? 'Todo' : '📅'}
+                                    {r === 'shift' ? 'Turno' : r === 'today' ? 'Hoy' : r === 'yesterday' ? 'Ayer' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : r === 'all' ? 'Todo' : '📅'}
                                 </button>
                             ))}
                         </div>
 
                         {dateRange === 'custom' && (
-                            <div className="glass-panel" style={{ padding: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Calendar size={16} color="#94a3b8" />
+                            <div style={{ 
+                                padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                background: 'white', borderRadius: '14px', border: `1px solid ${colors.border}`,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                            }}>
+                                <Calendar size={18} color={colors.textMuted} />
                                 <input 
                                     type="date" 
                                     value={customDate}
                                     onChange={(e) => setCustomDate(e.target.value)}
-                                    style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.85rem', outline: 'none', width: '120px' }}
+                                    style={{ background: 'transparent', border: 'none', color: colors.text, fontSize: '0.9rem', outline: 'none', width: '130px', fontWeight: '600' }}
                                 />
                             </div>
                         )}
@@ -611,122 +674,158 @@ const Analytics = () => {
                         <div style={{
                             display: 'grid',
                             gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
-                            gap: isMobile ? '0.75rem' : '1.5rem'
+                            gap: isMobile ? '1rem' : '1.5rem'
                         }}>
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem', background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Ventas</span>
-                                    <DollarSign size={16} color="#10b981" />
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`,
+                                transition: 'transform 0.2s'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ventas Brutas</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: colors.primary }}>
+                                        <DollarSign size={18} />
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: isMobile ? '1.25rem' : '2rem', fontWeight: 'bold' }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
-                                <div style={{ fontSize: '0.7rem', color: dashboardStats.revenueChange >= 0 ? '#10b981' : '#ef4444', marginTop: '0.25rem' }}>
-                                    {dashboardStats.revenueChange >= 0 ? '+' : ''}{dashboardStats.revenueChange.toFixed(1)}%
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
+                                <div style={{ 
+                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
+                                    color: dashboardStats.revenueChange >= 0 ? colors.success : colors.danger,
+                                    display: 'flex', alignItems: 'center', gap: '0.25rem'
+                                }}>
+                                    {dashboardStats.revenueChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.revenueChange).toFixed(1)}%
+                                    <span style={{ color: colors.textMuted, fontWeight: '500' }}>vs prev.</span>
                                 </div>
                             </div>
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Neto</span>
-                                    <TrendingUp size={16} color="#10b981" />
+
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Beneficio Neto</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: colors.success }}>
+                                        <TrendingUp size={18} />
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: isMobile ? '1.25rem' : '2rem', fontWeight: 'bold', color: dashboardStats.netProfit >= 0 ? '#10b981' : '#ef4444' }}>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: dashboardStats.netProfit >= 0 ? colors.success : colors.danger }}>
                                     {dashboardStats.netProfit.toFixed(2)}€
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem' }}>
-                                    <div style={{ fontSize: '0.7rem', color: dashboardStats.netChange >= 0 ? '#10b981' : '#ef4444' }}>
-                                        {dashboardStats.netChange >= 0 ? '+' : ''}{dashboardStats.netChange.toFixed(1)}%
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '0.5rem' }}>
+                                    <div style={{ 
+                                        fontSize: '0.8rem', fontWeight: '800', 
+                                        color: dashboardStats.netChange >= 0 ? colors.success : colors.danger 
+                                    }}>
+                                        {dashboardStats.netChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.netChange).toFixed(1)}%
                                     </div>
                                     {dashboardStats.totalDiscounts > 0 && (
-                                        <div style={{ fontSize: '0.7rem', color: '#ef4444', opacity: 0.8 }}>
-                                            Descuentos: {dashboardStats.totalDiscounts.toFixed(2)}€
+                                        <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '700', padding: '0.15rem 0.4rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '6px' }}>
+                                            Dec: -{dashboardStats.totalDiscounts.toFixed(2)}€
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Tickets</span>
-                                    <FileText size={16} color="#3b82f6" />
+
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Tickets</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: colors.primary }}>
+                                        <FileText size={18} />
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: isMobile ? '1.25rem' : '2rem', fontWeight: 'bold' }}>{dashboardStats.ticketCount}</div>
-                                <div style={{ fontSize: '0.7rem', color: dashboardStats.ticketChange >= 0 ? '#10b981' : '#ef4444', marginTop: '0.25rem' }}>
-                                    {dashboardStats.ticketChange >= 0 ? '+' : ''}{dashboardStats.ticketChange.toFixed(1)}%
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.ticketCount}</div>
+                                <div style={{ 
+                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
+                                    color: dashboardStats.ticketChange >= 0 ? colors.success : colors.danger 
+                                }}>
+                                    {dashboardStats.ticketChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.ticketChange).toFixed(1)}%
                                 </div>
                             </div>
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Media</span>
-                                    <Users size={16} color="#f59e0b" />
+
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ticket Medio</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)', color: colors.warning }}>
+                                        <Users size={18} />
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: isMobile ? '1.25rem' : '2rem', fontWeight: 'bold' }}>{dashboardStats.avgTicket.toFixed(2)}€</div>
-                                <div style={{ fontSize: '0.7rem', color: dashboardStats.avgChange >= 0 ? '#10b981' : '#ef4444', marginTop: '0.25rem' }}>
-                                    {dashboardStats.avgChange >= 0 ? '+' : ''}{dashboardStats.avgChange.toFixed(1)}%
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.avgTicket.toFixed(2)}€</div>
+                                <div style={{ 
+                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
+                                    color: dashboardStats.avgChange >= 0 ? colors.success : colors.danger 
+                                }}>
+                                    {dashboardStats.avgChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.avgChange).toFixed(1)}%
                                 </div>
                             </div>
                         </div>
 
                         {/* Net Profit Details Alert Tip */}
-                        <div className="glass-panel" style={{ padding: '1rem', marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '0.5rem', borderRadius: '8px' }}>
-                                <Info size={20} color="#10b981" />
+                        <div style={{ 
+                            padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', 
+                            background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}`
+                        }}>
+                            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.6rem', borderRadius: '10px' }}>
+                                <Info size={20} color={colors.primary} />
                             </div>
-                            <div style={{ fontSize: '0.9rem' }}>
-                                <b style={{ color: '#10b981' }}>Cálculo de Beneficio:</b> El beneficio neto se calcula restando el <b>coste de producto (escandallos)</b> y los <b>gastos generales</b> del total de ventas.
+                            <div style={{ fontSize: '0.95rem', color: colors.text, fontWeight: '500', lineHeight: '1.5' }}>
+                                <b style={{ color: colors.primary, fontWeight: '800' }}>Cálculo Intelectual:</b> El beneficio neto mostrado es una estimación real obtenida restando el <b style={{ color: colors.text }}>coste de producto (escandallos)</b> y los <b style={{ color: colors.text }}>gastos generales</b> facturados en el periodo.
                             </div>
                         </div>
 
                         {/* CHARTS ROW */}
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: isMobile ? '1rem' : '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: isMobile ? '1.5rem' : '1.5rem' }}>
                             {/* HOURLY HEATMAP */}
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
-                                <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Ventas por Hora</h3>
-                                <div style={{ display: 'flex', alignItems: 'flex-end', height: '150px', gap: '2px' }}>
+                            <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                                <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Ventas por Hora</h3>
+                                <div style={{ display: 'flex', alignItems: 'flex-end', height: '180px', gap: '4px', paddingBottom: '1.5rem' }}>
                                     {dashboardStats.hours.map((val, h) => (
-                                        <div key={h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                                            <div style={{
-                                                width: '100%',
-                                                height: `${(val / dashboardStats.maxHour) * 100}%`,
-                                                background: val > 0 ? '#3b82f6' : 'rgba(255,255,255,0.05)',
-                                                borderRadius: '2px 2px 0 0',
-                                                transition: 'height 0.5s',
-                                                minHeight: '2px'
-                                            }} />
-                                            {h % 6 === 0 && <span style={{ fontSize: '0.6rem', color: '#64748b' }}>{h}h</span>}
+                                        <div key={h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', height: '100%', justifyContent: 'flex-end' }}>
+                                            <div 
+                                                title={`${h}h: ${val.toFixed(2)}€`}
+                                                style={{
+                                                    width: '100%',
+                                                    height: `${(val / dashboardStats.maxHour) * 100}%`,
+                                                    background: val > 0 ? colors.primary : '#f1f5f9',
+                                                    borderRadius: '4px 4px 0 0',
+                                                    transition: 'all 0.3s ease',
+                                                    minHeight: val > 0 ? '4px' : '2px',
+                                                    boxShadow: val > 0 ? '0 -2px 8px rgba(59, 130, 246, 0.2)' : 'none'
+                                                }} 
+                                            />
+                                            {h % 4 === 0 && <span style={{ fontSize: '0.65rem', color: colors.textMuted, fontWeight: '700' }}>{h}h</span>}
                                         </div>
                                     ))}
                                 </div>
                             </div>
 
                             {/* PAYMENT MIX */}
-                            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
-                                <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Métodos de Pago</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
-                                            <span>Tarjeta</span>
-                                            <span>{dashboardStats.cardRaw.toFixed(2)}€</span>
+                            <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                                <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Métodos de Pago</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                    {[
+                                        { label: 'Tarjeta', value: dashboardStats.cardRaw, color: colors.primary, icon: Printer },
+                                        { label: 'Efectivo', value: dashboardStats.cashRaw, color: colors.success, icon: Wallet },
+                                        { label: 'Propina (TJ)', value: dashboardStats.cardTipsRaw, color: colors.warning, icon: TrendingUp }
+                                    ].map((pm, idx) => (
+                                        <div key={idx}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '700' }}>
+                                                <span style={{ color: colors.text }}>{pm.label}</span>
+                                                <span style={{ color: pm.color }}>{pm.value.toFixed(2)}€</span>
+                                            </div>
+                                            <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <div style={{ 
+                                                    width: `${(pm.value / (dashboardStats.totalRevenue + (pm.label.includes('Propina') ? pm.value : 0) || 1)) * 100}%`, 
+                                                    height: '100%', background: pm.color, borderRadius: '4px' 
+                                                }} />
+                                            </div>
                                         </div>
-                                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${(dashboardStats.cardRaw / (dashboardStats.totalRevenue || 1)) * 100}%`, height: '100%', background: '#3b82f6' }} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem' }}>
-                                            <span>Efectivo</span>
-                                            <span>{dashboardStats.cashRaw.toFixed(2)}€</span>
-                                        </div>
-                                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${(dashboardStats.cashRaw / (dashboardStats.totalRevenue || 1)) * 100}%`, height: '100%', background: '#10b981' }} />
-                                        </div>
-                                    </div>
-                                    <div style={{ marginTop: '0.25rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem', fontSize: '0.85rem', color: '#fbbf24' }}>
-                                            <span>Propina Tarjeta</span>
-                                            <span style={{ fontWeight: 'bold' }}>{dashboardStats.cardTipsRaw.toFixed(2)}€</span>
-                                        </div>
-                                        <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                            <div style={{ width: `${(dashboardStats.cardTipsRaw / ((dashboardStats.totalRevenue + dashboardStats.cardTipsRaw) || 1)) * 100}%`, height: '100%', background: '#fbbf24' }} />
-                                        </div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -735,91 +834,62 @@ const Analytics = () => {
 
                 {/* --- SALES VIEW --- */}
                 {activeSection === 'sales' && (
-                    <div className="glass-panel" style={{ padding: isMobile ? '0.5rem' : '0', overflow: isMobile ? 'visible' : 'hidden' }}>
+                    <div style={{ padding: isMobile ? '0.5rem' : '0' }}>
                         {isMobile ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {filteredSales.length === 0 ? (
-                                    <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                                        No hay ventas registradas
+                                    <div style={{ padding: '4rem', textAlign: 'center', color: colors.textMuted, background: colors.surface, borderRadius: '20px' }}>
+                                        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📭</div>
+                                        <div style={{ fontWeight: '700' }}>No hay ventas registradas</div>
                                     </div>
                                 ) : (
                                     filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
                                         <React.Fragment key={sale.id}>
-                                        <div className="glass-panel" style={{ padding: '1rem', background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)', border: expandedSale === sale.id ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid transparent', transition: 'all 0.2s' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
-                                                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{new Date(sale.date).toLocaleString()}</span>
+                                        <div style={{ 
+                                            padding: '1.25rem', background: colors.surface, borderRadius: '16px', 
+                                            marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                                            border: expandedSale === sale.id ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
+                                            transition: 'all 0.2s' 
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
+                                                <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(sale.date).toLocaleString()}</span>
                                                 <div style={{ textAlign: 'right' }}>
-                                                    {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: '#ef4444' }}>Desc: {sale.discount_percent ? `${sale.discount_percent}%` : `-${sale.discount_amount}€`}</div>}
-                                                    {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: '#fbbf24' }}>🎁 INVITACIÓN</div>}
-                                                    {sale.customer_data && (
-                                                        <div style={{ fontSize: '0.7rem', color: '#3b82f6', marginTop: '2px' }}>
-                                                            📄 {JSON.parse(sale.customer_data).name} (${JSON.parse(sale.customer_data).nif})
-                                                        </div>
-                                                    )}
-                                                    <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                    {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</div>}
+                                                    {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: colors.warning, fontWeight: '800' }}>🎁 INVITACIÓN</div>}
+                                                    <span style={{ fontWeight: '900', color: colors.text, fontSize: '1.1rem' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
                                                 </div>
                                             </div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ fontSize: '0.9rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
-                                                    Mesa: <b style={{ color: 'white' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
+                                                <div style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>
+                                                    Mesa: <b style={{ color: colors.text }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                     <span style={{
-                                                        padding: '2px 8px', borderRadius: '4px',
-                                                        background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                                                        color: sale.paymentMethod === 'Efectivo' ? '#10b981' : '#3b82f6',
-                                                        fontSize: '0.75rem'
+                                                        padding: '4px 8px', borderRadius: '6px',
+                                                        background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                                        color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
+                                                        fontSize: '0.7rem', fontWeight: '800'
                                                     }}>
                                                         {sale.paymentMethod}
                                                     </span>
-                                                    <button
-                                                        onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
-                                                        className="btn-icon"
-                                                        style={{ padding: '0.25rem', color: '#94a3b8' }}
-                                                    >
-                                                        <Info size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
-                                                            setInvoiceModal({ isOpen: true, sale, customerData: custData });
-                                                        }}
-                                                        className="btn-icon"
-                                                        style={{ padding: '0.25rem', color: '#3b82f6' }}
-                                                        title="Generar Factura"
-                                                    >
-                                                        <FileText size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReprint(sale)}
-                                                        className="btn-icon"
-                                                        style={{ padding: '0.25rem', color: '#10b981' }}
-                                                        title="Reimprimir Ticket"
-                                                    >
-                                                        <Printer size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteSale(sale.id)}
-                                                        className="btn-icon"
-                                                        style={{ padding: '0.25rem', color: '#ef4444' }}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <button onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.textMuted }}><Info size={18} /></button>
+                                                    <button onClick={() => handleReprint(sale)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.success }}><Printer size={18} /></button>
+                                                    <button onClick={() => handleDeleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.danger }}><Trash2 size={16} /></button>
                                                 </div>
                                             </div>
 
                                             <AnimatePresence>
                                                 {expandedSale === sale.id && (
                                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-                                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'bold' }}>DETALLE DEL PEDIDO</div>
+                                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                            <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>DETALLE DE PEDIDO</div>
                                                             { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
-                                                                <div key={idx} style={{ padding: '0.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                                        <span style={{ fontWeight: 'bold' }}>{item.quantity}x {item.name}</span>
-                                                                        <span>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                        <span style={{ fontWeight: '700', color: colors.text, fontSize: '0.85rem' }}>{item.quantity}x {item.name}</span>
+                                                                        {item.notes && <span style={{ color: colors.warning, fontSize: '0.7rem', fontWeight: '600' }}>📝 {item.notes}</span>}
                                                                     </div>
-                                                                    {item.notes && <div style={{ color: '#fbbf24', fontSize: '0.75rem', marginTop: '0.25rem' }}>📝 {item.notes}</div>}
+                                                                    <span style={{ fontWeight: '800', color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
                                                                 </div>
                                                             ))}
                                                         </div>
@@ -832,111 +902,88 @@ const Analytics = () => {
                                 )}
                             </div>
                         ) : (
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.05)', color: '#94a3b8' }}>
-                                    <tr>
-                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Fecha/Hora</th>
-                                        <th style={{ padding: '1rem', textAlign: 'left' }}>ID Transacción</th>
-                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Mesa</th>
-                                        <th style={{ padding: '1rem', textAlign: 'left' }}>Método</th>
-                                        <th style={{ padding: '1rem', textAlign: 'right' }}>Total</th>
-                                        <th style={{ padding: '1rem', textAlign: 'center' }}>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredSales.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                                                No hay ventas registradas en este periodo
-                                            </td>
+                            <div style={{ background: colors.surface, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${colors.border}` }}>
+                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
+                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
+                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
+                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
+                                            <th style={{ padding: '1.25rem', textAlign: 'right', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
+                                            <th style={{ padding: '1.25rem', textAlign: 'center', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
                                         </tr>
-                                    ) : (
-                                        filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale, index) => (
-                                        <React.Fragment key={sale.id || `fallback-${index}`}>
-                                            <tr 
-                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent', transition: 'background 0.2s' }}
-                                                onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
-                                            >
-                                                <td style={{ padding: '1rem' }}>{new Date(sale.date || 0).toLocaleString()}</td>
-                                                <td style={{ padding: '1rem', fontFamily: 'monospace' }}>{sale.ticket_number || (sale.id || '???').toString().slice(-8)}</td>
-                                                <td style={{ padding: '1rem' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
-                                                <td style={{ padding: '1rem' }}>
-                                                    <span style={{
-                                                        padding: '2px 8px', borderRadius: '4px',
-                                                        background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)',
-                                                        color: sale.paymentMethod === 'Efectivo' ? '#10b981' : '#3b82f6',
-                                                        fontSize: '0.8rem'
-                                                    }}>
-                                                        {sale.paymentMethod || 'Desconocido'}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold' }}>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                        {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 'normal' }}>Desc: {sale.discount_percent ? `${sale.discount_percent}%` : `-${sale.discount_amount.toFixed(2)}€`}</span>}
-                                                        {sale.is_invitation && <span style={{ fontSize: '0.7rem', color: '#fbbf24', fontWeight: 'normal' }}>🎁 INVITACIÓN</span>}
-                                                        {sale.customer_data && (
-                                                            <span style={{ fontSize: '0.7rem', color: '#3b82f6', fontWeight: 'normal' }}>
-                                                                📄 {JSON.parse(sale.customer_data).name} (${JSON.parse(sale.customer_data).nif})
-                                                            </span>
-                                                        )}
-                                                        <span>{parseFloat(sale.total || 0).toFixed(2)}€</span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: '1rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const custData = sale.customer_data ? JSON.parse(sale.customer_data) : { name: '', nif: '', address: '' };
-                                                                setInvoiceModal({ isOpen: true, sale, customerData: custData });
-                                                            }}
-                                                            className="btn-icon"
-                                                            style={{ color: '#3b82f6' }}
-                                                            title="Generar Factura"
-                                                        >
-                                                            <FileText size={18} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleReprint(sale); }}
-                                                            className="btn-icon"
-                                                            style={{ color: '#10b981' }}
-                                                            title="Reimprimir Ticket"
-                                                        >
-                                                            <Printer size={18} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.id); }}
-                                                            className="btn-icon"
-                                                            style={{ color: '#ef4444' }}
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {filteredSales.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} style={{ padding: '4rem', textAlign: 'center', color: colors.textMuted }}>
+                                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📅</div>
+                                                    <div style={{ fontWeight: '600' }}>No hay ventas en este periodo</div>
                                                 </td>
                                             </tr>
-                                            {expandedSale === sale.id && (
-                                                <tr>
-                                                    <td colSpan={6} style={{ padding: '1rem', background: 'rgba(0,0,0,0.3)' }}>
-                                                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: 'bold', marginBottom: '0.75rem' }}>DETALLE DEL PEDIDO Y NOTAS:</div>
-                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-                                                            { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
-                                                                <div key={idx} style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
-                                                                        <span>{item.quantity}x {item.name}</span>
-                                                                        <span style={{ color: '#10b981' }}>{(item.price * item.quantity).toFixed(2)}€</span>
-                                                                    </div>
-                                                                    {item.notes && <div style={{ color: '#fbbf24', fontSize: '0.75rem' }}>📝 {item.notes}</div>}
+                                        ) : (
+                                            filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
+                                                <React.Fragment key={sale.id}>
+                                                    <tr 
+                                                        style={{ 
+                                                            borderBottom: `1px solid ${colors.border}`, 
+                                                            cursor: 'pointer', 
+                                                            background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
+                                                            transition: 'all 0.2s' 
+                                                        }}
+                                                        onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
+                                                    >
+                                                        <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '600' }}>{new Date(sale.date).toLocaleString()}</td>
+                                                        <td style={{ padding: '1.25rem', fontFamily: 'monospace', color: colors.textMuted, fontWeight: '700' }}>#{sale.ticket_number || sale.id?.toString().slice(-6).toUpperCase()}</td>
+                                                        <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '700' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
+                                                        <td style={{ padding: '1.25rem' }}>
+                                                            <span style={{
+                                                                padding: '4px 10px', borderRadius: '8px',
+                                                                background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                                                color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
+                                                                fontSize: '0.75rem', fontWeight: '800'
+                                                            }}>
+                                                                {sale.paymentMethod}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '1.25rem', textAlign: 'right' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                <span style={{ fontSize: '1.1rem', fontWeight: '900', color: colors.text }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                                {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</span>}
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ padding: '1.25rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                                <button onClick={() => handleReprint(sale)} title="Reimprimir" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(16, 185, 129, 0.1)', color: colors.success, cursor: 'pointer' }}><Printer size={18} /></button>
+                                                                <button onClick={() => handleDeleteSale(sale.id)} title="Borrar" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: colors.danger, cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                    {expandedSale === sale.id && (
+                                                        <tr style={{ background: '#f8fafc' }}>
+                                                            <td colSpan={6} style={{ padding: '1.5rem', borderBottom: `1px solid ${colors.border}` }}>
+                                                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '800', marginBottom: '1rem', letterSpacing: '0.05em' }}>DETALLE DE LA TRANSACCIÓN</div>
+                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                                                                    {(typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                        <div key={idx} style={{ padding: '1rem', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: `1px solid ${colors.border}` }}>
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '0.9rem', color: colors.text }}>
+                                                                                <span>{item.quantity}x {item.name}</span>
+                                                                                <span style={{ color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                            </div>
+                                                                            {item.notes && <div style={{ marginTop: '0.4rem', color: colors.warning, fontSize: '0.75rem', fontWeight: '600' }}>📝 {item.notes}</div>}
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </div>
                 )}
@@ -951,18 +998,22 @@ const Analytics = () => {
                             gap: isMobile ? '0.75rem' : '1rem'
                         }}>
                             {[
-                                { type: 'Estrella', label: 'Estrellas', icon: '⭐', color: '#fbbf24', desc: 'Popular / Profa', strategy: 'Mantener.' },
-                                { type: 'Vaca Lechera', label: 'Vacas', icon: '🐮', color: '#10b981', desc: 'Popular / Poca', strategy: 'Costes.' },
-                                { type: 'Puzzle', label: 'Puzzles', icon: '❓', color: '#3b82f6', desc: 'Poca / Profa', strategy: 'Promo.' },
-                                { type: 'Perro', label: 'Perros', icon: '🐕', color: '#ef4444', desc: 'Poca / Poca', strategy: 'Fuera.' }
+                                { type: 'Estrella', label: 'Estrellas', icon: '⭐', color: colors.warning, desc: 'Alta Pop / Alta Margen', strategy: 'Mantener calidad.' },
+                                { type: 'Vaca Lechera', label: 'Vacas', icon: '🐮', color: colors.success, desc: 'Alta Pop / Bajo Margen', strategy: 'Optimizar costes.' },
+                                { type: 'Puzzle', label: 'Puzzles', icon: '❓', color: colors.primary, desc: 'Baja Pop / Alta Margen', strategy: 'Promocionar más.' },
+                                { type: 'Perro', label: 'Perros', icon: '🐕', color: colors.danger, desc: 'Baja Pop / Bajo Margen', strategy: 'Eliminar o cambiar.' }
                             ].map(group => (
-                                <div key={group.type} className="glass-panel" style={{ padding: '0.75rem', borderTop: `4px solid ${group.color}` }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                        <span style={{ fontSize: '1rem' }}>{group.icon}</span>
-                                        <b style={{ color: group.color, fontSize: '0.8rem' }}>{group.label}</b>
+                                <div key={group.type} style={{ 
+                                    padding: '1.25rem', background: colors.surface, borderRadius: '16px',
+                                    border: `1px solid ${colors.border}`, borderTop: `4px solid ${group.color}`,
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '1.25rem' }}>{group.icon}</span>
+                                        <b style={{ color: colors.text, fontSize: '0.9rem', fontWeight: '800' }}>{group.label}</b>
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.25rem' }}>{group.desc}</div>
-                                    <div style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'white', background: 'rgba(255,255,255,0.05)', padding: '0.25rem', borderRadius: '4px' }}>
+                                    <div style={{ fontSize: '0.75rem', color: colors.textMuted, marginBottom: '0.75rem', lineHeight: '1.4' }}>{group.desc}</div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: group.color, background: `${group.color}10`, padding: '0.5rem', borderRadius: '8px' }}>
                                         💡 {group.strategy}
                                     </div>
                                 </div>
@@ -975,42 +1026,48 @@ const Analytics = () => {
                             if (groupItems.length === 0) return null;
 
                             return (
-                                <div key={type} style={{ background: 'rgba(0,0,0,0.2)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <h3 style={{ margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        {type === 'Estrella' && <TrendingUp size={18} color="#fbbf24" />}
-                                        {type === 'Estrella' ? 'Favoritos del Cliente (Estrellas)' :
-                                            type === 'Vaca Lechera' ? 'Clásicos Populares (Vacas)' :
-                                                type === 'Puzzle' ? 'Oportunidades de Venta (Puzzles)' : 'Revisar Urgente (Perros)'}
-                                        <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 'normal' }}>({groupItems.length} productos)</span>
+                                <div key={type} style={{ background: colors.surface, padding: '1.5rem', borderRadius: '20px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                    <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem', color: colors.text, fontWeight: '800' }}>
+                                        {type === 'Estrella' && <TrendingUp size={20} color={colors.warning} />}
+                                        {type === 'Vaca Lechera' && <TrendingUp size={20} color={colors.success} />}
+                                        {type === 'Puzzle' && <TrendingUp size={20} color={colors.primary} />}
+                                        {type === 'Perro' && <TrendingUp size={20} color={colors.danger} />}
+                                        {type === 'Estrella' ? 'Favoritos del Cliente' :
+                                            type === 'Vaca Lechera' ? 'Clásicos Populares' :
+                                                type === 'Puzzle' ? 'Oportunidades de Mejora' : 'Revisión Necesaria'}
+                                        <span style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>({groupItems.length} productos)</span>
                                     </h3>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
                                         {groupItems.map(item => (
-                                            <div key={item.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', position: 'relative' }}>
+                                            <div key={item.id} style={{ 
+                                                padding: '1rem', background: '#f8fafc', borderRadius: '16px', 
+                                                display: 'flex', gap: '1rem', alignItems: 'center', border: `1px solid ${colors.border}`
+                                            }}>
                                                 <div style={{
-                                                    width: '60px',
-                                                    height: '60px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '1.5rem',
-                                                    background: 'rgba(255,255,255,0.05)',
-                                                    borderRadius: '8px',
-                                                    overflow: 'hidden',
-                                                    border: '1px solid rgba(255,255,255,0.1)'
+                                                    width: '64px', height: '64px',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: '1.5rem', background: 'white',
+                                                    borderRadius: '12px', overflow: 'hidden', border: `1px solid ${colors.border}`,
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
                                                 }}>
                                                     {(String(item.image || '').startsWith('data:image') || String(item.image || '').startsWith('http') || String(item.image || '').startsWith('/'))
                                                         ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         : item.image || '🍽️'}
                                                 </div>
                                                 <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{item.name}</div>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                        <span style={{ color: '#94a3b8' }}>Ventas: <b style={{ color: 'white' }}>{item.sold}</b></span>
-                                                        <span style={{ color: '#10b981' }}>Profit: <b style={{ color: 'white' }}>{item.margin.toFixed(2)}€</b></span>
+                                                    <div style={{ fontWeight: '800', fontSize: '0.95rem', color: colors.text, marginBottom: '0.25rem' }}>{item.name}</div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                                        <span style={{ color: colors.textMuted, fontWeight: '600' }}>Ventas: <b style={{ color: colors.text }}>{item.sold}</b></span>
+                                                        <span style={{ color: colors.success, fontWeight: '800' }}>+{item.margin.toFixed(2)}€ marg.</span>
                                                     </div>
-                                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '0.5rem', overflow: 'hidden' }}>
-                                                        <div style={{ width: `${Math.min((item.sold / 50) * 100, 100)}%`, height: '100%', background: type === 'Estrella' ? '#fbbf24' : '#3b82f6' }} />
+                                                    <div style={{ height: '6px', background: 'white', borderRadius: '3px', marginTop: '0.75rem', overflow: 'hidden', border: `1px solid ${colors.border}` }}>
+                                                        <div style={{ 
+                                                            width: `${Math.min((item.sold / 50) * 100, 100)}%`, 
+                                                            height: '100%', 
+                                                            background: type === 'Estrella' ? colors.warning : colors.primary,
+                                                            borderRadius: '3px'
+                                                        }} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1021,10 +1078,9 @@ const Analytics = () => {
                         })}
 
                         {menuMatrix.length === 0 && (
-                            <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>
-                                <UtensilsCrossed size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                <p>No hay datos suficientes para generar el análisis de matriz.</p>
-                                <p style={{ fontSize: '0.8rem' }}>Realiza algunas ventas para ver la ingeniería de menú.</p>
+                            <div style={{ textAlign: 'center', padding: '5rem', color: colors.textMuted, background: colors.surface, borderRadius: '24px', border: `1px dashed ${colors.border}` }}>
+                                <UtensilsCrossed size={48} style={{ marginBottom: '1.5rem', opacity: 0.3 }} />
+                                         <p style={{ fontSize: '0.9rem' }}>Realiza algunas ventas para generar la matriz de ingeniería de menú.</p>
                             </div>
                         )}
                     </div>
@@ -1032,138 +1088,136 @@ const Analytics = () => {
 
                 {/* --- CASH CLOSE VIEW --- */}
                 {activeSection === 'cash' && (
-                    <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
-                        <div style={{ padding: isMobile ? '1.5rem' : '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: isMobile ? '1.25rem' : '1.5rem' }}>Cierre de Caja (Z)</h2>
-                            <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Verifica el efectivo y cierra el día fiscal.</p>
+                    <div style={{ background: colors.surface, borderRadius: '24px', overflow: 'hidden', border: `1px solid ${colors.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                        <div style={{ padding: isMobile ? '1.5rem' : '2.5rem', borderBottom: `1px solid ${colors.border}`, background: '#f8fafc' }}>
+                            <h2 style={{ margin: '0 0 0.5rem 0', fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: '800', color: colors.text }}>Cierre de Caja (Z)</h2>
+                            <p style={{ color: colors.textMuted, fontSize: '0.95rem', fontWeight: '500' }}>Verifica el efectivo y genera el reporte fiscal del día.</p>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0' }}>
                             {/* LEFT: SUMMARY */}
-                            <div style={{ padding: isMobile ? '1.5rem' : '2rem', borderRight: isMobile ? 'none' : '1px solid rgba(255,255,255,0.05)', borderBottom: isMobile ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                                <h3 style={{ marginBottom: '1.5rem', color: '#f59e0b', fontSize: '1rem' }}>Resumen del Sistema</h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        <span>Ventas Totales</span>
-                                        <span style={{ fontWeight: 'bold' }}>{dashboardStats.totalRevenue.toFixed(2)}€</span>
+                            <div style={{ padding: isMobile ? '1.5rem' : '2.5rem', borderRight: isMobile ? 'none' : `1px solid ${colors.border}`, borderBottom: isMobile ? `1px solid ${colors.border}` : 'none' }}>
+                                <h3 style={{ marginBottom: '1.5rem', color: colors.warning, fontSize: '1.1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Receipt size={20} /> Resumen del Sistema
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.25rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600' }}>
+                                        <span style={{ color: colors.textMuted }}>Ventas Totales</span>
+                                        <span style={{ fontWeight: '800', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '0.9rem' }}>
-                                        <span>En Tarjeta</span>
-                                        <span style={{ fontWeight: 'bold' }}>{dashboardStats.cardRaw.toFixed(2)}€</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.25rem', background: '#f1f5f9', borderRadius: '12px', fontSize: '0.95rem', fontWeight: '600' }}>
+                                        <span style={{ color: colors.textMuted }}>Cobros Tarjeta</span>
+                                        <span style={{ fontWeight: '800', color: colors.primary }}>{dashboardStats.cardRaw.toFixed(2)}€</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', border: '1px dashed #3b82f6', fontSize: '0.9rem' }}>
-                                        <span style={{ color: '#60a5fa' }}>Fondo de Caja (Cambio)</span>
-                                        <input 
-                                            type="number" 
-                                            value={startingCash} 
-                                            onChange={(e) => setStartingCash(e.target.value)} 
-                                            placeholder="0.00"
-                                            style={{ width: '80px', textAlign: 'right', background: 'transparent', border: 'none', borderBottom: '1px solid #60a5fa', color: '#60a5fa', fontWeight: 'bold' }}
-                                        />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.25rem', background: `${colors.primary}08`, borderRadius: '12px', border: `2px dashed ${colors.primary}40`, fontSize: '0.95rem', fontWeight: '600' }}>
+                                        <span style={{ color: colors.primary }}>Fondo de Caja</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input 
+                                                type="number" 
+                                                value={startingCash} 
+                                                onChange={(e) => setStartingCash(e.target.value)} 
+                                                placeholder="0.00"
+                                                style={{ width: '80px', textAlign: 'right', background: 'transparent', border: 'none', borderBottom: `2px solid ${colors.primary}`, color: colors.primary, fontWeight: '800', outline: 'none' }}
+                                            />
+                                            <span style={{ color: colors.primary }}>€</span>
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '8px', border: '1px solid #10b981', fontSize: '0.9rem' }}>
-                                        <span style={{ color: '#10b981' }}>Efectivo TOTAL Esperado</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5rem', background: `${colors.success}08`, borderRadius: '16px', border: `1px solid ${colors.success}30`, fontSize: '1rem' }}>
+                                        <span style={{ color: colors.success, fontWeight: '800' }}>Efectivo Esperado</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                            <span style={{ fontWeight: 'bold', color: '#10b981', fontSize: '1.1rem' }}>{expectedCash.toFixed(2)}€</span>
-                                            <span style={{ fontSize: '0.7rem', color: '#10b981', opacity: 0.8 }}>(Ventas {dashboardStats.cashRaw.toFixed(2)} + Fondo)</span>
+                                            <span style={{ fontWeight: '900', color: colors.success, fontSize: '1.4rem' }}>{expectedCash.toFixed(2)}€</span>
+                                            <span style={{ fontSize: '0.75rem', color: colors.success, fontWeight: '600' }}>(Ventas {dashboardStats.cashRaw.toFixed(2)} + Fondo)</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* RIGHT: ACTION */}
-                            <div style={{ padding: isMobile ? '2rem 1.5rem' : '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                <AlertCircle size={isMobile ? 32 : 48} color="#64748b" style={{ margin: '0 auto 1rem auto' }} />
+                            <div style={{ padding: isMobile ? '2.5rem 1.5rem' : '2.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', background: '#f8fafc' }}>
                                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                                    <p style={{ fontSize: '0.9rem' }}>Al realizar el Cierre Z, se generará un registro inmutable de las ventas de hoy.</p>
+                                    <AlertCircle size={48} color={colors.textMuted} style={{ margin: '0 auto 1.5rem auto', opacity: 0.5 }} />
+                                    <p style={{ fontSize: '0.95rem', color: colors.textMuted, fontWeight: '600', lineHeight: '1.6' }}>
+                                        Al realizar el Cierre Z, se generará un registro inmutable de las ventas de hoy y se reseteará el acumulado diario.
+                                    </p>
                                 </div>
 
                                 {cashCloses.some(c => new Date(c.date).toDateString() === new Date().toDateString()) ? (
-                                    <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid #10b981' }}>
-                                        <CheckCircle size={32} color="#10b981" style={{ marginBottom: '0.5rem' }} />
-                                        <h3 style={{ color: '#10b981', margin: 0, fontSize: '1rem' }}>Cierre Realizado</h3>
-                                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.85rem' }}>Ya has cerrado la caja hoy.</p>
+                                    <div style={{ textAlign: 'center', padding: '2.5rem', background: `${colors.success}10`, borderRadius: '20px', border: `1px solid ${colors.success}30`, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.05)' }}>
+                                        <CheckCircle size={40} color={colors.success} style={{ marginBottom: '1rem' }} />
+                                        <h3 style={{ color: colors.success, margin: 0, fontSize: '1.25rem', fontWeight: '800' }}>Caja Cerrada</h3>
+                                        <p style={{ margin: '0.75rem 0 0 0', fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>El cierre para el día de hoy ya ha sido registrado.</p>
                                     </div>
                                 ) : (
                                     <button
                                         onClick={() => setIsCloseModalOpen(true)}
                                         disabled={dashboardStats.totalRevenue === 0}
                                         style={{
-                                            padding: '1rem',
-                                            background: dashboardStats.totalRevenue > 0 ? '#10b981' : '#334155',
-                                            color: dashboardStats.totalRevenue > 0 ? 'white' : '#64748b',
-                                            border: 'none', borderRadius: '8px',
-                                            fontSize: isMobile ? '1rem' : '1.2rem', fontWeight: 'bold',
-                                            cursor: dashboardStats.totalRevenue > 0 ? 'pointer' : 'not-allowed'
+                                            padding: '1.25rem',
+                                            background: dashboardStats.totalRevenue > 0 ? colors.success : '#e2e8f0',
+                                            color: 'white',
+                                            border: 'none', borderRadius: '16px',
+                                            fontSize: '1.1rem', fontWeight: '900',
+                                            cursor: dashboardStats.totalRevenue > 0 ? 'pointer' : 'not-allowed',
+                                            boxShadow: dashboardStats.totalRevenue > 0 ? `0 10px 15px -3px ${colors.success}40` : 'none',
+                                            transition: 'all 0.2s'
                                         }}
                                     >
-                                        REALIZAR CIERRE Z
+                                        EJECUTAR CIERRE Z
                                     </button>
                                 )}
                             </div>
                         </div>
 
                         {/* HISTORY */}
-                        <div style={{ padding: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                            <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Histórico de Cierres</h3>
-                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem' }}>
-                                {cashCloses.length === 0 && <p style={{ color: '#64748b', fontSize: '0.9rem' }}>No hay cierres anteriores.</p>}
-                                {cashCloses.map(close => (
-                                    <div
-                                        key={close.id}
-                                        className="glass-panel"
-                                        style={{
-                                            minWidth: isMobile ? '180px' : '220px',
-                                            padding: '1.25rem',
-                                            cursor: 'pointer',
-                                            transition: 'transform 0.2s',
-                                            border: '1px solid rgba(255,255,255,0.1)'
-                                        }}
-                                        onClick={() => {
-                                            if (confirm(`¿Deseas reimprimir el Cierre Z del día ${new Date(close.date).toLocaleDateString()}?`)) {
-                                                printCashCloseTicket(close, restaurantInfo);
-                                            }
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                                    >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{new Date(close.date).toLocaleDateString()}</div>
-                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <Printer 
-                                                    size={14} 
-                                                    color="#64748b" 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm(`¿Deseas reimprimir el Cierre Z del día ${new Date(close.date).toLocaleDateString()}?`)) {
-                                                            printCashCloseTicket(close, restaurantInfo);
-                                                        }
-                                                    }}
-                                                />
-                                                <Trash2 
-                                                    size={14} 
-                                                    color="#ef4444" 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        deleteCashClose(close.id);
-                                                    }}
-                                                />
+                        <div style={{ padding: '2rem', borderTop: `1px solid ${colors.border}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Historial de Cierres Recientes</h3>
+                                <Calendar size={20} color={colors.textMuted} />
+                            </div>
+                            <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'auto', paddingBottom: '1.5rem' }}>
+                                {cashCloses.length === 0 ? (
+                                    <div style={{ padding: '3rem', textAlign: 'center', width: '100%', color: colors.textMuted, background: '#f8fafc', borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+                                        No hay registros de cierres anteriores.
+                                    </div>
+                                ) : (
+                                    cashCloses.sort((a,b) => new Date(b.date) - new Date(a.date)).map(close => (
+                                        <div
+                                            key={close.id}
+                                            style={{
+                                                minWidth: '240px', padding: '1.25rem', background: 'white',
+                                                borderRadius: '16px', border: `1px solid ${colors.border}`,
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.02)', cursor: 'pointer',
+                                                transition: 'transform 0.2s, box-shadow 0.2s'
+                                            }}
+                                            onClick={() => {
+                                                if (confirm(`¿Reimprimir Cierre Z del ${new Date(close.date).toLocaleDateString()}?`)) {
+                                                    printCashCloseTicket(close, restaurantInfo);
+                                                }
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(-4px)';
+                                                e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.02)';
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                                                <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(close.date).toLocaleDateString()}</span>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <Printer size={16} color={colors.primary} onClick={(e) => { e.stopPropagation(); printCashCloseTicket(close, restaurantInfo); }} />
+                                                    <Trash2 size={16} color={colors.danger} onClick={(e) => { e.stopPropagation(); deleteCashClose(close.id); }} />
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: colors.text, marginBottom: '0.5rem' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
+                                            <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem' }}>
+                                                <span style={{ color: colors.success, fontWeight: '700' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</span>
+                                                <span style={{ color: colors.primary, fontWeight: '700' }}>Tj: {parseFloat(close.tarjeta || 0).toFixed(2)}€</span>
                                             </div>
                                         </div>
-                                        <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', margin: '0.25rem 0' }}>{parseFloat(close.total || 0).toFixed(2)}€</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#10b981' }}>Ef: {parseFloat(close.efectivo || 0).toFixed(2)}€</div>
-                                        <div style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Tj: {parseFloat(close.tarjeta || 0).toFixed(2)}€</div>
-                                        {close.fondo_caja > 0 && <div style={{ fontSize: '0.75rem', color: '#60a5fa', marginTop: '2px' }}>Fondo inicial: {parseFloat(close.fondo_caja).toFixed(2)}€</div>}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{close.salesCount} Tickets</div>
-                                            {close.notes && (
-                                                <div title={close.notes} style={{ fontSize: '0.7rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.2)', padding: '2px 6px', borderRadius: '4px', maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                    📝 {close.notes}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1180,55 +1234,63 @@ const Analytics = () => {
                 {invoiceModal.isOpen && (
                     <div style={{
                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
+                        background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
                     }}>
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="glass-panel"
-                            style={{ width: '100%', maxWidth: '400px', padding: '2rem', position: 'relative' }}
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 30 }}
+                            style={{ 
+                                width: '100%', maxWidth: '450px', padding: '2.5rem', 
+                                background: colors.surface, borderRadius: '24px', 
+                                border: `1px solid ${colors.border}`, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+                                position: 'relative' 
+                            }}
                         >
                             <button
                                 onClick={() => setInvoiceModal({ ...invoiceModal, isOpen: false })}
-                                style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+                                style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: '#f1f5f9', border: 'none', borderRadius: '12px', padding: '0.5rem', cursor: 'pointer', color: colors.textMuted }}
                             >
-                                <CloseIcon size={24} />
+                                <CloseIcon size={20} />
                             </button>
 
-                            <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <FileText color="var(--color-primary)" />
-                                Datos Fiscales Factura
-                            </h3>
+                            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: `${colors.primary}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
+                                    <FileText color={colors.primary} size={30} />
+                                </div>
+                                <h3 style={{ margin: 0, color: colors.text, fontSize: '1.5rem', fontWeight: '800' }}>Factura Proforma</h3>
+                                <p style={{ color: colors.textMuted, fontSize: '0.9rem', marginTop: '0.5rem' }}>Completa los datos fiscales del cliente.</p>
+                            </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Nombre / Razón Social</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', color: colors.text, fontWeight: '700', marginBottom: '0.5rem' }}>Nombre / Razón Social</label>
                                     <input
                                         type="text"
                                         value={invoiceModal.customerData.name}
                                         onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, name: e.target.value } })}
-                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
-                                        placeholder="Ej: Empresa S.L."
+                                        style={{ width: '100%', padding: '1rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '600', outline: 'none' }}
+                                        placeholder="Ej: Juan Pérez S.L."
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>NIF / CIF</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', color: colors.text, fontWeight: '700', marginBottom: '0.5rem' }}>NIF / CIF</label>
                                     <input
                                         type="text"
                                         value={invoiceModal.customerData.nif}
                                         onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, nif: e.target.value } })}
-                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                                        style={{ width: '100%', padding: '1rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '600', outline: 'none' }}
                                         placeholder="Ej: B12345678"
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.4rem' }}>Domicilio Fiscal</label>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', color: colors.text, fontWeight: '700', marginBottom: '0.5rem' }}>Domicilio Fiscal</label>
                                     <input
                                         type="text"
                                         value={invoiceModal.customerData.address}
                                         onChange={(e) => setInvoiceModal({ ...invoiceModal, customerData: { ...invoiceModal.customerData, address: e.target.value } })}
-                                        style={{ width: '100%', padding: '0.75rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white' }}
+                                        style={{ width: '100%', padding: '1rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '600', outline: 'none' }}
                                         placeholder="Ej: Calle Gran Vía 123, Madrid"
                                     />
                                 </div>
@@ -1250,20 +1312,22 @@ const Analytics = () => {
                                     }}
                                     disabled={!invoiceModal.customerData.name || !invoiceModal.customerData.nif}
                                     style={{
-                                        width: '100%', padding: '1rem', marginTop: '1rem',
-                                        background: 'var(--color-primary)', border: 'none', borderRadius: '8px',
-                                        color: 'black', fontWeight: 'bold', cursor: 'pointer',
-                                        opacity: (!invoiceModal.customerData.name || !invoiceModal.customerData.nif) ? 0.5 : 1
+                                        width: '100%', padding: '1.25rem', marginTop: '1rem',
+                                        background: (!invoiceModal.customerData.name || !invoiceModal.customerData.nif) ? '#e2e8f0' : colors.primary,
+                                        border: 'none', borderRadius: '16px',
+                                        color: 'white', fontWeight: '900', cursor: 'pointer',
+                                        boxShadow: (!invoiceModal.customerData.name || !invoiceModal.customerData.nif) ? 'none' : `0 10px 15px -3px ${colors.primary}40`,
+                                        transition: 'all 0.2s'
                                     }}
                                 >
-                                    🖨️ Generar e Imprimir Factura
+                                    IMPRIMIR FACTURA
                                 </button>
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };
 
