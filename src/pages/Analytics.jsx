@@ -58,14 +58,16 @@ const Analytics = () => {
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
     const [dateRange, setDateRange] = useState('today');
-    const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]); // today | week | month | all
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
     const [expandedSale, setExpandedSale] = useState(null);
 
     // Light Theme Colors
-    const colors = {
+    const colors = useMemo(() => ({
         bg: '#f1f5f9',
         surface: '#ffffff',
         text: '#1e293b',
@@ -75,7 +77,7 @@ const Analytics = () => {
         success: '#10b981',
         danger: '#ef4444',
         warning: '#f59e0b'
-    };
+    }), []);
 
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -95,7 +97,7 @@ const Analytics = () => {
     }, [salesHistory]);
 
     // --- SHARED HELPERS ---
-    const getFilteredSalesInRange = useCallback((unit = 'today', offset = 0, specificDate = null) => {
+    const getFilteredSalesInRange = useCallback((unit = 'today', offset = 0, altStart = null, altEnd = null) => {
         if (!salesHistory || !Array.isArray(salesHistory)) return [];
 
         const now = new Date();
@@ -112,16 +114,17 @@ const Analytics = () => {
                 start.setHours(0, 0, 0, 0);
             }
             end = new Date(now);
-        } else if (unit === 'custom' && (specificDate || customDate)) {
-            const dateToUse = specificDate || customDate;
-            start = new Date(dateToUse);
+        } else if (unit === 'custom') {
+            start = new Date(altStart || startDate);
             start.setHours(0,0,0,0);
-            end = new Date(dateToUse);
+            end = new Date(altEnd || endDate);
             end.setHours(23,59,59,999);
         } else if (unit === 'today') {
-            start.setDate(now.getDate() - offset);
+            const shiftDate = new Date(now);
+            shiftDate.setDate(now.getDate() - offset);
+            start = new Date(shiftDate);
             start.setHours(0, 0, 0, 0);
-            end.setDate(now.getDate() - offset);
+            end = new Date(shiftDate);
             end.setHours(23, 59, 59, 999);
         } else if (unit === 'all') {
             return salesHistory;
@@ -142,7 +145,7 @@ const Analytics = () => {
             const d = new Date(s.date);
             return unit === 'all' || (d >= start && d <= end);
         });
-    }, [salesHistory, customDate, cashCloses]);
+    }, [salesHistory, startDate, endDate, cashCloses]);
 
     const handleDeleteSale = async (id) => {
         if (confirm("¿Estás seguro de que quieres borrar esta venta? Esta acción no se puede deshacer.")) {
@@ -173,11 +176,23 @@ const Analytics = () => {
     };
 
     const filteredSales = useMemo(() => {
-        if (dateRange === 'shift') return getFilteredSalesInRange('shift');
-        if (dateRange === 'yesterday') return getFilteredSalesInRange('today', 1);
-        if (dateRange === 'custom') return getFilteredSalesInRange('custom', 0, customDate);
-        return getFilteredSalesInRange(dateRange, 0);
-    }, [dateRange, customDate, getFilteredSalesInRange]);
+        let sales = [];
+        if (dateRange === 'shift') sales = getFilteredSalesInRange('shift');
+        else if (dateRange === 'yesterday') sales = getFilteredSalesInRange('today', 1);
+        else if (dateRange === 'custom') sales = getFilteredSalesInRange('custom');
+        else sales = getFilteredSalesInRange(dateRange, 0);
+
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            sales = sales.filter(s => 
+                (s.ticket_number || '').toLowerCase().includes(term) ||
+                (s.tableId || '').toLowerCase().includes(term) ||
+                (s.total || 0).toString().includes(term) ||
+                (s.id || '').toLowerCase().includes(term)
+            );
+        }
+        return sales;
+    }, [dateRange, getFilteredSalesInRange, searchTerm]);
 
     const comparisonSales = useMemo(() => {
         if (dateRange === 'yesterday') return getFilteredSalesInRange('today', 2);
@@ -272,6 +287,35 @@ const Analytics = () => {
             hours, maxHour
         };
     }, [filteredSales, comparisonSales, expenses, getProductCost, dateRange]);
+
+    const categoryStats = useMemo(() => {
+        const stats = {
+            'Comida': { revenue: 0, count: 0, color: colors.primary },
+            'Bebida': { revenue: 0, count: 0, color: colors.success },
+            'Vinos': { revenue: 0, count: 0, color: colors.warning },
+            'Otros': { revenue: 0, count: 0, color: colors.textMuted }
+        };
+
+        filteredSales.forEach(sale => {
+            const items = typeof sale.items === 'string' ? JSON.parse(sale.items || '[]') : (sale.items || []);
+            items.forEach(item => {
+                let cat = 'Otros';
+                const lowerCat = String(item.category || '').toLowerCase();
+                const lowerName = String(item.name || '').toLowerCase();
+                
+                if (lowerCat.includes('bebida') || lowerCat.includes('refresco')  || lowerCat.includes('café') || lowerCat.includes('cerveza') || lowerCat.includes('copa') || lowerCat.includes('agua')) cat = 'Bebida';
+                else if (lowerCat.includes('vino')) cat = 'Vinos';
+                else if (lowerCat.includes('raciones') || lowerCat.includes('tapas') || lowerCat.includes('comida') || lowerCat.includes('postre') || lowerCat.includes('bocadillo') || lowerCat.includes('plato')) cat = 'Comida';
+                else if (lowerName.includes('cerveza') || lowerName.includes('caña') || lowerName.includes('doble')) cat = 'Bebida';
+                
+                if (!stats[cat]) stats[cat] = { revenue: 0, count: 0, color: colors.textMuted };
+                stats[cat].revenue += (parseFloat(item.price) * (item.quantity || 1));
+                stats[cat].count += (item.quantity || 1);
+            });
+        });
+
+        return Object.entries(stats).map(([name, data]) => ({ name, ...data }));
+    }, [filteredSales, colors]);
 
     const exportToCSV = () => {
         const headers = ["Fecha", "ID", "Mesa", "Metodo", "Total"];
@@ -702,12 +746,21 @@ const Analytics = () => {
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                             }}>
                                 <Calendar size={18} color={colors.textMuted} />
-                                <input 
-                                    type="date" 
-                                    value={customDate}
-                                    onChange={(e) => setCustomDate(e.target.value)}
-                                    style={{ background: 'transparent', border: 'none', color: colors.text, fontSize: '0.9rem', outline: 'none', width: '130px', fontWeight: '600' }}
-                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input 
+                                        type="date" 
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        style={{ background: 'transparent', border: 'none', color: colors.text, fontSize: '0.85rem', outline: 'none', width: '120px', fontWeight: '600' }}
+                                    />
+                                    <span style={{ color: colors.textMuted, fontSize: '0.8rem' }}>→</span>
+                                    <input 
+                                        type="date" 
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        style={{ background: 'transparent', border: 'none', color: colors.text, fontSize: '0.85rem', outline: 'none', width: '120px', fontWeight: '600' }}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -875,12 +928,43 @@ const Analytics = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* CATEGORY SUMMARY CARDS */}
+                        <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Reparto por Categoría</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '1rem' }}>
+                                {categoryStats.map((cat, idx) => (
+                                    <div key={idx} style={{ padding: '1rem', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}`, borderLeft: `5px solid ${cat.color}` }}>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: '800', color: colors.textMuted, marginBottom: '0.25rem' }}>{cat.name.toUpperCase()}</div>
+                                        <div style={{ fontSize: '1.25rem', fontWeight: '900', color: colors.text }}>{cat.revenue.toFixed(2)}€</div>
+                                        <div style={{ fontSize: '0.7rem', color: colors.textMuted, marginTop: '0.25rem' }}>{cat.count} uds. vendidas</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* --- SALES VIEW --- */}
                 {activeSection === 'sales' && (
                     <div style={{ padding: isMobile ? '0.5rem' : '0' }}>
+                        {/* SEARCH BAR */}
+                        <div style={{ 
+                            marginBottom: '1.5rem', background: colors.surface, borderRadius: '16px', 
+                            padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                        }}>
+                             <Search size={20} color={colors.textMuted} />
+                             <input 
+                                type="text"
+                                placeholder="Buscar por ticket, mesa, importe..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '1rem', color: colors.text, fontWeight: '500' }}
+                             />
+                             {searchTerm && <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><CloseIcon size={18}/></button>}
+                        </div>
+
                         {isMobile ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {filteredSales.length === 0 ? (

@@ -98,7 +98,7 @@ export const OrderProvider = ({ children }) => {
             try {
 
                 // 1. Fetch Sales
-                const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(1000);
+                const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(2000);
                 if (salesError) {
                     setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
                 } else if (salesData) {
