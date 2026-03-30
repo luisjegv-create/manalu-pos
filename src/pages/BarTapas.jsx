@@ -24,7 +24,8 @@ import {
     Camera,
     Layers,
     ClipboardList,
-    LayoutGrid
+    LayoutGrid,
+    RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printBillTicket, printServiceTickets } from '../utils/printHelpers';
@@ -41,7 +42,7 @@ import ProductEditorModal from '../components/TPV/ProductEditorModal';
 
 const BarTapas = () => {
     const navigate = useNavigate();
-    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo, checkProductAvailability, loading: inventoryLoading } = useInventory();
+    const { salesProducts, ingredients, addProductWithRecipe, getProductCost, restaurantInfo: contextRestaurantInfo, checkProductAvailability, loading: inventoryLoading, forceSync, isSyncing } = useInventory();
 
     // Safety fallback for restaurant info
     const restaurantInfo = contextRestaurantInfo || {
@@ -667,6 +668,26 @@ const BarTapas = () => {
 
                             {/* Quick Mode Button (Added) */}
                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                {/* Sync Button */}
+                                <button
+                                    onClick={forceSync}
+                                    disabled={isSyncing}
+                                    title="Forzar lectura de productos"
+                                    style={{
+                                        background: isSyncing ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                                        border: '1px solid #3b82f6',
+                                        color: '#3b82f6',
+                                        borderRadius: '8px',
+                                        padding: '0.5rem',
+                                        cursor: isSyncing ? 'wait' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <RefreshCw size={20} className={isSyncing ? "spin-animation" : ""} />
+                                </button>
                                 {/* Desktop Search Bar */}
                                 {!isMobile && (
                                     <div style={{ position: 'relative', marginRight: '0.5rem' }}>
@@ -926,7 +947,8 @@ const BarTapas = () => {
                                             <p style={{ maxWidth: '300px', margin: '0 auto' }}>Si crees que esto es un error, comprueba tu conexión a internet o intenta recargar la página.</p>
                                         </div>
                                         <button 
-                                            onClick={() => window.location.reload()}
+                                            onClick={forceSync}
+                                            disabled={isSyncing}
                                             style={{
                                                 padding: '0.75rem 2rem',
                                                 background: 'var(--color-primary)',
@@ -934,11 +956,16 @@ const BarTapas = () => {
                                                 border: 'none',
                                                 borderRadius: '12px',
                                                 fontWeight: 'bold',
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                                cursor: isSyncing ? 'wait' : 'pointer',
+                                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                opacity: isSyncing ? 0.7 : 1
                                             }}
                                         >
-                                            🔄 Recargar Aplicación
+                                            <RefreshCw size={18} className={isSyncing ? "spin-animation" : ""} />
+                                            {isSyncing ? 'Sincronizando...' : 'Recargar Productos'}
                                         </button>
                                     </div>
                                 )}

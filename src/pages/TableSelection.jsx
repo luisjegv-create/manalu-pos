@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrder } from '../context/OrderContext';
-import { ArrowLeft, Clock, PlusCircle } from 'lucide-react';
+import { useInventory } from '../context/InventoryContext';
+import { ArrowLeft, Clock, PlusCircle, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TableOrderPreview from '../components/TableOrderPreview';
 
@@ -44,6 +45,7 @@ const TableTimer = ({ startTime }) => {
 const TableSelection = () => {
     const navigate = useNavigate();
     const { tables, selectTable, addTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus } = useOrder();
+    const { forceSync, isSyncing } = useInventory();
     
     // Mostramos directamente todas las "Mesas" que ahora son nuestros Tickets/Pedidos Abiertos
     const activeTickets = tables;
@@ -90,26 +92,49 @@ const TableSelection = () => {
                     </div>
                 </div>
                 
-                <button
-                    onClick={handleNewOrder}
-                    className="btn-glow"
-                    style={{
-                        padding: '1.2rem 2.5rem',
-                        borderRadius: '12px',
-                        background: '#10b981',
-                        color: 'white',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '1.4rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        boxShadow: '0 4px 20px rgba(16, 185, 129, 0.5)'
-                    }}
-                >
-                    <PlusCircle size={28} /> NUEVO PEDIDO
-                </button>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button
+                        onClick={forceSync}
+                        disabled={isSyncing}
+                        title="Forzar lectura de productos y mesas"
+                        style={{
+                            background: isSyncing ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
+                            border: '1px solid #3b82f6',
+                            color: '#3b82f6',
+                            borderRadius: '12px',
+                            padding: '1.2rem',
+                            cursor: isSyncing ? 'wait' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.1)'
+                        }}
+                    >
+                        <RefreshCw size={28} className={isSyncing ? "spin-animation" : ""} />
+                    </button>
+                    
+                    <button
+                        onClick={handleNewOrder}
+                        className="btn-glow"
+                        style={{
+                            padding: '1.2rem 2.5rem',
+                            borderRadius: '12px',
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '1.4rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.5)'
+                        }}
+                    >
+                        <PlusCircle size={28} /> NUEVO PEDIDO
+                    </button>
+                </div>
             </header>
 
             <div style={{ padding: '0 2rem', maxWidth: '1600px', margin: '0 auto' }}>

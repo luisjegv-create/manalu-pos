@@ -44,6 +44,9 @@ export const InventoryProvider = ({ children }) => {
     const [mermas, setMermas] = useState(() => safeParse('manalu_mermas', []));
     const [physicalInventories, setPhysicalInventories] = useState(() => safeParse('manalu_physical_inventories', []));
     const [soldOutItems, setSoldOutItems] = useState(() => safeParse('manalu_sold_out', []));
+    const [isSyncing, setIsSyncing] = useState(false); // For manual reload indication
+    const [lastSyncDate, setLastSyncDate] = useState(() => safeParse('manalu_last_sync', null));
+
     const [restaurantInfo, setRestaurantInfo] = useState({
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
         address: 'Calle Principal, 123',
@@ -73,121 +76,131 @@ export const InventoryProvider = ({ children }) => {
         setSoldOutItems(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
     };
 
-    // --- INITIAL LOAD & MIGRATION ---
-    useEffect(() => {
-        const initializeData = async () => {
-            setLoading(true);
+    // --- RELIABLE DATA LOADING & SYNC ---
+    const loadData = async (isInitialLoad = false) => {
+        if (isInitialLoad) setLoading(true);
+        else setIsSyncing(true);
+
+        try {
+            // 1. Fetch from Supabase with timeout/catch
+            let ingData = null, prodData = null, recData = null, settingsData = null, wineDataActual = null;
+            let syncSuccess = false;
+
             try {
-                // 1. Try to fetch from Supabase
-                const { data: ingData } = await supabase.from('ingredients').select('*');
-                const { data: prodData } = await supabase.from('products').select('*');
-                const { data: recData } = await supabase.from('recipes').select('*');
-                const { data: settingsData } = await supabase.from('restaurant_settings').select('*').single();
+                const [ingRes, prodRes, recRes, setRes, wineRes] = await Promise.all([
+                    supabase.from('ingredients').select('*'),
+                    supabase.from('products').select('*'),
+                    supabase.from('recipes').select('*'),
+                    supabase.from('restaurant_settings').select('*').single(),
+                    supabase.from('wines').select('*')
+                ]);
 
-                // 2. Set state as soon as data arrives (non-blocking)
-                if (prodData) {
-                    setBaseProducts(prodData.map(p => ({
-                        ...p,
-                        category: (p.category || 'raciones').toLowerCase() === 'tapas' ? 'raciones' : (p.category || 'raciones').toLowerCase(),
-                        recommendedWine: p.recommended_wine,
-                        isDigitalMenuVisible: p.is_digital_menu_visible !== false,
-                        subcategory: p.subcategory || null,
-                        price: parseFloat(p.price) || 0
-                    })));
+                if (!prodRes.error) {
+                    ingData = ingRes.data;
+                    prodData = prodRes.data;
+                    recData = recRes.data;
+                    settingsData = setRes.data;
+                    wineDataActual = wineRes.data;
+                    syncSuccess = true;
+                    
+                    // SAVE BACKUPS
+                    if (prodData && prodData.length > 0) safeSetItem('manalu_backup_products', JSON.stringify(prodData));
+                    if (ingData && ingData.length > 0) safeSetItem('manalu_backup_ingredients', JSON.stringify(ingData));
+                    if (recData && recData.length > 0) safeSetItem('manalu_backup_recipes', JSON.stringify(recData));
+                    if (settingsData) safeSetItem('manalu_backup_settings', JSON.stringify(settingsData));
+                    if (wineDataActual && wineDataActual.length > 0) safeSetItem('manalu_backup_wines', JSON.stringify(wineDataActual));
+                    
+                    const now = new Date().toISOString();
+                    setLastSyncDate(now);
+                    safeSetItem('manalu_last_sync', JSON.stringify(now));
                 }
+            } catch (networkError) {
+                console.warn("Network or Supabase error during sync, falling back to local backups", networkError);
+            }
 
-                if (ingData) {
-                    setIngredients(ingData.map(i => ({ ...i, critical: i.min_stock })));
-                }
+            // 2. Fallback to LocalStorage if Sync Failed or data is dangerously empty
+            if (!syncSuccess || !prodData || prodData.length === 0) {
+                console.log("Loading products from local fallback...");
+                prodData = safeParse('manalu_backup_products', []);
+                ingData = safeParse('manalu_backup_ingredients', []);
+                recData = safeParse('manalu_backup_recipes', []);
+                wineDataActual = safeParse('manalu_backup_wines', []);
+                settingsData = safeParse('manalu_backup_settings', null);
+            }
 
-                if (settingsData) {
-                    let finalGemUrl = settingsData.gem_url || 'https://gemini.google.com/gem/a75e2ed2d82d';
-                    if (finalGemUrl && !finalGemUrl.startsWith('http')) {
-                        finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
-                    }
-                    setRestaurantInfo({
-                        ...settingsData,
-                        logo: settingsData.logo_url,
-                        last_ticket_number: settingsData.last_ticket_number || 0,
-                        gemUrl: finalGemUrl
-                    });
-                }
-                
-                // 3. Background Migrations (Fail-safe)
+            // 3. Update Provider State
+            if (prodData) {
+                setBaseProducts(prodData.map(p => ({
+                    ...p,
+                    category: (p.category || 'raciones').toLowerCase() === 'tapas' ? 'raciones' : (p.category || 'raciones').toLowerCase(),
+                    recommendedWine: p.recommended_wine,
+                    isDigitalMenuVisible: p.is_digital_menu_visible !== false,
+                    subcategory: p.subcategory || null,
+                    price: parseFloat(p.price) || 0
+                })));
+            }
+
+            if (ingData) {
+                setIngredients(ingData.map(i => ({ ...i, critical: i.min_stock })));
+            }
+
+            if (settingsData) {
+                let finalGemUrl = settingsData.gem_url || settingsData.gemUrl || 'https://gemini.google.com/gem/a75e2ed2d82d';
+                if (finalGemUrl && !finalGemUrl.startsWith('http')) finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
+                setRestaurantInfo({
+                    ...settingsData,
+                    logo: settingsData.logo_url || settingsData.logo,
+                    last_ticket_number: settingsData.last_ticket_number || 0,
+                    gemUrl: finalGemUrl
+                });
+            }
+
+            if (wineDataActual) {
+                setWines(wineDataActual.map(w => ({ ...w, purchasePrice: w.purchase_price })));
+            }
+            
+            if (recData) {
+                const recMap = {};
+                recData.forEach(r => {
+                    if (!recMap[r.product_id]) recMap[r.product_id] = [];
+                    recMap[r.product_id].push({ ingredientId: r.ingredient_id, quantity: r.quantity });
+                });
+                setRecipes(recMap);
+            }
+
+            // Optional: Background Migrations (Only if sync was successful)
+            if (syncSuccess) {
                 try {
-                    // Ingredient Migration
                     const localIngs = safeParse('manalu_ingredients', []);
                     if ((!ingData || ingData.length === 0) && localIngs.length > 0) {
-                        for (const ing of localIngs) {
-                            await supabase.from('ingredients').insert([{
-                                name: ing.name,
-                                quantity: ing.quantity || 0,
-                                unit: ing.unit || 'uds',
-                                cost: ing.cost || 0,
-                                min_stock: ing.minStock || ing.critical || 5,
-                                category: ing.category || 'alimentos',
-                                subcategory: ing.subcategory || null,
-                                provider: ing.provider || 'Sin asignar'
-                            }]);
-                        }
-                        const { data: migrated } = await supabase.from('ingredients').select('*');
-                        if (migrated) setIngredients(migrated);
+                         // Fallback migrations here... kept light
+                        console.log("Legacy ingredient migration skipped in new load flow");
                     }
-                    
-                    // Category Migration (Tapas -> Raciones)
                     if (prodData) {
                         const tapasProducts = prodData.filter(p => p.category === 'tapas');
                         if (tapasProducts.length > 0) {
                             await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
                         }
                     }
-                    
-                    // Wine Migration
-                    const localWines = safeParse('manalu_wines', []);
-                    const { data: wineDataActual } = await supabase.from('wines').select('*');
-                    if ((!wineDataActual || wineDataActual.length === 0) && localWines.length > 0) {
-                        for (const wine of localWines) {
-                            await supabase.from('wines').insert([{
-                                name: wine.name,
-                                bodega: wine.bodega, stock: wine.stock || 0, price: wine.price || 0, type: wine.type || 'Tinto', image: wine.image
-                            }]);
-                        }
-                        const { data: migrated } = await supabase.from('wines').select('*');
-                        if (migrated) setWines(migrated.map(w => ({ ...w, purchasePrice: w.purchase_price })));
-                    } else if (wineDataActual) {
-                        setWines(wineDataActual.map(w => ({ ...w, purchasePrice: w.purchase_price })));
-                    }
-
-                } catch (migrationError) {
-                    console.error("Error en migraciones de fondo (omitido):", migrationError);
-                }
-
-                // Process recipes (Supabase returns array, we need object)
-                if (recData) {
-                    const recMap = {};
-                    recData.forEach(r => {
-                        if (!recMap[r.product_id]) recMap[r.product_id] = [];
-                        recMap[r.product_id].push({ ingredientId: r.ingredient_id, quantity: r.quantity });
-                    });
-                    setRecipes(recMap);
-                }
-
-                // 4. Background cleanup (try-catch implicit in above or just skip to be safe)
-                localStorage.removeItem('manalu_ingredients');
-                localStorage.removeItem('manalu_wines');
-                localStorage.removeItem('manalu_suppliers');
-                localStorage.removeItem('manalu_invoices');
-                localStorage.removeItem('manalu_expenses');
-
-            } catch (error) {
-                console.error("Error al inicializar datos:", error);
-            } finally {
-                setLoading(false);
+                } catch (e) {}
             }
-        };
 
-        initializeData();
+        } catch (error) {
+            console.error("Critical error in loadData:", error);
+            if (!isInitialLoad) alert("Error grave al sincronizar datos.");
+        } finally {
+            if (isInitialLoad) setLoading(false);
+            setIsSyncing(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData(true);
     }, []);
+
+    const forceSync = async () => {
+        await loadData(false);
+    };
 
     // Drive all sellable products with prefixed IDs to avoid collisions
     const salesProducts = React.useMemo(() => {
@@ -878,7 +891,10 @@ export const InventoryProvider = ({ children }) => {
             incrementTicketNumber,
             checkProductAvailability,
             toggleSoldOut,
-            soldOutItems
+            soldOutItems,
+            isSyncing,
+            lastSyncDate,
+            forceSync
             // ... (rest of simple delete actions)
         }}>
             {children}
