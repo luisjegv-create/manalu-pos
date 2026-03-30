@@ -128,6 +128,34 @@ const Settings = () => {
         }
     };
 
+    const handleDeepClean = () => {
+        if (!confirm("⚠️ ¿Vaciar memoria temporal y backups locales? \n\nNo perderás tus mesas abiertas ni tus ventas. Solo se borrarán copias de seguridad locales de productos e ingredientes para ganar espacio (se volverán a descargar automáticamente de la nube).")) return;
+        
+        const keysToKeep = [
+            'manalu_tables', 
+            'manalu_table_orders', 
+            'manalu_table_bills', 
+            'manalu_employees', 
+            'manalu_auth_user', 
+            'manalu_gemini_api_key', 
+            'manalu_custom_qr'
+        ];
+        
+        let cleanedCount = 0;
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            // Remove backups and stale state but keep critical POS data
+            if (!keysToKeep.includes(key) && (key.startsWith('manalu_backup_') || key === 'manalu_last_good_state' || key === 'manalu_mermas' || key === 'manalu_physical_inventories')) {
+                localStorage.removeItem(key);
+                cleanedCount++;
+            }
+        });
+        
+        calculateStorage();
+        alert(`✅ Limpieza completada. Se han eliminado ${cleanedCount} archivos de backup locales para liberar espacio. La aplicación se reiniciará para refrescar datos.`);
+        window.location.reload();
+    };
+
     const handleRecoverFromKDS = async () => {
         if (!confirm("⚠️ ¿Intentar reconstruir las mesas abiertas en el TPV usando los pedidos que están pendientes en Cocina? (Las bebidas no se recuperarán).")) return;
         
@@ -544,6 +572,19 @@ const Settings = () => {
                                         </div>
                                     )}
                                     {optProgress.active && <span style={{ fontSize: '0.7rem' }}>{optProgress.status} ({optProgress.current}/{optProgress.total})</span>}
+                                </button>
+                                
+                                <button
+                                    onClick={handleDeepClean}
+                                    style={{
+                                        width: '100%', padding: '0.75rem',
+                                        background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
+                                        border: '1px solid #3b82f6', borderRadius: '8px',
+                                        cursor: 'pointer', fontSize: '0.85rem',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    🧹 Limpiar Temporales y Caché (Recomendado)
                                 </button>
                                 
                                 <button

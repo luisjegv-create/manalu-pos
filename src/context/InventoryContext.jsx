@@ -18,6 +18,19 @@ const safeParse = (key, fallback) => {
     }
 };
 
+// Helper to remove heavy base64 images from local backups
+const stripLargeImages = (list) => {
+    if (!Array.isArray(list)) return list;
+    return list.map(item => {
+        if (item && item.image && typeof item.image === 'string' && item.image.startsWith('data:image')) {
+            // Skip storing the base64 image in localStorage to prevent QuotaExceededError
+            const { image: _unused, ...rest } = item;
+            return rest;
+        }
+        return item;
+    });
+};
+
 const safeSetItem = (key, value) => {
     try {
         localStorage.setItem(key, value);
@@ -104,12 +117,12 @@ export const InventoryProvider = ({ children }) => {
                     wineDataActual = wineRes.data;
                     syncSuccess = true;
                     
-                    // SAVE BACKUPS
-                    if (prodData && prodData.length > 0) safeSetItem('manalu_backup_products', JSON.stringify(prodData));
+                    // SAVE BACKUPS (Stripping heavy base64 images to save space)
+                    if (prodData && prodData.length > 0) safeSetItem('manalu_backup_products', JSON.stringify(stripLargeImages(prodData)));
                     if (ingData && ingData.length > 0) safeSetItem('manalu_backup_ingredients', JSON.stringify(ingData));
                     if (recData && recData.length > 0) safeSetItem('manalu_backup_recipes', JSON.stringify(recData));
                     if (settingsData) safeSetItem('manalu_backup_settings', JSON.stringify(settingsData));
-                    if (wineDataActual && wineDataActual.length > 0) safeSetItem('manalu_backup_wines', JSON.stringify(wineDataActual));
+                    if (wineDataActual && wineDataActual.length > 0) safeSetItem('manalu_backup_wines', JSON.stringify(stripLargeImages(wineDataActual)));
                     
                     const now = new Date().toISOString();
                     setLastSyncDate(now);
@@ -183,7 +196,9 @@ export const InventoryProvider = ({ children }) => {
                             await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
                         }
                     }
-                } catch (e) {}
+                } catch (migrationError) {
+                    console.warn("Migration failed:", migrationError);
+                }
             }
 
         } catch (error) {

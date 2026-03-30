@@ -52,7 +52,8 @@ export const OrderProvider = ({ children }) => {
         } catch (e) {
             console.error(`Error saving ${key} to localStorage:`, e);
             if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                alert(`⚠️ ALMACENAMIENTO LLENO ⚠️\n\nEl sistema no puede guardar más datos y funcionará lento.\nVe a Configuración y borra fotos pasadas o datos innecesarios para continuar trabajando sin perder información.`);
+                // Modified message to be more concise and useful
+                alert(`⚠️ MEMORIA LLENA EN EL NAVEGADOR ⚠️\n\nEl sistema tiene demasiados datos temporales guardados.\n\nSOLUCIÓN:\n1. Ve a Configuración.\n2. Pulsa en "Limpiar Temporales y Caché".\n3. Las comandas actuales NO se perderán.`);
             }
         }
     };
@@ -401,8 +402,9 @@ export const OrderProvider = ({ children }) => {
                 tableBills,
                 timestamp: new Date().toISOString()
             };
-            // Local snapshot (Level 1)
-            localStorage.setItem('manalu_last_good_state', JSON.stringify(snapshot));
+            // Local snapshot (Level 1) - DISABLED to save localStorage space, 
+            // the individual table_orders and table_bills keys are already persistent.
+            // localStorage.setItem('manalu_last_good_state', JSON.stringify(snapshot));
             
             // Cloud mirror (Level 2) - Only every 5 minutes to avoid spamming
             const lastCloudBackup = localStorage.getItem('manalu_last_cloud_backup');
