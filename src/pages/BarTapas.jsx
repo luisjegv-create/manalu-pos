@@ -25,7 +25,8 @@ import {
     Layers,
     ClipboardList,
     LayoutGrid,
-    RefreshCw
+    RefreshCw,
+    Move
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printBillTicket, printServiceTickets } from '../utils/printHelpers';
@@ -102,6 +103,7 @@ const BarTapas = () => {
     const [mobileActiveTab, setMobileActiveTab] = useState('menu'); // 'tables', 'menu', 'order'
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isEditMode, setIsEditMode] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -739,6 +741,25 @@ const BarTapas = () => {
 
                                 {/* Removed Mobile Search Button from here */}
                                 <button
+                                    onClick={() => setIsEditMode(!isEditMode)}
+                                    className="btn-primary"
+                                    style={{
+                                        background: isEditMode ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                        border: `1px solid ${isEditMode ? 'var(--color-primary)' : 'rgba(255,255,255,0.2)'}`,
+                                        color: isEditMode ? 'white' : 'var(--color-text-muted)',
+                                        borderRadius: '8px',
+                                        padding: '0.5rem 1rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Move size={18} /> {isMobile ? '' : (isEditMode ? 'Hecho' : 'Ordenar')}
+                                </button>
+                                <button
                                     onClick={() => setIsAddingProduct(true)}
                                     className="btn-primary"
                                     style={{
@@ -823,6 +844,7 @@ const BarTapas = () => {
                                                 }}
                                                 getProductCost={getProductCost}
                                                 checkProductAvailability={checkProductAvailability}
+                                                isEditMode={isEditMode}
                                             />
                                         ) : (
                                             <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '3rem 1rem' }}>
@@ -913,6 +935,7 @@ const BarTapas = () => {
                                                         onProductClick={handleProductClick}
                                                         getProductCost={getProductCost}
                                                         checkProductAvailability={checkProductAvailability}
+                                                        isEditMode={isEditMode}
                                                     />
                                                 </div>
                                             );
@@ -924,6 +947,7 @@ const BarTapas = () => {
                                                 onProductClick={handleProductClick}
                                                 getProductCost={getProductCost}
                                                 checkProductAvailability={checkProductAvailability}
+                                                isEditMode={isEditMode}
                                             />
                                         )}
                                     </>

@@ -1,9 +1,37 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInventory } from '../../context/InventoryContext';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const ProductGrid = ({ products, onProductClick }) => {
-    const { checkProductAvailability, toggleSoldOut, soldOutItems } = useInventory();
+const ProductGrid = ({ products, onProductClick, isEditMode }) => {
+    const { checkProductAvailability, toggleSoldOut, soldOutItems, customProductOrder, updateCustomProductOrder } = useInventory();
+
+    const handleMove = (e, product, direction) => {
+        e.stopPropagation();
+        
+        let currentOrder = [...customProductOrder];
+        products.forEach(p => {
+            if (!currentOrder.includes(p.id)) {
+                currentOrder.push(p.id);
+            }
+        });
+
+        const currentIndex = currentOrder.indexOf(product.id);
+        const visibleIndex = products.findIndex(p => p.id === product.id);
+        if (visibleIndex === -1) return;
+        
+        const targetVisibleIndex = visibleIndex + direction;
+        if (targetVisibleIndex < 0 || targetVisibleIndex >= products.length) return;
+        
+        const targetProductId = products[targetVisibleIndex].id;
+        const targetOrderIndex = currentOrder.indexOf(targetProductId);
+        
+        if (currentIndex !== -1 && targetOrderIndex !== -1) {
+            [currentOrder[currentIndex], currentOrder[targetOrderIndex]] = [currentOrder[targetOrderIndex], currentOrder[currentIndex]];
+            updateCustomProductOrder(currentOrder);
+        }
+    };
+
     return (
         <div style={{
             flex: 1,
@@ -24,6 +52,7 @@ const ProductGrid = ({ products, onProductClick }) => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         onClick={() => {
+                            if (isEditMode) return;
                             if (!soldOutItems.includes(product.id)) {
                                 onProductClick(product);
                             } else {
@@ -53,6 +82,61 @@ const ProductGrid = ({ products, onProductClick }) => {
                         }}
                         whileTap={{ scale: 0.95 }}
                     >
+                        {/* Edit Mode Movement Overlays */}
+                        {isEditMode && (
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.4)',
+                                backdropFilter: 'blur(2px)',
+                                zIndex: 20,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                borderRadius: '10px',
+                                padding: '0 0.5rem'
+                            }}>
+                                <button
+                                    onClick={(e) => handleMove(e, product, -1)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.4)',
+                                        borderRadius: '50%',
+                                        width: '45px',
+                                        height: '45px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: 'white',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                    }}
+                                >
+                                    <ChevronLeft size={28} />
+                                </button>
+                                <button
+                                    onClick={(e) => handleMove(e, product, 1)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: '1px solid rgba(255,255,255,0.4)',
+                                        borderRadius: '50%',
+                                        width: '45px',
+                                        height: '45px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        color: 'white',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                                    }}
+                                >
+                                    <ChevronRight size={28} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Agotado Toggle Button */}
                         <button
                             onClick={(e) => {

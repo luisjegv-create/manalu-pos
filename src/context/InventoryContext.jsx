@@ -46,6 +46,7 @@ export const InventoryProvider = ({ children }) => {
     const [soldOutItems, setSoldOutItems] = useState(() => safeParse('manalu_sold_out', []));
     const [isSyncing, setIsSyncing] = useState(false); // For manual reload indication
     const [lastSyncDate, setLastSyncDate] = useState(() => safeParse('manalu_last_sync', null));
+    const [customProductOrder, setCustomProductOrder] = useState(() => safeParse('manalu_product_order', []));
 
     const [restaurantInfo, setRestaurantInfo] = useState({
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
@@ -220,8 +221,25 @@ export const InventoryProvider = ({ children }) => {
             id: `prod_${p.id}`,
             dbId: p.id
         }));
-        return [...baseProductsMapped, ...wineProducts];
-    }, [baseProducts, wines]);
+        
+        let allProducts = [...baseProductsMapped, ...wineProducts];
+        if (customProductOrder && customProductOrder.length > 0) {
+            allProducts.sort((a, b) => {
+                const idxA = customProductOrder.indexOf(a.id);
+                const idxB = customProductOrder.indexOf(b.id);
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return 0;
+            });
+        }
+        return allProducts;
+    }, [baseProducts, wines, customProductOrder]);
+
+    const updateCustomProductOrder = (newOrderArray) => {
+        setCustomProductOrder(newOrderArray);
+        safeSetItem('manalu_product_order', JSON.stringify(newOrderArray));
+    };
 
 
     // --- Ingredient Actions ---
@@ -894,7 +912,9 @@ export const InventoryProvider = ({ children }) => {
             soldOutItems,
             isSyncing,
             lastSyncDate,
-            forceSync
+            forceSync,
+            customProductOrder,
+            updateCustomProductOrder
             // ... (rest of simple delete actions)
         }}>
             {children}
