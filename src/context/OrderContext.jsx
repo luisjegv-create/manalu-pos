@@ -172,10 +172,14 @@ export const OrderProvider = ({ children }) => {
                 lastSync: new Date().toISOString()
             }));
 
-            // 2. Fetch Kitchen Orders
+            // 2. Fetch Kitchen Orders (Last 24 Hours only to avoid stale data)
+            const twentyFourHoursAgo = new Date();
+            twentyFourHoursAgo.setDate(twentyFourHoursAgo.getDate() - 1);
+
             const { data: kitchenData, error: kitchenError } = await supabase.from('kitchen_orders')
                 .select('*')
                 .or('status.eq.pending,status.eq.ready')
+                .gte('created_at', twentyFourHoursAgo.toISOString())
                 .order('created_at', { ascending: true });
             if (kitchenError) {
                 setSyncStatus(prev => ({ ...prev, kitchen: { count: 0, error: kitchenError.message } }));
@@ -690,15 +694,15 @@ export const OrderProvider = ({ children }) => {
                     const tableObj = tables.find(t => t.id === tableId);
                     if (tableObj) {
                         setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
-                        // Attempt to clean them from DB as well or mark them closed if needed
-                        supabase.from('kitchen_orders')
-                            .update({ status: 'completed' })
-                            .eq('table_name', tableObj.name)
-                            .neq('status', 'completed')
-                            .then();
-                            
-                        // NEW: Also clear links and remove if this was a master table
-                        setTables(prev => prev.filter(t => t.id !== tableId && t.linkedTo !== tableId));
+                        // Mark all kitchen orders for this table as completed in DB
+                        try {
+                            await supabase.from('kitchen_orders')
+                                .update({ status: 'completed' })
+                                .eq('table_name', tableObj.name)
+                                .neq('status', 'completed');
+                        } catch (e) {
+                            console.error("Error clearing kitchen orders on closeTable:", e);
+                        }
                     }
 
                     return newSale;

@@ -74,15 +74,20 @@ const TableOrderPreview = ({ tableOrders = [], kitchenOrders = [], onItemToggle 
                 if (!item) return null;
                 const isReady = item.itemStatus === 'ready';
                 const isDraft = item.itemStatus === 'draft';
+                // Generar una key más robusta basada en ID de orden + nombre + status + index
+                const itemKey = `${item.orderId || 'draft'}-${item.uniqueId || item.id}-${isDraft ? 'd' : 'k'}-${idx}`;
+                
                 return (
-                    <div key={`${item.uniqueId}-${idx}`} style={{
+                    <div key={itemKey} style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        color: 'rgba(255, 255, 255, 0.9)', // White text for dark cards
+                        color: 'rgba(255, 255, 255, 0.9)', 
                         padding: '4px 0',
                         fontWeight: '600',
-                        borderBottom: idx === allItems.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)'
+                        borderBottom: idx === allItems.length - 1 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)',
+                        opacity: isReady ? 0.6 : 1,
+                        transition: 'all 0.2s ease'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                             <button
