@@ -98,8 +98,17 @@ export const OrderProvider = ({ children }) => {
         setLoadingState(true);
         setSyncStatus(prev => ({ ...prev, isSyncing: true }));
         try {
-            // 1. Fetch Sales
-            const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(2000);
+            // 1. Fetch Sales (Optimized for performance)
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            const { data: salesData, error: salesError } = await supabase
+                .from('sales')
+                .select('*')
+                .gte('created_at', thirtyDaysAgo.toISOString())
+                .order('created_at', { ascending: false })
+                .limit(1000);
+
             if (salesError) {
                 setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
             } else if (salesData) {
