@@ -88,130 +88,123 @@ export const OrderProvider = ({ children }) => {
         sales: { count: 0, error: null },
         kitchen: { count: 0, error: null },
         closes: { count: 0, error: null },
-        totalSales: 0
+        totalSales: 0,
+        lastSync: null,
+        isSyncing: false
     });
 
-    // --- INITIAL CLOUD SYNC ---
-    useEffect(() => {
-        const syncWithCloud = async () => {
-            setLoadingState(true);
-            try {
+    const syncWithCloud = async () => {
+        if (syncStatus.isSyncing) return;
+        setLoadingState(true);
+        setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+        try {
+            // 1. Fetch Sales
+            const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(2000);
+            if (salesError) {
+                setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
+            } else if (salesData) {
+                const mappedSales = salesData.map(s => ({
+                    ...s,
+                    date: new Date(s.created_at),
+                    total: parseFloat(s.total || s.total_amount || 0),
+                    items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
+                    paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
+                    tableId: s.table_id || s.tableId
+                }));
+                setSalesHistory(mappedSales);
+                setSyncStatus(prev => ({ ...prev, sales: { count: mappedSales.length, error: null }, totalSales: mappedSales.length }));
+            }
 
-                // 1. Fetch Sales
-                const { data: salesData, error: salesError } = await supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(2000);
-                if (salesError) {
-                    setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
-                } else if (salesData) {
-                    const mappedSales = salesData.map(s => ({
-                        ...s,
-                        date: new Date(s.created_at),
-                        total: parseFloat(s.total || s.total_amount || 0),
-                        items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
-                        paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
-                        tableId: s.table_id || s.tableId
-                    }));
-                    setSalesHistory(mappedSales);
-                    setSyncStatus(prev => ({ ...prev, sales: { count: mappedSales.length, error: null }, totalSales: mappedSales.length }));
-                }
+            // 2. Fetch Kitchen Orders
+            const { data: kitchenData, error: kitchenError } = await supabase.from('kitchen_orders')
+                .select('*')
+                .or('status.eq.pending,status.eq.ready')
+                .order('created_at', { ascending: true });
+            if (kitchenError) {
+                setSyncStatus(prev => ({ ...prev, kitchen: { count: 0, error: kitchenError.message } }));
+            } else if (kitchenData) {
+                const mappedKitchen = kitchenData.map(o => ({
+                    ...o,
+                    items: typeof o.items === 'string' ? (o.items.startsWith('[') ? JSON.parse(o.items) : []) : (o.items || []),
+                    timestamp: new Date(o.created_at),
+                    table: o.table_name,
+                    customer: typeof o.customer_info === 'string' ? (o.customer_info.startsWith('{') ? JSON.parse(o.customer_info) : null) : o.customer_info
+                }));
+                setKitchenOrders(mappedKitchen);
+                setSyncStatus(prev => ({ ...prev, kitchen: { count: mappedKitchen.length, error: null } }));
+            }
 
-                // 2. Fetch Kitchen Orders
-                const { data: kitchenData, error: kitchenError } = await supabase.from('kitchen_orders')
-                    .select('*')
-                    .or('status.eq.pending,status.eq.ready')
-                    .order('created_at', { ascending: true });
-                if (kitchenError) {
-                    setSyncStatus(prev => ({ ...prev, kitchen: { count: 0, error: kitchenError.message } }));
-                } else if (kitchenData) {
-                    const mappedKitchen = kitchenData.map(o => ({
-                        ...o,
-                        items: typeof o.items === 'string' ? (o.items.startsWith('[') ? JSON.parse(o.items) : []) : (o.items || []),
-                        timestamp: new Date(o.created_at),
-                        table: o.table_name,
-                        customer: typeof o.customer_info === 'string' ? (o.customer_info.startsWith('{') ? JSON.parse(o.customer_info) : null) : o.customer_info
-                    }));
-                    setKitchenOrders(mappedKitchen);
-                    setSyncStatus(prev => ({ ...prev, kitchen: { count: mappedKitchen.length, error: null } }));
-                }
+            // 3. Fetch Cash Closes
+            const { data: closeData, error: closeError } = await supabase.from('cash_closes').select('*').order('created_at', { ascending: false }).limit(50);
+            if (closeError) {
+                setSyncStatus(prev => ({ ...prev, closes: { count: 0, error: closeError.message } }));
+            } else if (closeData) {
+                const mappedCloses = closeData.map(c => ({
+                    ...c,
+                    id: c.id,
+                    date: new Date(c.created_at),
+                    total: c.total_ventas,
+                    salesCount: c.sales_count
+                }));
+                setCashCloses(mappedCloses);
+                setSyncStatus(prev => ({ ...prev, closes: { count: mappedCloses.length, error: null } }));
+            }
 
-                // 3. Fetch Cash Closes
-                const { data: closeData, error: closeError } = await supabase.from('cash_closes').select('*').order('created_at', { ascending: false }).limit(50);
-                if (closeError) {
-                    setSyncStatus(prev => ({ ...prev, closes: { count: 0, error: closeError.message } }));
-                } else if (closeData) {
-                    const mappedCloses = closeData.map(c => ({
-                        ...c,
-                        id: c.id,
-                        date: new Date(c.created_at),
-                        total: c.total_ventas,
-                        salesCount: c.sales_count
-                    }));
-                    setCashCloses(mappedCloses);
-                    setSyncStatus(prev => ({ ...prev, closes: { count: mappedCloses.length, error: null } }));
-                }
+            // 4. Fetch Service Requests
+            const { data: requestData } = await supabase.from('service_requests')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+            if (requestData) {
+                const validRequests = [];
+                for (const req of requestData) {
+                    if (req.type === 'new_order' && req.payload) {
+                        try {
+                            const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
 
-                // 4. Fetch Service Requests
-                const { data: requestData } = await supabase.from('service_requests')
-                    .select('*')
-                    .eq('status', 'pending')
-                    .order('created_at', { ascending: false });
-                if (requestData) {
-                    const validRequests = [];
-                    for (const req of requestData) {
-                        if (req.type === 'new_order' && req.payload) {
-                            // Process automatic order insertion into tableBills for the POS
-                            try {
-                                const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
-
-                                // Broadcast to POS UI (BarTapas) for auto-printing and alerting
-                                window.dispatchEvent(new CustomEvent('new_qr_order', {
-                                    detail: {
-                                        tableId: req.table_id,
-                                        tableName: req.table_name,
-                                        items: cartItems
+                            // We update tableBills for the POS
+                            setTableBills(prev => {
+                                const currentBill = prev[req.table_id] || [];
+                                const newBill = [...currentBill];
+                                cartItems.forEach(newItem => {
+                                    const cleanItem = stripItem(newItem);
+                                    const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
+                                    if (existingInBill) {
+                                        existingInBill.quantity += cleanItem.quantity;
+                                    } else {
+                                        newBill.push(cleanItem);
                                     }
-                                }));
-
-                                setTableBills(prev => {
-                                    const currentBill = prev[req.table_id] || [];
-                                    const newBill = [...currentBill];
-                                    cartItems.forEach(newItem => {
-                                        const cleanItem = stripItem(newItem);
-                                        const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
-                                        if (existingInBill) {
-                                            existingInBill.quantity += cleanItem.quantity;
-                                        } else {
-                                            newBill.push(cleanItem);
-                                        }
-                                    });
-                                    return { ...prev, [req.table_id]: newBill };
                                 });
-                                // Mark table as occupied
-                                setTables(prev => prev.map(t =>
-                                    String(t.id) === String(req.table_id)
-                                        ? { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }
-                                        : t
-                                ));
+                                return { ...prev, [req.table_id]: newBill };
+                            });
+                            // Mark table as occupied
+                            setTables(prev => prev.map(t =>
+                                String(t.id) === String(req.table_id)
+                                    ? { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }
+                                    : t
+                            ));
 
-                                // Instead of clearing immediately here which causes a race condition between tabs,
-                                // marked it processed in a way that doesn't delete it for other clients during initial sync load.
-                                // Actually, clearing it is fine IF all active tabs received the postgres_changes INSERT event directly.
-                                await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).eq('status', 'pending');
-                            } catch (err) {
-                                console.error("Error processing auto-order payload:", err);
-                                validRequests.push(req); // Keep as pending if failed
-                            }
-                        } else {
+                            await supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).eq('status', 'pending');
+                        } catch (err) {
+                            console.error("Error processing auto-order payload:", err);
                             validRequests.push(req);
                         }
+                    } else {
+                        validRequests.push(req);
                     }
-                    setServiceRequests(validRequests);
                 }
-            } catch (err) {
-                console.error("Error crítico de sincronización:", err);
-            } finally {
-                setLoadingState(false);
+                setServiceRequests(validRequests);
             }
-        };
+            setSyncStatus(prev => ({ ...prev, lastSync: new Date().toISOString() }));
+        } catch (err) {
+            console.error("Error crítico de sincronización:", err);
+        } finally {
+            setLoadingState(false);
+            setSyncStatus(prev => ({ ...prev, isSyncing: false }));
+        }
+    };
+
+    useEffect(() => {
         syncWithCloud();
 
         // 5. Setup Cross-Tab Synchronization
@@ -220,9 +213,7 @@ export const OrderProvider = ({ children }) => {
                 try {
                     const nextBills = JSON.parse(e.newValue);
                     setTableBills(prev => {
-                        // Only update if actually different to avoid infinite loops
                         if (JSON.stringify(prev) === JSON.stringify(nextBills)) return prev;
-                        console.log("Syncing tableBills from other tab...");
                         return nextBills;
                     });
                 } catch (err) {
@@ -248,7 +239,7 @@ export const OrderProvider = ({ children }) => {
         const kitchenSubscription = supabase
             .channel('kitchen-updates')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'kitchen_orders' }, () => {
-                syncWithCloud(); // Refresh kitchen
+                syncWithCloud();
             })
             .subscribe();
 
@@ -270,70 +261,7 @@ export const OrderProvider = ({ children }) => {
         const serviceSubscription = supabase
             .channel('service-updates')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_requests' }, (payload) => {
-                const req = payload.new;
-                if (req.type === 'new_order' && req.payload) {
-                    try {
-                        const cartItems = typeof req.payload === 'string' ? JSON.parse(req.payload) : req.payload;
-                        const tableName = req.table_name || `Mesa ${req.table_id}`;
-
-                        // Print combined tickets (Kitchen and Bar)
-                        const foodItems = cartItems.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
-                        const drinkItems = cartItems.filter(item => item.category === 'bebidas' || item.category === 'vinos');
-
-                        // We only print if there's actually something to print
-                        if (foodItems.length > 0 || drinkItems.length > 0) {
-                            printServiceTickets(tableName, foodItems, drinkItems);
-                        }
-
-                        setActiveQrAlert({ tableId: req.table_id, tableName, items: cartItems });
-
-                        setTableBills(prev => {
-                            const currentBill = prev[req.table_id] || [];
-                            const newBill = [...currentBill];
-                            let modified = false;
-
-                            cartItems.forEach(newItem => {
-                                // IMPORTANT IDEMPOTENCY CHECK: 
-                                // Avoid re-adding the same items if this request was already processed 
-                                // (e.g., if syncWithCloud just ran or multiple events fired)
-                                const alreadyExists = newBill.some(b =>
-                                    b.id === newItem.id &&
-                                    b.quantity === newItem.quantity &&
-                                    (b.timestamp === newItem.timestamp || (new Date() - new Date(req.created_at) < 5000))
-                                );
-
-                                if (!alreadyExists) {
-                                    const cleanItem = stripItem(newItem);
-                                    const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
-                                    if (existingInBill) {
-                                        existingInBill.quantity += cleanItem.quantity;
-                                    } else {
-                                        newBill.push(cleanItem);
-                                    }
-                                    modified = true;
-                                }
-                            });
-                            return modified ? { ...prev, [req.table_id]: newBill } : prev;
-                        });
-
-                        setTables(prev => prev.map(t =>
-                            String(t.id) === String(req.table_id)
-                                ? { ...t, status: 'occupied', lastActionAt: new Date().toISOString() }
-                                : t
-                        ));
-
-                        // Only the "primary" tab (the one that sees it first) should clear it
-                        // but since multiple tabs might see it at the same time, we'll let Supabase handle the concurrency.
-                        // We add a tiny delay to ensure all listeners had a chance to see it.
-                        setTimeout(() => {
-                            supabase.from('service_requests').update({ status: 'cleared' }).eq('id', req.id).eq('status', 'pending').then();
-                        }, 1000);
-                    } catch (err) {
-                        console.error("Error in real-time order parsing", err);
-                    }
-                } else {
-                    syncWithCloud();
-                }
+                 syncWithCloud();
             })
             .subscribe();
 
@@ -1583,6 +1511,7 @@ export const OrderProvider = ({ children }) => {
             splitTable,
             deleteCashClose,
             performCashClose,
+            syncWithCloud,
             // --- BACKUP & RECOVERY ---
             saveEmergencyBackup: () => {
                 const snapshot = {

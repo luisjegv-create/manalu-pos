@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle, Users, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Building, Info, Server, Camera, Trash2, Database, AlertTriangle, Users, UserPlus, X, RefreshCw } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuth } from '../context/AuthContext';
 import { useOrder } from '../context/OrderContext';
@@ -11,7 +11,15 @@ import { uploadImage } from '../utils/storageUtils';
 const Settings = () => {
     const navigate = useNavigate();
     const { restaurantInfo, updateRestaurantInfo } = useInventory();
-    const { restoreFromBackup } = useOrder();
+    const { 
+        saveEmergencyBackup, 
+        restoreFromBackup, 
+        syncWithCloud, 
+        syncStatus,
+        tables,
+        tableOrders,
+        tableBills
+    } = useOrder();
     const { employees, addEmployee, deleteEmployee, currentUser } = useAuth();
     const [saved, setSaved] = useState(false);
     const [storageUsage, setStorageUsage] = useState(0);
@@ -28,9 +36,6 @@ const Settings = () => {
         }
     };
 
-    // Temp state for form to avoid saving on every keystroke if preferred, 
-    // but here we can just use the context data directly for simplicity if it's small.
-    // Let's use local state for the form and save to context on handleSave.
     const [formData, setFormData] = useState({
         ...restaurantInfo,
         geminiApiKey: localStorage.getItem('manalu_gemini_api_key') || ''
@@ -63,14 +68,12 @@ const Settings = () => {
     }, []);
 
     const handleSave = () => {
-        // Save API Key locally
         if (formData.geminiApiKey) {
             localStorage.setItem('manalu_gemini_api_key', formData.geminiApiKey);
         } else {
             localStorage.removeItem('manalu_gemini_api_key');
         }
 
-        // Remove it from the object sent to updateRestaurantInfo to avoid sending to Supabase if it's not a column
         const dataToSave = { ...formData };
         delete dataToSave.geminiApiKey;
 
@@ -84,7 +87,6 @@ const Settings = () => {
         const file = e.target.files[0];
         if (file) {
             try {
-                // Settings images (logo, QR) should be small and clear
                 const compressedBase64 = await compressImage(file, 500, 0.7);
                 if (field === 'logo') {
                     setFormData(prev => ({ ...prev, logo: compressedBase64 }));
@@ -144,7 +146,6 @@ const Settings = () => {
         let cleanedCount = 0;
         const keys = Object.keys(localStorage);
         keys.forEach(key => {
-            // Remove backups and stale state but keep critical POS data
             if (!keysToKeep.includes(key) && (key.startsWith('manalu_backup_') || key === 'manalu_last_good_state' || key === 'manalu_mermas' || key === 'manalu_physical_inventories')) {
                 localStorage.removeItem(key);
                 cleanedCount++;
@@ -181,7 +182,6 @@ const Settings = () => {
                 const tableName = order.table_name;
                 const items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
                 
-                // Buscar si la mesa ya existe o crearla
                 let tableId = tableName.replace(/[^0-9]/g, '');
                 if (!tableId) tableId = `rec-${Date.now()}-${Math.floor(Math.random()*1000)}`;
                 tableId = parseInt(tableId) || tableId;
@@ -197,10 +197,8 @@ const Settings = () => {
                     currentTables.push(tableObj);
                 }
 
-                // Asegurar que exista el array de la cuenta
                 if (!currentBills[tableObj.id]) currentBills[tableObj.id] = [];
                 
-                // Añadir items evitando duplicados exactos si ya los hay
                 items.forEach(item => {
                     const exists = currentBills[tableObj.id].find(b => 
                         b.id === item.id && b.uniqueId === item.uniqueId
@@ -274,31 +272,25 @@ const Settings = () => {
         setOptProgress({ active: true, current: 0, total: 0, status: 'Iniciando mantenimiento...' });
 
         try {
-            // 1. Fetch all with images
             const { data: prods } = await supabase.from('products').select('id, name, image').not('image', 'is', null);
             const { data: wines } = await supabase.from('wines').select('id, name, image').not('image', 'is', null);
             
             const prodList = (prods || []).filter(p => !p.image.startsWith('http') || p.image.includes('supabase.co'));
             const wineList = (wines || []).filter(w => !w.image.startsWith('http') || w.image.includes('supabase.co'));
             
-            const total = prodList.length + wineList.length + 1; // +1 for logo
+            const total = prodList.length + wineList.length + 1;
             setOptProgress(prev => ({ ...prev, total, status: 'Analizando catálogo...' }));
 
             let count = 0;
 
-            // Process Products
             for (const p of prodList) {
                 try {
                     setOptProgress(prev => ({ ...prev, status: `Comprimiendo: ${p.name}` }));
                     const compressedBase64 = await compressImageFromUrl(p.image, 500, 0.6);
-                    
-                    // Conversion to blob for storage
                     const res = await fetch(compressedBase64);
                     const blob = await res.blob();
-                    
                     const storageUrl = await uploadImage(blob, 'product-images', 'optimized');
                     await supabase.from('products').update({ image: storageUrl }).eq('id', p.id);
-                    
                     count++;
                     setOptProgress(prev => ({ ...prev, current: count }));
                 } catch (e) {
@@ -306,18 +298,14 @@ const Settings = () => {
                 }
             }
 
-            // Process Wines
             for (const w of wineList) {
                 try {
                     setOptProgress(prev => ({ ...prev, status: `Comprimiendo: ${w.name}` }));
                     const compressedBase64 = await compressImageFromUrl(w.image, 400, 0.6);
-                    
                     const res = await fetch(compressedBase64);
                     const blob = await res.blob();
-                    
                     const storageUrl = await uploadImage(blob, 'product-images', 'wines-optimized');
                     await supabase.from('wines').update({ image: storageUrl }).eq('id', w.id);
-                    
                     count++;
                     setOptProgress(prev => ({ ...prev, current: count }));
                 } catch (e) {
@@ -325,18 +313,14 @@ const Settings = () => {
                 }
             }
 
-            // Process Restaurant Logo if it's base64
             if (formData.logo && formData.logo.startsWith('data:image')) {
                 try {
                     setOptProgress(prev => ({ ...prev, status: `Comprimiendo: Logo Principal` }));
                     const compressedBase64 = await compressImageFromUrl(formData.logo, 500, 0.7);
-                    
                     const res = await fetch(compressedBase64);
                     const blob = await res.blob();
-                    
                     const storageUrl = await uploadImage(blob, 'product-images', 'branding');
                     await updateRestaurantInfo({ ...restaurantInfo, logo: storageUrl });
-                    
                     count++;
                     setOptProgress(prev => ({ ...prev, current: count }));
                 } catch (e) {
@@ -510,266 +494,129 @@ const Settings = () => {
                                     Reiniciar
                                 </button>
                             </div>
-                            <p style={{ fontSize: '0.7rem', color: '#f59e0b', marginTop: '0.5rem' }}>
-                                💡 El siguiente ticket generado será: {(formData.last_ticket_number || 0) + 1}
-                            </p>
                         </div>
                     </div>
 
-                    {/* Storage & System */}
+                    {/* Cloud Sync Status */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
                         <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
-                            <Database size={20} /> Almacenamiento Local
+                            <Server size={20} /> Estado de la Nube
                         </h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
-                            Espacio ocupado por fotos y datos en este navegador.
-                        </p>
-
-                        <div style={{ height: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px', overflow: 'hidden', marginBottom: '0.5rem' }}>
-                            <div style={{
-                                width: `${storageUsage}%`,
-                                height: '100%',
-                                background: storageUsage > 80 ? '#ef4444' : storageUsage > 50 ? '#f59e0b' : '#3b82f6',
-                                transition: 'width 0.5s'
-                            }} />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                            <span>{storageUsage.toFixed(1)}% ocupado</span>
-                            <span>Límite (aprox. 5MB)</span>
-                        </div>
-
-                        <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid var(--glass-border)' }}>
-                            <h4 style={{ margin: '0 0 1rem 0', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Database size={16} /> Mantenimiento de Datos
-                            </h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <button
-                                    onClick={optimizeExistingImages}
-                                    disabled={optProgress.active}
-                                    style={{
-                                        width: '100%', padding: '0.75rem',
-                                        background: optProgress.active ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.1)', 
-                                        color: optProgress.active ? 'gray' : '#10b981',
-                                        border: '1px solid ' + (optProgress.active ? 'gray' : '#10b981'), 
-                                        borderRadius: '8px',
-                                        cursor: optProgress.active ? 'default' : 'pointer', 
-                                        fontSize: '0.85rem',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '0.5rem'
-                                    }}
-                                >
-                                    <span>{optProgress.active ? 'Optimización en curso...' : '🖼️ Optimizar Imágenes Existentes'}</span>
-                                    {optProgress.active && (
-                                        <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                            <div style={{ 
-                                                width: `${(optProgress.current / optProgress.total) * 100}%`, 
-                                                height: '100%', 
-                                                background: '#10b981',
-                                                transition: 'width 0.3s'
-                                            }} />
-                                        </div>
-                                    )}
-                                    {optProgress.active && <span style={{ fontSize: '0.7rem' }}>{optProgress.status} ({optProgress.current}/{optProgress.total})</span>}
-                                </button>
-                                
-                                <button
-                                    onClick={handleDeepClean}
-                                    style={{
-                                        width: '100%', padding: '0.75rem',
-                                        background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
-                                        border: '1px solid #3b82f6', borderRadius: '8px',
-                                        cursor: 'pointer', fontSize: '0.85rem',
-                                        fontWeight: 'bold'
-                                    }}
-                                >
-                                    🧹 Limpiar Temporales y Caché (Recomendado)
-                                </button>
-                                
-                                <button
-                                    onClick={handleRecoverFromKDS}
-                                    style={{
-                                        width: '100%', padding: '0.75rem',
-                                        background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
-                                        border: '1px solid #3b82f6', borderRadius: '8px',
-                                        cursor: 'pointer', fontSize: '0.85rem'
-                                    }}
-                                >
-                                    🚑 Recuperar Mesas desde Cocina (Parcial)
-                                </button>
-                                
-                                <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px dashed #3b82f6' }}>
-                                    <h5 style={{ margin: '0 0 0.75rem 0', color: '#3b82f6', fontSize: '0.8rem', fontWeight: 'bold' }}>SISTEMA DE RECUPERACIÓN TOTAL</h5>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                        <button
-                                            onClick={handleRestoreLocalState}
-                                            style={{
-                                                padding: '0.75rem',
-                                                background: '#3b82f6', color: 'white',
-                                                border: 'none', borderRadius: '8px',
-                                                cursor: 'pointer', fontSize: '0.8rem',
-                                                fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem'
-                                            }}
-                                        >
-                                            <Database size={16} /> Local Backup
-                                        </button>
-                                        <button
-                                            onClick={handleRestoreCloudState}
-                                            style={{
-                                                padding: '0.75rem',
-                                                background: '#10b981', color: 'white',
-                                                border: 'none', borderRadius: '8px',
-                                                cursor: 'pointer', fontSize: '0.8rem',
-                                                fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem'
-                                            }}
-                                        >
-                                            <Server size={16} /> Cloud Mirror
-                                        </button>
-                                    </div>
-                                    <p style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
-                                        Usa estas opciones solo si se han perdido las comandas tras un cierre accidental.
-                                    </p>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.85rem' }}>Ventas Recuperadas:</span>
+                                <span style={{ fontWeight: 'bold' }}>{syncStatus.sales.count}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span style={{ fontSize: '0.85rem' }}>Última vez:</span>
+                                <span style={{ fontWeight: 'bold' }}>{syncStatus.lastSync ? new Date(syncStatus.lastSync).toLocaleTimeString() : 'Nunca'}</span>
+                            </div>
+                            {syncStatus.sales.error && (
+                                <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                                    ⚠️ {syncStatus.sales.error}
                                 </div>
-                                <button
-                                    onClick={handleResetData}
-                                    style={{
-                                        width: '100%', padding: '0.75rem',
-                                        background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444',
-                                        border: '1px solid #ef4444', borderRadius: '8px',
-                                        cursor: 'pointer', fontSize: '0.85rem'
-                                    }}
-                                >
-                                    Borrar Todos los Datos de la App
-                                </button>
-                            </div>
+                            )}
                         </div>
+                        <button
+                            onClick={syncWithCloud}
+                            disabled={syncStatus.isSyncing}
+                            className="btn-primary"
+                            style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}
+                        >
+                            <RefreshCw size={18} className={syncStatus.isSyncing ? "spin-animation" : ""} />
+                            {syncStatus.isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}
+                        </button>
                     </div>
 
-                    {/* QR Config */}
+                    {/* Mantenimiento */}
                     <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
                         <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
-                            <Info size={20} /> Menú Digital (QR)
+                            <AlertTriangle size={20} /> Mantenimiento
                         </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ background: 'white', padding: '1rem', borderRadius: '8px' }}>
-                                <img
-                                    src={customQR || `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/menu')}`}
-                                    alt="QR"
-                                    style={{ width: '120px', height: '120px', display: 'block' }}
-                                />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                            <button onClick={handleDeepClean} className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
+                                🧹 Limpiar Temporales y Caché
+                            </button>
+                            <button onClick={handleRecoverFromKDS} className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
+                                🚑 Recuperar desde Cocina
+                            </button>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                <button onClick={handleRestoreLocalState} className="btn-secondary" style={{ fontSize: '0.75rem' }}>
+                                    💾 Backup Local
+                                </button>
+                                <button onClick={handleRestoreCloudState} className="btn-secondary" style={{ fontSize: '0.75rem' }}>
+                                    🌐 Cloud Mirror
+                                </button>
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <label className="btn-secondary" style={{ fontSize: '0.75rem', cursor: 'pointer' }}>
-                                    Subir Propio QR
-                                    <input type="file" hidden accept="image/*" onChange={(e) => handleImageUpload(e, 'qr')} />
-                                </label>
-                                {customQR && <button onClick={removeCustomQR} className="btn-icon" style={{ color: '#ef4444' }}><Trash2 size={16} /></button>}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Employee PIN Management */}
-                    <div className="glass-panel" style={{ padding: isMobile ? '1.5rem' : '2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', color: 'var(--color-text)' }}>
-                                <Users size={20} /> Empleados y Accesos
-                            </h3>
-                            <button
-                                onClick={() => setShowAddEmployee(!showAddEmployee)}
-                                className="btn-primary"
-                                style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', gap: '0.5rem' }}
-                            >
-                                {showAddEmployee ? <X size={16} /> : <UserPlus size={16} />}
-                                {showAddEmployee ? 'Cancelar' : 'Añadir Empleado'}
+                            <button onClick={handleResetData} className="btn-secondary" style={{ width: '100%', justifyContent: 'center', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
+                                💀 Borrar todo el TPV
                             </button>
                         </div>
-
-                        {showAddEmployee && (
-                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid var(--glass-border)' }}>
-                                <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.9rem', color: '#3b82f6' }}>Nuevo Empleado</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    <div className="form-group">
-                                        <label>Nombre</label>
-                                        <input
-                                            value={newEmployee.name}
-                                            onChange={e => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                                            placeholder="Ej: Laura"
-                                        />
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) 1fr', gap: '1rem' }}>
-                                        <div className="form-group">
-                                            <label>PIN (Acceso)</label>
-                                            <input
-                                                type="text"
-                                                maxLength="8"
-                                                value={newEmployee.pin}
-                                                onChange={e => setNewEmployee({ ...newEmployee, pin: e.target.value.replace(/\D/g, '') })}
-                                                placeholder="1234"
-                                            />
-                                        </div>
-                                        <div className="form-group">
-                                            <label>Rol</label>
-                                            <select
-                                                value={newEmployee.role}
-                                                onChange={e => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                                                style={{ width: '100%', padding: '0.8rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}
-                                            >
-                                                <option value="staff" style={{ background: '#1e293b' }}>Camarero/a (Staff)</option>
-                                                <option value="admin" style={{ background: '#1e293b' }}>Administrador (Total)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={handleAddEmployee}
-                                        className="btn-primary"
-                                        disabled={!newEmployee.name || !newEmployee.pin}
-                                        style={{ width: '100%', justifyContent: 'center', marginTop: '0.5rem', opacity: (!newEmployee.name || !newEmployee.pin) ? 0.5 : 1 }}
-                                    >
-                                        Crear Empleado y Asignar PIN
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {employees.map(emp => (
-                                <div key={emp.id} style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    padding: '1rem', background: 'rgba(255,255,255,0.03)',
-                                    borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'
-                                }}>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {emp.name}
-                                            {emp.role === 'admin' && <span style={{ fontSize: '0.6rem', background: '#3b82f6', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>Admin</span>}
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.25rem', fontFamily: 'monospace', letterSpacing: '2px' }}>
-                                            PIN: {emp.pin}
-                                        </div>
-                                    </div>
-                                    {emp.id !== 'admin' && emp.id !== currentUser?.id && (
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm(`¿Seguro que quieres borrar a ${emp.name}? Perderá el acceso de inmediato.`)) {
-                                                    deleteEmployee(emp.id);
-                                                }
-                                            }}
-                                            className="btn-icon" style={{ padding: '0.5rem', color: '#ef4444' }}
-                                            title="Revocar Acceso"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
                     </div>
-
                 </div>
-
             </div>
-        </div >
+
+            <style>
+                {`
+                    .glass-panel {
+                        background: var(--color-surface);
+                        border: 1px solid var(--border-strong);
+                        border-radius: 20px;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    }
+                    .form-group {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+                    .form-group label {
+                        font-size: 0.85rem;
+                        font-weight: 600;
+                        color: var(--color-text-muted);
+                    }
+                    .form-group input {
+                        padding: 0.8rem;
+                        border-radius: 10px;
+                        background: rgba(255,255,255,0.05);
+                        border: 1px solid var(--border-strong);
+                        color: var(--color-text);
+                    }
+                    .btn-primary {
+                        background: var(--color-primary);
+                        color: white;
+                        border: none;
+                        padding: 0.8rem 1.5rem;
+                        border-radius: 12px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        transition: all 0.2s;
+                    }
+                    .btn-secondary {
+                        background: rgba(255,255,255,0.05);
+                        color: var(--color-text);
+                        border: 1px solid var(--border-strong);
+                        padding: 0.8rem 1.5rem;
+                        border-radius: 12px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        transition: all 0.2s;
+                    }
+                    .spin-animation {
+                        animation: spin 1s linear infinite;
+                    }
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}
+            </style>
+        </div>
     );
 };
 

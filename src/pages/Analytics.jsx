@@ -53,7 +53,7 @@ const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection, c
 
 const Analytics = () => {
     const navigate = useNavigate();
-    const { salesHistory, cashCloses, performCashClose, deleteSale, deleteCashClose } = useOrder();
+    const { salesHistory, cashCloses, performCashClose, deleteSale, deleteCashClose, syncWithCloud, syncStatus } = useOrder();
     const { salesProducts, getProductCost, expenses, restaurantInfo } = useInventory(); // Added restaurantInfo
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
@@ -700,6 +700,36 @@ const Analytics = () => {
                         gap: '1rem',
                         alignItems: 'center'
                     }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            {syncStatus.isSyncing && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6', fontSize: '0.9rem' }}>
+                                    <div className="spin-animation">🔄</div> Sincronizando...
+                                </div>
+                            )}
+                            <button
+                                onClick={syncWithCloud}
+                                disabled={syncStatus.isSyncing}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
+                                    border: '1px solid #3b82f6', padding: '0.5rem 1rem', borderRadius: '8px',
+                                    cursor: 'pointer', fontWeight: 'bold'
+                                }}
+                            >
+                                Refrescar Datos
+                            </button>
+                            <button
+                                onClick={() => navigate('/')}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    background: 'var(--color-surface)', color: 'var(--color-text)',
+                                    border: '1px solid var(--border-strong)', padding: '0.5rem 1rem', borderRadius: '8px',
+                                    cursor: 'pointer', fontWeight: 'bold'
+                                }}
+                            >
+                                <ArrowLeft size={18} /> Volver
+                            </button>
+                        </div>
                         {!isMobile && activeSection === 'sales' && (
                             <button
                                 onClick={exportToCSV}
@@ -965,95 +995,92 @@ const Analytics = () => {
                              {searchTerm && <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><CloseIcon size={18}/></button>}
                         </div>
 
-                        {isMobile ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {filteredSales.length === 0 ? (
-                                    <div style={{ padding: '4rem', textAlign: 'center', color: colors.textMuted, background: colors.surface, borderRadius: '20px' }}>
-                                        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📭</div>
-                                        <div style={{ fontWeight: '700' }}>No hay ventas registradas</div>
+                        {filteredSales.length === 0 ? (
+                            <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                                <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No se han encontrado registros para este periodo.</p>
+                                <p style={{ fontSize: '0.9rem' }}>Prueba a cambiar el filtro arriba (ej: pulsando en "Semana" o "Mes") o pulsa el botón "Refrescar Datos".</p>
+                                {syncStatus.sales.error && (
+                                    <div style={{ marginTop: '1rem', color: '#ef4444', fontSize: '0.8rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
+                                        Error de conexión: {syncStatus.sales.error}
                                     </div>
-                                ) : (
-                                    filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
-                                        <React.Fragment key={sale.id}>
-                                        <div style={{ 
-                                            padding: '1.25rem', background: colors.surface, borderRadius: '16px', 
-                                            marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                                            border: expandedSale === sale.id ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                            transition: 'all 0.2s' 
-                                        }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
-                                                <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(sale.date).toLocaleString()}</span>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</div>}
-                                                    {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: colors.warning, fontWeight: '800' }}>🎁 INVITACIÓN</div>}
-                                                    <span style={{ fontWeight: '900', color: colors.text, fontSize: '1.1rem' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>
-                                                    Mesa: <b style={{ color: colors.text }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <span style={{
-                                                        padding: '4px 8px', borderRadius: '6px',
-                                                        background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                                                        color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
-                                                        fontSize: '0.7rem', fontWeight: '800'
-                                                    }}>
-                                                        {sale.paymentMethod}
-                                                    </span>
-                                                    <button onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.textMuted }}><Info size={18} /></button>
-                                                    <button onClick={() => handleReprint(sale)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.success }}><Printer size={18} /></button>
-                                                    <button onClick={() => handleDeleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.danger }}><Trash2 size={16} /></button>
-                                                </div>
-                                            </div>
-
-                                            <AnimatePresence>
-                                                {expandedSale === sale.id && (
-                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-                                                        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                            <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>DETALLE DE PEDIDO</div>
-                                                            { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
-                                                                <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                        <span style={{ fontWeight: '700', color: colors.text, fontSize: '0.85rem' }}>{item.quantity}x {item.name}</span>
-                                                                        {item.notes && <span style={{ color: colors.warning, fontSize: '0.7rem', fontWeight: '600' }}>📝 {item.notes}</span>}
-                                                                    </div>
-                                                                    <span style={{ fontWeight: '800', color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                        </React.Fragment>
-                                    ))
                                 )}
                             </div>
                         ) : (
-                            <div style={{ background: colors.surface, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                    <thead>
-                                        <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${colors.border}` }}>
-                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
-                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
-                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
-                                            <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
-                                            <th style={{ padding: '1.25rem', textAlign: 'right', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
-                                            <th style={{ padding: '1.25rem', textAlign: 'center', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredSales.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} style={{ padding: '4rem', textAlign: 'center', color: colors.textMuted }}>
-                                                    <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📅</div>
-                                                    <div style={{ fontWeight: '600' }}>No hay ventas en este periodo</div>
-                                                </td>
+                            <div className="glass-panel animate-in" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+                                {isMobile ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
+                                            <React.Fragment key={sale.id}>
+                                            <div style={{ 
+                                                padding: '1.25rem', background: colors.surface, borderRadius: '16px', 
+                                                marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                                                border: expandedSale === sale.id ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
+                                                transition: 'all 0.2s' 
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
+                                                    <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(sale.date).toLocaleString()}</span>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</div>}
+                                                        {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: colors.warning, fontWeight: '800' }}>🎁 INVITACIÓN</div>}
+                                                        <span style={{ fontWeight: '900', color: colors.text, fontSize: '1.1rem' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>
+                                                        Mesa: <b style={{ color: colors.text }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                        <span style={{
+                                                            padding: '4px 8px', borderRadius: '6px',
+                                                            background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                                            color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
+                                                            fontSize: '0.7rem', fontWeight: '800'
+                                                        }}>
+                                                            {sale.paymentMethod}
+                                                        </span>
+                                                        <button onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.textMuted }}><Info size={18} /></button>
+                                                        <button onClick={() => handleReprint(sale)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.success }}><Printer size={18} /></button>
+                                                        <button onClick={() => handleDeleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.danger }}><Trash2 size={16} /></button>
+                                                    </div>
+                                                </div>
+
+                                                <AnimatePresence>
+                                                    {expandedSale === sale.id && (
+                                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
+                                                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>DETALLE DE PEDIDO</div>
+                                                                { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                    <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                            <span style={{ fontWeight: '700', color: colors.text, fontSize: '0.85rem' }}>{item.quantity}x {item.name}</span>
+                                                                            {item.notes && <span style={{ color: colors.warning, fontSize: '0.7rem', fontWeight: '600' }}>📝 {item.notes}</span>}
+                                                                        </div>
+                                                                        <span style={{ fontWeight: '800', color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${colors.border}` }}>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'right', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'center', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
                                             </tr>
-                                        ) : (
-                                            filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
+                                        </thead>
+                                        <tbody>
+                                            {filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
                                                 <React.Fragment key={sale.id}>
                                                     <tr 
                                                         style={{ 
@@ -1109,10 +1136,10 @@ const Analytics = () => {
                                                         </tr>
                                                     )}
                                                 </React.Fragment>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         )}
                     </div>
