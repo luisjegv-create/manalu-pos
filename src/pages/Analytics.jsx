@@ -703,7 +703,8 @@ const Analytics = () => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             {syncStatus.isSyncing && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6', fontSize: '0.9rem' }}>
-                                    <div className="spin-animation">🔄</div> Sincronizando...
+                                    <div className="spin-animation">🔄</div> 
+                                    Sincronizando día {syncStatus.progress} de {syncStatus.totalSteps}...
                                 </div>
                             )}
                             <button

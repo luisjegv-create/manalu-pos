@@ -77,7 +77,18 @@ export const OrderProvider = ({ children }) => {
 
     // Cloud Synchronized States
     const [kitchenOrders, setKitchenOrders] = useState([]);
-    const [salesHistory, setSalesHistory] = useState([]);
+    const [salesHistory, setSalesHistory] = useState(() => {
+        try {
+            const saved = localStorage.getItem('manalu_sales_history_local');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                return parsed.map(s => ({ ...s, date: new Date(s.date) }));
+            }
+        } catch (e) {
+            console.error("Error loading local sales history:", e);
+        }
+        return [];
+    });
     const [cashCloses, setCashCloses] = useState([]);
     const [serviceRequests, setServiceRequests] = useState([]);
 
@@ -90,39 +101,76 @@ export const OrderProvider = ({ children }) => {
         closes: { count: 0, error: null },
         totalSales: 0,
         lastSync: null,
-        isSyncing: false
+        isSyncing: false,
+        progress: 0,
+        totalSteps: 7
     });
 
     const syncWithCloud = async () => {
         if (syncStatus.isSyncing) return;
         setLoadingState(true);
-        setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+        setSyncStatus(prev => ({ ...prev, isSyncing: true, progress: 0, totalSteps: 7 }));
+        
         try {
-            // 1. Fetch Sales (Ultra-optimized for last 7 days only)
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            
-            const { data: salesData, error: salesError } = await supabase
-                .from('sales')
-                .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation')
-                .gte('created_at', sevenDaysAgo.toISOString())
-                .order('created_at', { ascending: false })
-                .limit(500);
+            // 1. Fetch Sales in Chunks (Last 7 Days)
+            let allCloudSales = [];
+            let syncError = null;
 
-            if (salesError) {
-                setSyncStatus(prev => ({ ...prev, sales: { count: 0, error: salesError.message } }));
-            } else if (salesData) {
-                const mappedSales = salesData.map(s => ({
-                    ...s,
-                    date: new Date(s.created_at),
-                    total: parseFloat(s.total || s.total_amount || 0),
-                    items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
-                    paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
-                    tableId: s.table_id || s.tableId
-                }));
-                setSalesHistory(mappedSales);
-                setSyncStatus(prev => ({ ...prev, sales: { count: mappedSales.length, error: null }, totalSales: mappedSales.length }));
+            for (let i = 0; i < 7; i++) {
+                setSyncStatus(prev => ({ ...prev, progress: i + 1 }));
+                
+                const start = new Date();
+                start.setDate(start.getDate() - i);
+                start.setHours(0, 0, 0, 0);
+                
+                const end = new Date();
+                end.setDate(end.getDate() - i + 1);
+                end.setHours(0, 0, 0, 0);
+
+                const { data: dayData, error: dayError } = await supabase
+                    .from('sales')
+                    .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation')
+                    .gte('created_at', start.toISOString())
+                    .lt('created_at', end.toISOString())
+                    .order('created_at', { ascending: false });
+
+                if (dayError) {
+                    console.error(`Error syncing day ${i}:`, dayError);
+                    syncError = dayError.message;
+                    // Don't break, try next day
+                } else if (dayData && dayData.length > 0) {
+                    const mapped = dayData.map(s => ({
+                        ...s,
+                        date: new Date(s.created_at),
+                        total: parseFloat(s.total || s.total_amount || 0),
+                        items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
+                        paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
+                        tableId: s.table_id || s.tableId
+                    }));
+                    allCloudSales = [...allCloudSales, ...mapped];
+                }
             }
+
+            // Sync result
+            if (allCloudSales.length > 0) {
+                setSalesHistory(prev => {
+                    // Merge cloud with local, avoiding duplicates by ID
+                    const localIds = new Set(prev.map(s => s.id));
+                    const newFromCloud = allCloudSales.filter(s => !localIds.has(s.id));
+                    const updated = [...newFromCloud, ...prev].sort((a, b) => b.date - a.date).slice(0, 500);
+                    
+                    // Persist to local storage
+                    safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
+                    return updated;
+                });
+            }
+            
+            setSyncStatus(prev => ({ 
+                ...prev, 
+                sales: { count: allCloudSales.length, error: syncError }, 
+                totalSales: allCloudSales.length,
+                lastSync: new Date().toISOString()
+            }));
 
             // 2. Fetch Kitchen Orders
             const { data: kitchenData, error: kitchenError } = await supabase.from('kitchen_orders')
@@ -608,9 +656,14 @@ export const OrderProvider = ({ children }) => {
                         paymentMethod: data[0].payment_method,
                         tableId: data[0].table_id,
                         ticket_number: data[0].ticket_number || ticketNumber,
-                        card_tips: parseFloat(data[0].card_tips) || cardTips // Use returned value or local value
+                        card_tips: parseFloat(data[0].card_tips) || cardTips 
                     };
-                    setSalesHistory(prev => [newSale, ...prev]);
+                    
+                    setSalesHistory(prev => {
+                        const updated = [newSale, ...prev].slice(0, 500);
+                        safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
+                        return updated;
+                    });
 
                     // Update customer loyalty if applicable
                     if (customerData && customerData.id) {
