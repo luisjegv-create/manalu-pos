@@ -73,10 +73,10 @@ const Analytics = () => {
         text: '#1e293b',
         textMuted: '#64748b',
         border: 'rgba(0,0,0,0.08)',
-        primary: '#3b82f6',
-        success: '#10b981',
-        danger: '#ef4444',
-        warning: '#f59e0b'
+        primary: '#4f46e5', // Vibrant Indigo for Card/General
+        success: '#059669', // Solid Emerald for Cash
+        danger: '#dc2626',
+        warning: '#d97706'
     }), []);
 
     // Mobile Responsiveness
@@ -1033,10 +1033,12 @@ const Analytics = () => {
                                                     </div>
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                         <span style={{
-                                                            padding: '4px 8px', borderRadius: '6px',
-                                                            background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                                                            color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
-                                                            fontSize: '0.7rem', fontWeight: '800'
+                                                            padding: '6px 12px', borderRadius: '8px',
+                                                            background: sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(79, 70, 229, 0.15)',
+                                                            color: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
+                                                            border: `1px solid ${sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(79, 70, 229, 0.3)'}`,
+                                                            fontSize: '0.75rem', fontWeight: '900',
+                                                            textTransform: 'uppercase', letterSpacing: '0.02em'
                                                         }}>
                                                             {sale.paymentMethod}
                                                         </span>
@@ -1097,10 +1099,12 @@ const Analytics = () => {
                                                         <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '700' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
                                                         <td style={{ padding: '1.25rem' }}>
                                                             <span style={{
-                                                                padding: '4px 10px', borderRadius: '8px',
-                                                                background: sale.paymentMethod === 'Efectivo' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                                                                color: sale.paymentMethod === 'Efectivo' ? colors.success : colors.primary,
-                                                                fontSize: '0.75rem', fontWeight: '800'
+                                                                padding: '6px 14px', borderRadius: '10px',
+                                                                background: sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(79, 70, 229, 0.15)',
+                                                                color: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
+                                                                border: `1px solid ${sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(79, 70, 229, 0.3)'}`,
+                                                                fontSize: '0.8rem', fontWeight: '900',
+                                                                textTransform: 'uppercase', letterSpacing: '0.02em'
                                                             }}>
                                                                 {sale.paymentMethod}
                                                             </span>
