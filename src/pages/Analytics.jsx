@@ -702,7 +702,7 @@ const Analytics = () => {
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             {syncStatus.isSyncing && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#3b82f6', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4f46e5', fontSize: '0.9rem' }}>
                                     <div className="spin-animation">🔄</div> 
                                     Sincronizando día {syncStatus.progress} de {syncStatus.totalSteps}...
                                 </div>
@@ -712,8 +712,8 @@ const Analytics = () => {
                                 disabled={syncStatus.isSyncing}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                    background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6',
-                                    border: '1px solid #3b82f6', padding: '0.5rem 1rem', borderRadius: '8px',
+                                    background: 'rgba(79, 70, 229, 0.15)', color: '#4f46e5',
+                                    border: '1px solid #4f46e5', padding: '0.5rem 1rem', borderRadius: '8px',
                                     cursor: 'pointer', fontWeight: 'bold'
                                 }}
                             >
@@ -813,7 +813,7 @@ const Analytics = () => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ventas Brutas</span>
-                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: colors.primary }}>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.2)', color: colors.primary }}>
                                         <DollarSign size={18} />
                                     </div>
                                 </div>
@@ -834,7 +834,7 @@ const Analytics = () => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Beneficio Neto</span>
-                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: colors.success }}>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(5, 150, 105, 0.2)', color: colors.success }}>
                                         <TrendingUp size={18} />
                                     </div>
                                 </div>
@@ -849,7 +849,7 @@ const Analytics = () => {
                                         {dashboardStats.netChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.netChange).toFixed(1)}%
                                     </div>
                                     {dashboardStats.totalDiscounts > 0 && (
-                                        <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '700', padding: '0.15rem 0.4rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '6px' }}>
+                                        <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '700', padding: '0.15rem 0.4rem', background: 'rgba(239, 68, 68, 0.15)', borderRadius: '6px' }}>
                                             Dec: -{dashboardStats.totalDiscounts.toFixed(2)}€
                                         </div>
                                     )}
@@ -862,7 +862,7 @@ const Analytics = () => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Tickets</span>
-                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: colors.primary }}>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.2)', color: colors.primary }}>
                                         <FileText size={18} />
                                     </div>
                                 </div>
@@ -881,7 +881,7 @@ const Analytics = () => {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                                     <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ticket Medio</span>
-                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)', color: colors.warning }}>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(217, 119, 6, 0.2)', color: colors.warning }}>
                                         <Users size={18} />
                                     </div>
                                 </div>
@@ -898,9 +898,9 @@ const Analytics = () => {
                         {/* Net Profit Details Alert Tip */}
                         <div style={{ 
                             padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', 
-                            background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}`
+                            background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`
                         }}>
-                            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.6rem', borderRadius: '10px' }}>
+                            <div style={{ background: `${colors.primary}20`, padding: '0.6rem', borderRadius: '10px' }}>
                                 <Info size={20} color={colors.primary} />
                             </div>
                             <div style={{ fontSize: '0.95rem', color: colors.text, fontWeight: '500', lineHeight: '1.5' }}>
