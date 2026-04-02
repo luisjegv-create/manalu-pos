@@ -1034,9 +1034,9 @@ const Analytics = () => {
                                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                         <span style={{
                                                             padding: '6px 12px', borderRadius: '8px',
-                                                            background: sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(79, 70, 229, 0.15)',
-                                                            color: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
-                                                            border: `1px solid ${sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(79, 70, 229, 0.3)'}`,
+                                                            background: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
+                                                            color: '#ffffff',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                                                             fontSize: '0.75rem', fontWeight: '900',
                                                             textTransform: 'uppercase', letterSpacing: '0.02em'
                                                         }}>
@@ -1073,13 +1073,13 @@ const Analytics = () => {
                                 ) : (
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                         <thead>
-                                            <tr style={{ background: '#f8fafc', borderBottom: `2px solid ${colors.border}` }}>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'right', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'center', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
+                                            <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: `1px solid rgba(255,255,255,0.1)` }}>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'right', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
+                                                <th style={{ padding: '1.25rem', textAlign: 'center', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1100,9 +1100,9 @@ const Analytics = () => {
                                                         <td style={{ padding: '1.25rem' }}>
                                                             <span style={{
                                                                 padding: '6px 14px', borderRadius: '10px',
-                                                                background: sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(79, 70, 229, 0.15)',
-                                                                color: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
-                                                                border: `1px solid ${sale.paymentMethod === 'Efectivo' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(79, 70, 229, 0.3)'}`,
+                                                                background: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
+                                                                color: '#ffffff',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                                                                 fontSize: '0.8rem', fontWeight: '900',
                                                                 textTransform: 'uppercase', letterSpacing: '0.02em'
                                                             }}>
@@ -1111,7 +1111,7 @@ const Analytics = () => {
                                                         </td>
                                                         <td style={{ padding: '1.25rem', textAlign: 'right' }}>
                                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                                <span style={{ fontSize: '1.1rem', fontWeight: '900', color: colors.text }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                                <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ffffff' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
                                                                 {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</span>}
                                                             </div>
                                                         </td>
@@ -1131,7 +1131,7 @@ const Analytics = () => {
                                                                         <div key={idx} style={{ padding: '1rem', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: `1px solid ${colors.border}` }}>
                                                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '0.9rem', color: colors.text }}>
                                                                                 <span>{item.quantity}x {item.name}</span>
-                                                                                <span style={{ color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                                <span style={{ color: '#ffffff' }}>{(item.price * item.quantity).toFixed(2)}€</span>
                                                                             </div>
                                                                             {item.notes && <div style={{ marginTop: '0.4rem', color: colors.warning, fontSize: '0.75rem', fontWeight: '600' }}>📝 {item.notes}</div>}
                                                                         </div>
