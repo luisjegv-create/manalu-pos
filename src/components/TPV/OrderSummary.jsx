@@ -40,7 +40,8 @@ const OrderSummary = ({
     handleCloseTable,
     currentTable,
     forceClearTable,
-    updateBillQuantity
+    updateBillQuantity,
+    updateDiners
 }) => {
     const [openQuickNotes, setOpenQuickNotes] = React.useState({});
 
@@ -217,9 +218,44 @@ const OrderSummary = ({
                     <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: '800' }}>
                         {currentTable ? currentTable.name : 'Venta Rápida'}
                     </h2>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cuenta de Mesa</span>
+                    {currentTable && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px' }}>
+                            <Users size={12} color="var(--color-text-muted)" />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '600' }}>
+                                {currentTable.diners || 1} { (currentTable.diners || 1) === 1 ? 'comensal' : 'comensales' }
+                            </span>
+                        </div>
+                    )}
                 </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {currentTable && (
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '2px', 
+                            background: 'rgba(255,255,255,0.05)', 
+                            padding: '2px', 
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                            <button 
+                                onClick={() => updateDiners(currentTable.id, (currentTable.diners || 1) - 1)}
+                                style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Minus size={14} />
+                            </button>
+                            <div style={{ width: '30px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                {currentTable.diners || 1}
+                            </div>
+                            <button 
+                                onClick={() => updateDiners(currentTable.id, (currentTable.diners || 1) + 1)}
+                                style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Plus size={14} />
+                            </button>
+                        </div>
+                    )}
                     {(order.length > 0 || (bill && bill.length > 0)) && (
                         <button
                             onClick={() => {

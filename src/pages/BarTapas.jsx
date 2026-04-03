@@ -84,7 +84,8 @@ const BarTapas = () => {
         clearServiceRequest, // Added clearServiceRequest
         reservations,
         forceClearTable,
-        updateBillQuantity
+        updateBillQuantity,
+        updateDiners
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
@@ -1038,6 +1039,7 @@ const BarTapas = () => {
                         currentTable={currentTable}
                         forceClearTable={forceClearTable}
                         updateBillQuantity={updateBillQuantity}
+                        updateDiners={updateDiners}
                     />
                 )}
             </div>

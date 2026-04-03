@@ -277,11 +277,22 @@ const Analytics = () => {
         });
         const maxHour = Math.max(...hours, 1); // Avoid div by 0
 
+        // Diners Stats
+        const totalDiners = filteredSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
+        const prevTotalDiners = comparisonSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
+        const dinersChange = prevTotalDiners > 0 ? ((totalDiners - prevTotalDiners) / prevTotalDiners) * 100 : 0;
+
+        const avgPerDiner = totalDiners > 0 ? totalRevenue / totalDiners : 0;
+        const prevAvgPerDiner = prevTotalDiners > 0 ? prevRevenue / prevTotalDiners : 0;
+        const avgPerDinerChange = prevAvgPerDiner > 0 ? ((avgPerDiner - prevAvgPerDiner) / prevAvgPerDiner) * 100 : 0;
+
         return {
             totalRevenue, revenueChange,
             netProfit, netChange,
             ticketCount, ticketChange,
             avgTicket, avgChange,
+            totalDiners, dinersChange,
+            avgPerDiner, avgPerDinerChange,
             cashRaw, cardRaw, cardTipsRaw,
             totalDiscounts: currentStats.totalDiscounts,
             hours, maxHour
@@ -690,7 +701,7 @@ const Analytics = () => {
                             {activeSection === 'expenses' && 'Control de Gastos'}
                         </h1>
                         <p style={{ color: colors.textMuted, marginTop: '0.35rem', fontSize: '1rem', fontWeight: '500' }}>
-                           {dateRange === 'shift' ? '✨ Turno en curso' : `Periodo: ${dateRange.charAt(0).toUpperCase() + dateRange.slice(1)}`}
+                           {dateRange === 'shift' ? '✨ Jornada Actual (Desde último cierre)' : `Periodo: ${dateRange === 'today' ? 'Hoy' : dateRange === 'yesterday' ? 'Ayer' : dateRange === 'week' ? 'Semana' : dateRange === 'month' ? 'Mes' : dateRange === 'all' ? 'Todo' : 'Personalizado'}`}
                         </p>
                     </div>
 
@@ -800,10 +811,32 @@ const Analytics = () => {
                 {/* --- DASHBOARD VIEW --- */}
                 {activeSection === 'dashboard' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        {/* SHIFT INFO BANNER */}
+                        {dateRange === 'shift' && cashCloses && cashCloses.length > 0 && (
+                            <div style={{ 
+                                padding: '1rem 1.5rem', 
+                                background: 'rgba(79, 70, 229, 0.1)', 
+                                border: `1px solid rgba(79, 70, 229, 0.2)`,
+                                borderRadius: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                color: colors.primary
+                            }}>
+                                <Info size={20} />
+                                <div style={{ fontSize: '0.95rem', fontWeight: '600' }}>
+                                    Mostrando datos desde el último cierre: <span style={{ fontWeight: '800' }}>{new Date([...cashCloses].sort((a,b) => new Date(b.date) - new Date(a.date))[0].date).toLocaleString()}</span>
+                                </div>
+                                <div style={{ marginLeft: 'auto', fontSize: '0.8rem', opacity: 0.8 }}>
+                                    Las ventas después de medianoche están incluidas en este reporte.
+                                </div>
+                            </div>
+                        )}
+
                         {/* KPI CARDS */}
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)',
+                            gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)',
                             gap: isMobile ? '1rem' : '1.5rem'
                         }}>
                             <div style={{ 
@@ -891,6 +924,44 @@ const Analytics = () => {
                                     color: dashboardStats.avgChange >= 0 ? colors.success : colors.danger 
                                 }}>
                                     {dashboardStats.avgChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.avgChange).toFixed(1)}%
+                                </div>
+                            </div>
+
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Total Comensales</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(5, 150, 105, 0.2)', color: colors.success }}>
+                                        <Users size={18} />
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.totalDiners}</div>
+                                <div style={{ 
+                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
+                                    color: dashboardStats.dinersChange >= 0 ? colors.success : colors.danger 
+                                }}>
+                                    {dashboardStats.dinersChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.dinersChange).toFixed(1)}%
+                                </div>
+                            </div>
+
+                            <div style={{ 
+                                padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Promedio / Persona</span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(217, 119, 6, 0.2)', color: colors.warning }}>
+                                        <Users size={18} />
+                                    </div>
+                                </div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.avgPerDiner.toFixed(2)}€</div>
+                                <div style={{ 
+                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
+                                    color: dashboardStats.avgPerDinerChange >= 0 ? colors.success : colors.danger 
+                                }}>
+                                    {dashboardStats.avgPerDinerChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.avgPerDinerChange).toFixed(1)}%
                                 </div>
                             </div>
                         </div>

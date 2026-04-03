@@ -129,7 +129,7 @@ export const OrderProvider = ({ children }) => {
 
                 const { data: dayData, error: dayError } = await supabase
                     .from('sales')
-                    .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation')
+                    .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation, diners')
                     .gte('created_at', start.toISOString())
                     .lt('created_at', end.toISOString())
                     .order('created_at', { ascending: false });
@@ -145,7 +145,8 @@ export const OrderProvider = ({ children }) => {
                         total: parseFloat(s.total || s.total_amount || 0),
                         items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
                         paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
-                        tableId: s.table_id || s.tableId
+                        tableId: s.table_id || s.tableId,
+                        diners: parseInt(s.diners) || 1
                     }));
                     allCloudSales = [...allCloudSales, ...mapped];
                 }
@@ -613,6 +614,9 @@ export const OrderProvider = ({ children }) => {
                 // Assign sequential ticket number
                 const ticketNumber = await incrementTicketNumber();
 
+                const tableObj = tables.find(t => t.id === tableId);
+                const diners = tableObj ? (tableObj.diners || 1) : 1;
+
                 // Build sale record
                 const saleRecord = {
                     total,
@@ -621,7 +625,8 @@ export const OrderProvider = ({ children }) => {
                     table_id: tableId,
                     ticket_number: ticketNumber,
                     customer_info: customerData ? JSON.stringify(customerData) : null,
-                    card_tips: cardTips // Attempt to use column
+                    card_tips: cardTips,
+                    diners: diners
                 };
 
                 // Save to Supabase
@@ -641,6 +646,7 @@ export const OrderProvider = ({ children }) => {
                     delete retryRecord.card_tips;
                     delete retryRecord.customer_info;
                     delete retryRecord.ticket_number;
+                    delete retryRecord.diners;
                     const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                     error = retryError;
@@ -660,7 +666,8 @@ export const OrderProvider = ({ children }) => {
                         paymentMethod: data[0].payment_method,
                         tableId: data[0].table_id,
                         ticket_number: data[0].ticket_number || ticketNumber,
-                        card_tips: parseFloat(data[0].card_tips) || cardTips 
+                        card_tips: parseFloat(data[0].card_tips) || cardTips,
+                        diners: parseInt(data[0].diners) || diners
                     };
                     
                     setSalesHistory(prev => {
@@ -1120,11 +1127,12 @@ export const OrderProvider = ({ children }) => {
 
     const addTable = (zoneId, name) => {
         const newTable = {
-            id: `ticket-${Date.now()}`,
-            name: name || `Pedido ${tables.length + 1}`,
-            zone: 'pedidos',
-            status: 'occupied', // directly start as occupied/active
-            seats: 1
+            id: `table-${Date.now()}`,
+            zoneId,
+            name,
+            status: 'occupied',
+            lastActionAt: new Date().toISOString(),
+            diners: 2 // Default diners
         };
         setTables(prev => [...prev, newTable]);
         return newTable;
@@ -1223,6 +1231,11 @@ export const OrderProvider = ({ children }) => {
         setTables(prev => prev.map(t =>
             t.id === tableId ? { ...t, ...updates } : t
         ));
+    };
+
+    const updateDiners = (tableId, count) => {
+        const newCount = Math.max(1, count);
+        updateTableDetails(tableId, { diners: newCount });
     };
 
     const requestService = async (tableId, tableName, type) => {
@@ -1578,6 +1591,7 @@ export const OrderProvider = ({ children }) => {
             deleteCashClose,
             performCashClose,
             syncWithCloud,
+            updateDiners,
             // --- BACKUP & RECOVERY ---
             saveEmergencyBackup: () => {
                 const snapshot = {
