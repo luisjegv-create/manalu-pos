@@ -61,6 +61,8 @@ const Analytics = () => {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [startHour, setStartHour] = useState(0);
+    const [endHour, setEndHour] = useState(23);
 
     // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
@@ -143,9 +145,16 @@ const Analytics = () => {
 
         return salesHistory.filter(s => {
             const d = new Date(s.date);
-            return unit === 'all' || (d >= start && d <= end);
+            const matchesDate = unit === 'all' || (d >= start && d <= end);
+            
+            // Hourly filter only applies if we are looking at a specific day or custom range
+            // For custom ranges spanning multiple days, it still works but behavior is "every day in that range at those hours"
+            const hour = d.getHours();
+            const matchesHour = hour >= startHour && hour <= endHour;
+            
+            return matchesDate && matchesHour;
         });
-    }, [salesHistory, startDate, endDate, cashCloses]);
+    }, [salesHistory, startDate, endDate, cashCloses, startHour, endHour]);
 
     const handleDeleteSale = async (id) => {
         if (confirm("¿Estás seguro de que quieres borrar esta venta? Esta acción no se puede deshacer.")) {
@@ -199,6 +208,26 @@ const Analytics = () => {
         if (dateRange === 'custom') return [];
         return getFilteredSalesInRange(dateRange, 1);
     }, [dateRange, getFilteredSalesInRange]);
+
+    const isSingleDay = useMemo(() => {
+        return dateRange === 'today' || dateRange === 'yesterday' || dateRange === 'shift' || (dateRange === 'custom' && startDate === endDate);
+    }, [dateRange, startDate, endDate]);
+
+    const handlePrintReport = () => {
+        const periodLabel = dateRange === 'shift' ? 'Turno Actual' : 
+                          dateRange === 'today' ? 'Hoy' : 
+                          dateRange === 'yesterday' ? 'Ayer' : 
+                          dateRange === 'custom' ? `Personalizado (${startDate})` : 'Reporte General';
+        
+        const periodInfo = {
+            label: periodLabel,
+            hours: isSingleDay ? `${startHour.toString().padStart(2, '0')}:00 - ${endHour.toString().padStart(2, '0')}:59` : 'Día Completo'
+        };
+
+        import('../utils/printHelpers').then(module => {
+            module.printDailyReport(dashboardStats, categoryStats, periodInfo, restaurantInfo || {});
+        });
+    };
 
     // --- DASHBOARD DATA ---
     const dashboardStats = useMemo(() => {
@@ -757,6 +786,7 @@ const Analytics = () => {
                                 <Download size={18} /> Exportar
                             </button>
                         )}
+
                         <div style={{ 
                             display: 'flex', padding: '0.35rem', gap: '0.35rem', flexWrap: 'wrap',
                             background: colors.surface, borderRadius: '14px', border: `1px solid ${colors.border}`,
@@ -780,6 +810,51 @@ const Analytics = () => {
                                 </button>
                             ))}
                         </div>
+
+                        {isSingleDay && (
+                            <div style={{ 
+                                display: 'flex', padding: '0.35rem', gap: '0.5rem', alignItems: 'center',
+                                background: colors.surface, borderRadius: '14px', border: `1px solid ${colors.border}`,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.03)', fontSize: '0.8rem', fontWeight: '700', color: colors.textMuted
+                            }}>
+                                <Calculator size={14} style={{ marginLeft: '0.5rem' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <select 
+                                        value={startHour} 
+                                        onChange={(e) => setStartHour(parseInt(e.target.value))}
+                                        style={{ border: 'none', background: 'transparent', fontWeight: '800', color: colors.primary, outline: 'none', cursor: 'pointer' }}
+                                    >
+                                        {Array.from({ length: 24 }).map((_, i) => (
+                                            <option key={i} value={i}>{i.toString().padStart(2, '0')}:00</option>
+                                        ))}
+                                    </select>
+                                    <span>→</span>
+                                    <select 
+                                        value={endHour} 
+                                        onChange={(e) => setEndHour(parseInt(e.target.value))}
+                                        style={{ border: 'none', background: 'transparent', fontWeight: '800', color: colors.primary, outline: 'none', cursor: 'pointer' }}
+                                    >
+                                        {Array.from({ length: 24 }).map((_, i) => (
+                                            <option key={i} value={i}>{i.toString().padStart(2, '0')}:59</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handlePrintReport}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.65rem 1rem', background: colors.primary,
+                                color: 'white', border: 'none',
+                                borderRadius: '12px', cursor: 'pointer', fontWeight: '800',
+                                boxShadow: '0 4px 10px rgba(79, 70, 229, 0.25)', transition: 'all 0.2s',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <Printer size={18} /> Reporte
+                        </button>
 
                         {dateRange === 'custom' && (
                             <div style={{ 

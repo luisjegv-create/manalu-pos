@@ -1192,3 +1192,281 @@ export const printEventInventoryA4 = (inventoryItems, companyInfo = {}) => {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
+
+export const printDailyReport = (stats, categoryStats, periodInfo, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=800,height=1000');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir el reporte.');
+        return;
+    }
+
+    const date = new Date().toLocaleDateString('es-ES');
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Reporte de Ventas - ${periodInfo.label}</title>
+            <style>
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    line-height: 1.6;
+                    color: #334155;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    padding: 30px;
+                    background-color: #f8fafc;
+                }
+                .report-container {
+                    background: white;
+                    padding: 40px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+                }
+                .header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    border-bottom: 2px solid #e2e8f0;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }
+                .business-info h1 {
+                    margin: 0;
+                    color: #1e293b;
+                    font-size: 24px;
+                    font-weight: 800;
+                }
+                .business-details {
+                    font-size: 13px;
+                    color: #64748b;
+                    margin-top: 5px;
+                }
+                .report-meta {
+                    text-align: right;
+                }
+                .report-title {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #4f46e5;
+                    margin: 0;
+                }
+                .period-badge {
+                    display: inline-block;
+                    background: #f1f5f9;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    margin-top: 8px;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .stat-card {
+                    padding: 20px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    text-align: center;
+                }
+                .stat-label {
+                    font-size: 12px;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    font-weight: 600;
+                    margin-bottom: 8px;
+                }
+                .stat-value {
+                    font-size: 22px;
+                    font-weight: 800;
+                    color: #1e293b;
+                }
+                .section-title {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin: 30px 0 15px 0;
+                    padding-left: 10px;
+                    border-left: 4px solid #4f46e5;
+                }
+                .payment-section {
+                    display: flex;
+                    gap: 30px;
+                    margin-bottom: 30px;
+                }
+                .payment-item {
+                    flex: 1;
+                    padding: 15px;
+                    border-radius: 10px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .cash-bg { background: #ecfdf5; border: 1px solid #10b98133; }
+                .card-bg { background: #eff6ff; border: 1px solid #3b82f633; }
+                .tip-bg { background: #fffbeb; border: 1px solid #f59e0b33; }
+                
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                th {
+                    text-align: left;
+                    padding: 12px;
+                    background: #f1f5f9;
+                    font-size: 13px;
+                    color: #475569;
+                    border-bottom: 2px solid #e2e8f0;
+                }
+                td {
+                    padding: 12px;
+                    font-size: 14px;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .bar-container {
+                    width: 100px;
+                    height: 8px;
+                    background: #e2e8f0;
+                    border-radius: 4px;
+                    display: inline-block;
+                    margin-left: 10px;
+                    overflow: hidden;
+                }
+                .bar-fill {
+                    height: 100%;
+                    border-radius: 4px;
+                }
+                .footer {
+                    margin-top: 50px;
+                    padding-top: 20px;
+                    border-top: 1px solid #e2e8f0;
+                    text-align: center;
+                    font-size: 11px;
+                    color: #94a3b8;
+                }
+                @media print {
+                    body { background: white; padding: 0; }
+                    .report-container { box-shadow: none; padding: 0; }
+                    @page { margin: 25mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="report-container">
+                <div class="header">
+                    <div class="business-info">
+                        <h1>${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</h1>
+                        <div class="business-details">
+                            ${companyInfo.businessName || 'TAPAS Y BOCATAS / MANALU EVENTOS'}<br>
+                            ${companyInfo.address || 'C/ Principal 123'}<br>
+                            NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}
+                        </div>
+                    </div>
+                    <div class="report-meta">
+                        <h2 class="report-title">REPORTE DE ESTADÍSTICAS</h2>
+                        <div class="period-badge">${periodInfo.label}</div>
+                        <div style="font-size: 11px; margin-top: 5px; color: #64748b;">
+                            Generado: ${date} - ${time}<br>
+                            Tramo Horario: ${periodInfo.hours || 'Todo el día'}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Ventas Totales</div>
+                        <div class="stat-value">${stats.totalRevenue.toFixed(2)}€</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Comensales</div>
+                        <div class="stat-value">${stats.totalDiners}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Ticket Medio</div>
+                        <div class="stat-value">${stats.avgTicket.toFixed(2)}€</div>
+                    </div>
+                </div>
+
+                <div class="section-title">Métodos de Cobro</div>
+                <div class="payment-section">
+                    <div class="payment-item cash-bg">
+                        <span style="font-weight: 600; color: #065f46;">Efectivo</span>
+                        <span style="font-weight: 800; color: #065f46;">${stats.cashRaw.toFixed(2)}€</span>
+                    </div>
+                    <div class="payment-item card-bg">
+                        <span style="font-weight: 600; color: #1e40af;">Tarjeta</span>
+                        <span style="font-weight: 800; color: #1e40af;">${stats.cardRaw.toFixed(2)}€</span>
+                    </div>
+                    <div class="payment-item tip-bg">
+                        <span style="font-weight: 600; color: #92400e;">Propina (T)</span>
+                        <span style="font-weight: 800; color: #92400e;">${stats.cardTipsRaw.toFixed(2)}€</span>
+                    </div>
+                </div>
+
+                <div class="section-title">Ventas por Categoría</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Unid.</th>
+                            <th>Ingresos</th>
+                            <th>% sobre Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${categoryStats.map(cat => {
+                            const percent = stats.totalRevenue > 0 ? (cat.revenue / stats.totalRevenue) * 100 : 0;
+                            return `
+                                <tr>
+                                    <td style="font-weight: 600;">${cat.name}</td>
+                                    <td>${cat.count}</td>
+                                    <td style="font-weight: 700;">${cat.revenue.toFixed(2)}€</td>
+                                    <td>
+                                        ${percent.toFixed(1)}%
+                                        <div class="bar-container">
+                                            <div class="bar-fill" style="width: ${percent}%; background: ${cat.color || '#4f46e5'};"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+
+                <div class="stats-grid" style="margin-top: 30px; grid-template-columns: repeat(2, 1fr);">
+                    <div class="stat-card">
+                        <div class="stat-label">Gasto Medio x Comensal</div>
+                        <div class="stat-value" style="color: #4f46e5;">${stats.avgPerDiner.toFixed(2)}€</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Tickets</div>
+                        <div class="stat-value">${stats.ticketCount}</div>
+                    </div>
+                </div>
+
+                <div class="footer">
+                    Reporte automático generado por Sistema Manalú POS/Gestión.<br>
+                    www.tapasybocatas.es | www.manalueventos.com
+                </div>
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                    // window.close(); // Opcional
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
