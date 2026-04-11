@@ -53,7 +53,12 @@ const TableSelection = () => {
     const handleNewOrder = () => {
         // Obtenemos un nombre para el ticket, si no pone nada, será "Pedido X"
         const name = prompt('Nombre o número para el pedido (Ej: Paco, Barra 1, Llevar):');
-        const newTicket = addTable('pedidos', name);
+        if (name === null) return; // Cancelado
+
+        const diners = prompt('¿Cuántos comensales?', '1');
+        if (diners === null) return; // Cancelado
+
+        const newTicket = addTable('pedidos', name, diners);
         selectTable(newTicket);
         navigate('/bar-tapas'); // Directo al TPV
     };

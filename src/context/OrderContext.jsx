@@ -512,11 +512,18 @@ export const OrderProvider = ({ children }) => {
         if (status === 'free') {
             deleteTable(tableId);
         } else {
+            const now = new Date().toISOString();
             setTables(prev => prev.map(t =>
                 t.id === tableId
-                    ? { ...t, status, lastActionAt: status === 'occupied' ? new Date().toISOString() : t.lastActionAt }
+                    ? { ...t, status, lastActionAt: status === 'occupied' ? now : t.lastActionAt }
                     : t
             ));
+            setCurrentTable(prev => {
+                if (prev && prev.id === tableId) {
+                    return { ...prev, status, lastActionAt: status === 'occupied' ? now : prev.lastActionAt };
+                }
+                return prev;
+            });
         }
     };
 
@@ -1125,14 +1132,14 @@ export const OrderProvider = ({ children }) => {
         return items.reduce((total, item) => total + (item.isInvitation ? 0 : (item.price * item.quantity)), 0);
     };
 
-    const addTable = (zoneId, name) => {
+    const addTable = (zoneId, name, dinersCount = 1) => {
         const newTable = {
             id: `table-${Date.now()}`,
             zoneId,
             name,
             status: 'occupied',
             lastActionAt: new Date().toISOString(),
-            diners: 2 // Default diners
+            diners: parseInt(dinersCount) || 1
         };
         setTables(prev => [...prev, newTable]);
         return newTable;
@@ -1231,6 +1238,12 @@ export const OrderProvider = ({ children }) => {
         setTables(prev => prev.map(t =>
             t.id === tableId ? { ...t, ...updates } : t
         ));
+        setCurrentTable(prev => {
+            if (prev && prev.id === tableId) {
+                return { ...prev, ...updates };
+            }
+            return prev;
+        });
     };
 
     const updateDiners = (tableId, count) => {
