@@ -1,8 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useOrder } from '../context/OrderContext';
-import { useInventory } from '../context/InventoryContext';
-import { ArrowLeft, Clock, PlusCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Clock, PlusCircle, RefreshCw, Edit2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TableOrderPreview from '../components/TableOrderPreview';
 
@@ -44,7 +40,7 @@ const TableTimer = ({ startTime }) => {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { tables, selectTable, addTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus } = useOrder();
+    const { tables, selectTable, addTable, renameTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus } = useOrder();
     const { forceSync, isSyncing } = useInventory();
     
     // Mostramos directamente todas las "Mesas" que ahora son nuestros Tickets/Pedidos Abiertos
@@ -214,21 +210,39 @@ const TableSelection = () => {
                                     
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#fef3c7', paddingRight: '3rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{ticket.name}</h3>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (window.confirm(`🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de "${ticket.name}"? Esta acción borrará el borrador y lo enviado a cocina.`)) {
-                                                    forceClearTable(ticket.id);
-                                                }
-                                            }}
-                                            style={{
-                                                background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
-                                                color: '#ef4444', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer',
-                                                fontSize: '0.86rem', fontWeight: 'bold'
-                                            }}
-                                        >
-                                            Eliminar
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const newName = prompt('Nuevo nombre para el pedido:', ticket.name);
+                                                    if (newName && newName !== ticket.name) {
+                                                        renameTable(ticket.id, newName);
+                                                    }
+                                                }}
+                                                style={{
+                                                    background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)',
+                                                    color: '#60a5fa', padding: '0.4rem 0.6rem', borderRadius: '8px', cursor: 'pointer',
+                                                    fontSize: '0.86rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px'
+                                                }}
+                                            >
+                                                <Edit2 size={14} /> Renombrar
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de "${ticket.name}"? Esta acción borrará el borrador y lo enviado a cocina.`)) {
+                                                        forceClearTable(ticket.id);
+                                                    }
+                                                }}
+                                                style={{
+                                                    background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                    color: '#ef4444', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer',
+                                                    fontSize: '0.86rem', fontWeight: 'bold'
+                                                }}
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <div style={{ flex: 1, minHeight: '100px' }}>

@@ -1,7 +1,4 @@
-import React from 'react';
-import {
-    User, Plus, Star, Utensils, MessageSquare, Gift,
-    Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users
+    Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users, Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,7 +38,8 @@ const OrderSummary = ({
     currentTable,
     forceClearTable,
     updateBillQuantity,
-    updateDiners
+    updateDiners,
+    renameTable
 }) => {
     const [openQuickNotes, setOpenQuickNotes] = React.useState({});
 
@@ -214,10 +212,34 @@ const OrderSummary = ({
                 flexShrink: 0,
                 background: 'rgba(0,0,0,0.2)'
             }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: '800' }}>
-                        {currentTable ? currentTable.name : 'Venta Rápida'}
-                    </h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-text)', fontWeight: '800' }}>
+                            {currentTable ? currentTable.name : 'Venta Rápida'}
+                        </h2>
+                        {currentTable && (
+                            <button
+                                onClick={() => {
+                                    const newName = prompt('Nuevo nombre para la mesa:', currentTable.name);
+                                    if (newName && newName !== currentTable.name) {
+                                        renameTable(currentTable.id, newName);
+                                    }
+                                }}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--color-primary)',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    opacity: 0.7
+                                }}
+                                title="Renombrar Mesa"
+                            >
+                                <Edit2 size={14} />
+                            </button>
+                        )}
+                    </div>
                     {currentTable && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px' }}>
                             <Users size={12} color="var(--color-text-muted)" />

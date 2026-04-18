@@ -1246,6 +1246,30 @@ export const OrderProvider = ({ children }) => {
         });
     };
 
+    const renameTable = async (tableId, newName) => {
+        if (!newName || newName.trim() === '') return;
+        
+        const table = tables.find(t => t.id === tableId);
+        if (!table) return;
+
+        const oldName = table.name;
+        const trimmedNewName = newName.trim();
+
+        // 1. Update kitchen_orders in Supabase (Realtime will update other devices)
+        try {
+            await supabase.from('kitchen_orders')
+                .update({ table_name: trimmedNewName })
+                .eq('table_name', oldName)
+                .neq('status', 'completed')
+                .neq('status', 'archived');
+        } catch (e) {
+            console.error("Error updating kitchen orders names:", e);
+        }
+
+        // 2. Update local state
+        updateTableDetails(tableId, { name: trimmedNewName });
+    };
+
     const updateDiners = (tableId, count) => {
         const newCount = Math.max(1, count);
         updateTableDetails(tableId, { diners: newCount });
@@ -1585,6 +1609,7 @@ export const OrderProvider = ({ children }) => {
             updateBillQuantity,
             removeOrder,
             addTable,
+            renameTable,
             deleteTable,
             deleteSale,
             updateTableDetails,

@@ -85,7 +85,8 @@ const BarTapas = () => {
         reservations,
         forceClearTable,
         updateBillQuantity,
-        updateDiners
+        updateDiners,
+        renameTable
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
@@ -1040,6 +1041,7 @@ const BarTapas = () => {
                         forceClearTable={forceClearTable}
                         updateBillQuantity={updateBillQuantity}
                         updateDiners={updateDiners}
+                        renameTable={renameTable}
                     />
                 )}
             </div>
