@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
-    Trash2, Minus, Plus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users, Edit2
+    Trash2, Minus, Plus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users, Edit2,
+    User, Star, MessageSquare, Gift, Utensils
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
