@@ -150,8 +150,7 @@ export const InventoryProvider = ({ children }) => {
                     recommendedWine: p.recommended_wine,
                     isDigitalMenuVisible: p.is_digital_menu_visible !== false,
                     subcategory: p.subcategory || null,
-                    price: parseFloat(p.price) || 0,
-                    price_type: p.price_type || 'fixed'
+                    price: parseFloat(p.price) || 0
                 })));
             }
 
@@ -374,8 +373,7 @@ export const InventoryProvider = ({ children }) => {
                 allergens: product.allergens,
                 recommended_wine: product.recommendedWine,
                 is_digital_menu_visible: product.isDigitalMenuVisible !== false,
-                subcategory: product.subcategory,
-                price_type: product.price_type || 'fixed'
+                subcategory: product.subcategory
             }]).select();
 
             if (error) throw error;
@@ -408,8 +406,7 @@ export const InventoryProvider = ({ children }) => {
                     allergens: updatedData.allergens,
                     recommended_wine: updatedData.recommendedWine,
                     is_digital_menu_visible: updatedData.isDigitalMenuVisible !== false,
-                    subcategory: updatedData.subcategory,
-                    price_type: updatedData.price_type || 'fixed'
+                    subcategory: updatedData.subcategory
                 }).eq('id', id);
 
                 if (error) throw error;
@@ -642,8 +639,7 @@ export const InventoryProvider = ({ children }) => {
                 price: product.price,
                 category: product.category,
                 image: imageUrl,
-                subcategory: product.subcategory,
-                price_type: product.price_type || 'fixed'
+                subcategory: product.subcategory
             }]).select();
 
             if (error) throw error;
