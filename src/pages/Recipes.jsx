@@ -111,19 +111,29 @@ const Recipes = () => {
         }
     };
 
-    const handleSaveProduct = () => {
+    const handleSaveProduct = async () => {
         try {
             if (isEditingProduct && selectedProductId) {
-                updateProduct(dbId, productForm);
+                await updateProduct(dbId, productForm);
                 setIsEditingProduct(false);
             } else {
-                addProduct(productForm);
+                await addProduct(productForm);
                 setIsAddingProduct(false);
             }
-            setProductForm({ name: '', price: 0, category: 'raciones', image: '🍽️', description: '', allergens: [], recommendedWine: '', isDigitalMenuVisible: true });
+            setProductForm({ 
+                name: '', 
+                price: 0, 
+                category: 'raciones', 
+                image: '🍽️', 
+                description: '', 
+                allergens: [], 
+                recommendedWine: '', 
+                isDigitalMenuVisible: true,
+                subcategory: null
+            });
         } catch (error) {
             console.error("Error saving product:", error);
-            alert("Error al guardar el producto. Puede que la imagen sea muy pesada o el almacenamiento esté lleno.");
+            alert("Error al guardar el producto. " + (error.message || "Puede que la imagen sea muy pesada o el almacenamiento esté lleno."));
         }
     };
 
