@@ -1,5 +1,9 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, PlusCircle, RefreshCw, Edit2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useOrder } from '../context/OrderContext';
+import { useInventory } from '../context/InventoryContext';
 import TableOrderPreview from '../components/TableOrderPreview';
 
 const TableTimer = ({ startTime }) => {

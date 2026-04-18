@@ -1,3 +1,5 @@
+import React from 'react';
+import { 
     Trash2, Minus, Wine, ArrowLeft, Send, Printer, CreditCard, Receipt, Users, Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -322,7 +324,6 @@ const OrderSummary = ({
                         {order.length + (bill?.length || 0)} {(order.length + (bill?.length || 0)) === 1 ? 'item' : 'items'}
                     </div>
                 </div>
-            </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <AnimatePresence mode='popLayout'>
