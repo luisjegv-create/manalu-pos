@@ -241,7 +241,7 @@ const ProductGrid = ({ products, onProductClick, isEditMode }) => {
                                 fontWeight: 'bold',
                                 fontSize: '1rem'
                             }}>
-                                {product.price.toFixed(2)}€
+                                {product.price.toFixed(2)}€{product.price_type === 'weighted' ? '/kg' : ''}
                             </div>
 
                             {/* Subtle cost info for staff */}

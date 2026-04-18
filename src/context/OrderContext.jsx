@@ -457,11 +457,20 @@ export const OrderProvider = ({ children }) => {
             }
 
             const cleanProduct = stripItem(product);
-            const existingItem = currentTableOrder.find(item => item.id === cleanProduct.id && !item.isModified);
+            
+            // Modified merging logic: Only merge if ID AND PRICE are the same.
+            // This prevents weighted products with different totals from collapsing.
+            const existingItem = currentTableOrder.find(item => 
+                item.id === cleanProduct.id && 
+                Math.abs(item.price - cleanProduct.price) < 0.001 && // Compare with float safety
+                !item.isModified && 
+                !cleanProduct.isModified
+            );
+
             let nextOrder;
             if (existingItem) {
                 nextOrder = currentTableOrder.map(item =>
-                    (item.id === cleanProduct.id && !item.isModified)
+                    (item.id === cleanProduct.id && Math.abs(item.price - cleanProduct.price) < 0.001 && !item.isModified)
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );

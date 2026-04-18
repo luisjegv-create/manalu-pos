@@ -183,7 +183,7 @@ const BarTapas = () => {
 
     // New Product Creator State
     const [isAddingProduct, setIsAddingProduct] = useState(false);
-    const [newProductForm, setNewProductForm] = useState({ name: '', price: 0, category: 'tapas', image: '🍽️' });
+    const [newProductForm, setNewProductForm] = useState({ name: '', price: 0, category: 'tapas', image: '🍽️', price_type: 'fixed' });
     const [newProductRecipe, setNewProductRecipe] = useState([]);
 
     // Modifiers State
@@ -202,12 +202,34 @@ const BarTapas = () => {
     const [customerTaxData, setCustomerTaxData] = useState({ name: '', nif: '', address: '' });
 
     const handleProductClick = (product) => {
+        if (product.price_type === 'weighted') {
+            const gramsInput = prompt(`Peso en gramos para "${product.name}" (Precio: ${product.price.toFixed(2)}€/kg):`);
+            if (gramsInput === null) return; // Cancelled
+            const grams = parseFloat(gramsInput);
+            if (isNaN(grams) || grams <= 0) {
+                alert("Por favor, introduce un peso válido en gramos.");
+                return;
+            }
+            // Calculate price based on grams: (grams / 1000) * price_per_kg
+            const calculatedPrice = (grams / 1000) * product.price;
+            
+            // Add with calculated price and flag as modified to treat as a unique item
+            addToOrder({ 
+                ...product, 
+                price: calculatedPrice, 
+                name: `${product.name} (${grams}g)`,
+                isModified: true, // Unique-ify
+                weightGrams: grams
+            });
+            return;
+        }
+
         if (product.modifiers && product.modifiers.length > 0) {
             // Open modal for modifiers
             setModifierModal({
                 isOpen: true,
                 product: product,
-                selections: {} // Reset selections
+                selections: {} 
             });
         } else {
             // Normal add

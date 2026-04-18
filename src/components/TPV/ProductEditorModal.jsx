@@ -46,15 +46,30 @@ const ProductEditorModal = ({
                                 style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
                             />
                         </div>
-                        <div>
-                            <label>Precio de Venta</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label>{newProductForm.price_type === 'weighted' ? 'Precio por Kilogramo (€/kg)' : 'Precio de Venta'}</label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', cursor: 'pointer' }}>
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newProductForm.price_type === 'weighted'} 
+                                        onChange={(e) => setNewProductForm({...newProductForm, price_type: e.target.checked ? 'weighted' : 'fixed'})}
+                                    />
+                                    Precio por Peso
+                                </label>
+                            </div>
                             <input
                                 type="number"
                                 value={newProductForm.price}
                                 onChange={(e) => setNewProductForm({ ...newProductForm, price: parseFloat(e.target.value) || 0 })}
                                 className="glass-panel"
-                                style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', color: 'white' }}
+                                style={{ width: '100%', padding: '0.75rem', color: 'white' }}
                             />
+                            {newProductForm.price_type === 'weighted' && (
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--color-primary)' }}>
+                                    💡 Se pedirá el peso en gramos al vender este producto.
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label>Icono / Imagen</label>
