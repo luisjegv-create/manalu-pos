@@ -355,6 +355,125 @@ export const InventoryProvider = ({ children }) => {
         }, 0);
     };
 
+    const saveProductCostUnderTheHood = async (productId, productName, cost) => {
+        try {
+            const dbId = String(productId).startsWith('prod_') ? productId.replace('prod_', '') : productId;
+            const parsedCost = parseFloat(cost) || 0;
+            
+            // Check if there is already a recipe for this product
+            const { data: existingRecipe, error: recError } = await supabase
+                .from('recipes')
+                .select('*')
+                .eq('product_id', dbId);
+            
+            if (recError) throw recError;
+            
+            let targetIngredientId = null;
+            
+            if (existingRecipe && existingRecipe.length > 0) {
+                // There is already a recipe!
+                const firstMapping = existingRecipe[0];
+                const { data: ingredient, error: ingError } = await supabase
+                    .from('ingredients')
+                    .select('*')
+                    .eq('id', firstMapping.ingredient_id)
+                    .single();
+                
+                if (!ingError && ingredient) {
+                    // Update the cost of the existing ingredient
+                    const { data: updatedIng, error: updateIngErr } = await supabase
+                        .from('ingredients')
+                        .update({ 
+                            cost: parsedCost,
+                            name: `${productName} (Coste)`
+                        })
+                        .eq('id', ingredient.id)
+                        .select();
+                    
+                    if (!updateIngErr && updatedIng && updatedIng[0]) {
+                        // Update local ingredients state
+                        setIngredients(prev => prev.map(ing => ing.id === ingredient.id ? updatedIng[0] : ing));
+                    }
+                    targetIngredientId = ingredient.id;
+                } else {
+                    // If ingredient is missing, create a new one
+                    const { data: newIng, error: newIngErr } = await supabase
+                        .from('ingredients')
+                        .insert([{
+                            name: `${productName} (Coste)`,
+                            quantity: 9999,
+                            unit: 'uds',
+                            cost: parsedCost,
+                            provider: 'Autogenerado',
+                            category: 'alimentos'
+                        }])
+                        .select();
+                    if (newIngErr) throw newIngErr;
+                    
+                    if (newIng && newIng[0]) {
+                        setIngredients(prev => [...prev, newIng[0]]);
+                        targetIngredientId = newIng[0].id;
+                    }
+                    
+                    await supabase
+                        .from('recipes')
+                        .update({ ingredient_id: targetIngredientId, quantity: 1 })
+                        .eq('id', firstMapping.id);
+                }
+                
+                // If there are other items in the recipe, delete them (since we are setting a single direct cost now)
+                if (existingRecipe.length > 1) {
+                    const extraIds = existingRecipe.slice(1).map(r => r.id);
+                    await supabase
+                        .from('recipes')
+                        .delete()
+                        .in('id', extraIds);
+                }
+            } else {
+                // No recipe exists for this product yet.
+                // 1. Create a dummy ingredient
+                const { data: newIng, error: newIngErr } = await supabase
+                    .from('ingredients')
+                    .insert([{
+                        name: `${productName} (Coste)`,
+                        quantity: 9999,
+                        unit: 'uds',
+                        cost: parsedCost,
+                        provider: 'Autogenerado',
+                        category: 'alimentos'
+                    }])
+                    .select();
+                if (newIngErr) throw newIngErr;
+                
+                if (newIng && newIng[0]) {
+                    setIngredients(prev => [...prev, newIng[0]]);
+                    targetIngredientId = newIng[0].id;
+                }
+                
+                // 2. Create the recipe mapping
+                await supabase
+                    .from('recipes')
+                    .insert([{
+                        product_id: dbId,
+                        ingredient_id: targetIngredientId,
+                        quantity: 1
+                    }]);
+            }
+            
+            // 3. Update local recipes state
+            if (targetIngredientId) {
+                const newLocalRecipe = [{
+                    ingredient_id: targetIngredientId,
+                    ingredientId: targetIngredientId,
+                    quantity: 1
+                }];
+                setRecipes(prev => ({ ...prev, [dbId]: newLocalRecipe }));
+            }
+        } catch (err) {
+            console.error("Error saving product cost under the hood:", err);
+        }
+    };
+
     // --- Product Actions ---
     const addProduct = async (product) => {
         try {
@@ -384,6 +503,11 @@ export const InventoryProvider = ({ children }) => {
                     isDigitalMenuVisible: data[0].is_digital_menu_visible !== false
                 };
                 setBaseProducts(prev => [...prev, newProd]);
+                
+                // If a cost is provided, save it under the hood!
+                if (product.cost !== undefined && product.cost !== null) {
+                    await saveProductCostUnderTheHood(data[0].id, product.name, product.cost);
+                }
             }
         } catch (error) {
             console.error("Error al añadir producto:", error);
@@ -411,6 +535,11 @@ export const InventoryProvider = ({ children }) => {
 
                 if (error) throw error;
                 setBaseProducts(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+                
+                // If a cost is provided, save it under the hood!
+                if (updatedData.cost !== undefined && updatedData.cost !== null) {
+                    await saveProductCostUnderTheHood(id, updatedData.name, updatedData.cost);
+                }
             } else {
                 // If not in products, check if it's a wine
                 const { data: isWine } = await supabase.from('wines').select('id').eq('id', id).single();

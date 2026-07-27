@@ -46,7 +46,7 @@ const Recipes = () => {
     const [activeCategory, setActiveCategory] = useState('raciones');
     const [activeSubcategory, setActiveSubcategory] = useState(null);
 
-    const MODO_APERTURA_RAPIDA = false; // Activa la vista de escandallos y productos
+    const MODO_APERTURA_RAPIDA = true; // Activa la vista puramente orientada a carta e ignora escandallos
     
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -65,7 +65,8 @@ const Recipes = () => {
         allergens: [],
         recommendedWine: '',
         isDigitalMenuVisible: true,
-        subcategory: null
+        subcategory: null,
+        cost: 0
     });
 
     const selectedProduct = salesProducts.find(p => p.id === selectedProductId);
@@ -129,7 +130,8 @@ const Recipes = () => {
                 allergens: [], 
                 recommendedWine: '', 
                 isDigitalMenuVisible: true,
-                subcategory: null
+                subcategory: null,
+                cost: 0
             });
         } catch (error) {
             console.error("Error saving product:", error);
@@ -148,7 +150,8 @@ const Recipes = () => {
             allergens: Array.isArray(selectedProduct.allergens) ? selectedProduct.allergens : [],
             recommendedWine: selectedProduct.recommendedWine || '',
             isDigitalMenuVisible: selectedProduct.isDigitalMenuVisible !== false,
-            subcategory: selectedProduct.subcategory || null
+            subcategory: selectedProduct.subcategory || null,
+            cost: dbId ? getProductCost(dbId) : 0
         });
         setIsEditingProduct(true);
     };
@@ -322,7 +325,10 @@ const Recipes = () => {
                                         </div>
                                         <div>
                                             <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{product.price.toFixed(2)}€</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', gap: '8px' }}>
+                                                <span>PVP: {product.price.toFixed(2)}€</span>
+                                                <span style={{ color: '#fbbf24' }}>Coste: {getProductCost(product.id).toFixed(2)}€</span>
+                                            </div>
                                         </div>
                                     </div>
                                     <ChevronRight size={14} />
@@ -376,6 +382,17 @@ const Recipes = () => {
                                             style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
                                             value={productForm.price}
                                             onChange={(e) => setProductForm({ ...productForm, price: parseFloat(e.target.value) || 0 })}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        <label>Coste del Producto (€)</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="glass-panel"
+                                            style={{ padding: '0.75rem', border: '1px solid var(--glass-border)', color: 'white' }}
+                                            value={productForm.cost || 0}
+                                            onChange={(e) => setProductForm({ ...productForm, cost: parseFloat(e.target.value) || 0 })}
                                         />
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -571,7 +588,6 @@ const Recipes = () => {
                             </div>
 
                             {/* Summary Card */}
-                            {!MODO_APERTURA_RAPIDA && (
                             <div className="glass-panel" style={{
                                 padding: isMobile ? '1.5rem' : '2rem',
                                 display: 'grid',
@@ -583,7 +599,7 @@ const Recipes = () => {
                                     <h2 style={{ margin: '0.25rem 0', color: 'var(--color-primary)', fontSize: isMobile ? '1.5rem' : '2rem' }}>{price.toFixed(2)}€</h2>
                                 </div>
                                 <div style={{ borderRight: isMobile ? 'none' : '1px solid var(--glass-border)', borderBottom: isMobile ? '1px solid var(--glass-border)' : 'none', paddingBottom: isMobile ? '1rem' : 0 }}>
-                                    <p style={{ margin: 0, color: '#ffffff', fontSize: '0.85rem', fontWeight: '500' }}>Coste Ingredientes</p>
+                                    <p style={{ margin: 0, color: '#ffffff', fontSize: '0.85rem', fontWeight: '500' }}>{MODO_APERTURA_RAPIDA ? 'Coste del Producto' : 'Coste Ingredientes'}</p>
                                     <h2 style={{ margin: '0.25rem 0', color: '#ef4444', fontSize: isMobile ? '1.5rem' : '2rem' }}>{cost.toFixed(2)}€</h2>
                                 </div>
                                 <div>
@@ -591,7 +607,6 @@ const Recipes = () => {
                                     <h2 style={{ margin: '0.25rem 0', color: '#10b981', fontSize: isMobile ? '1.5rem' : '2rem' }}>{margin}%</h2>
                                 </div>
                             </div>
-                            )}
 
                             {/* Ingredients Table */}
                             {!MODO_APERTURA_RAPIDA && (
