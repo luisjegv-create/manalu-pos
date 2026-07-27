@@ -418,9 +418,9 @@ const Analytics = () => {
                 const lowerCat = String(item.category || '').toLowerCase();
                 const lowerName = String(item.name || '').toLowerCase();
                 
-                if (lowerCat.includes('bebida') || lowerCat.includes('refresco')  || lowerCat.includes('café') || lowerCat.includes('cerveza') || lowerCat.includes('copa') || lowerCat.includes('agua')) cat = 'Bebida';
+                if (lowerCat.includes('bebida') || lowerCat.includes('refresco')  || lowerCat.includes('café') || lowerCat.includes('cafe') || lowerCat.includes('cerveza') || lowerCat.includes('copa') || lowerCat.includes('agua')) cat = 'Bebida';
                 else if (lowerCat.includes('vino')) cat = 'Vinos';
-                else if (lowerCat.includes('raciones') || lowerCat.includes('tapas') || lowerCat.includes('comida') || lowerCat.includes('postre') || lowerCat.includes('bocadillo') || lowerCat.includes('plato')) cat = 'Comida';
+                else if (lowerCat.includes('raciones') || lowerCat.includes('tapas') || lowerCat.includes('comida') || lowerCat.includes('postre') || lowerCat.includes('bocadillo') || lowerCat.includes('bocata') || lowerCat.includes('hamburguesa') || lowerCat.includes('plato')) cat = 'Comida';
                 else if (lowerName.includes('cerveza') || lowerName.includes('caña') || lowerName.includes('doble')) cat = 'Bebida';
                 
                 if (!stats[cat]) stats[cat] = { revenue: 0, count: 0, color: colors.textMuted };
