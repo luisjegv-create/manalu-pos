@@ -1705,6 +1705,10 @@ const Analytics = () => {
                                                         <span style={{ color: colors.textMuted, fontWeight: '600' }}>Ventas: <b style={{ color: colors.text }}>{item.sold}</b></span>
                                                         <span style={{ color: colors.success, fontWeight: '800' }}>+{item.margin.toFixed(2)}€ marg.</span>
                                                     </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: colors.textMuted, marginTop: '0.25rem' }}>
+                                                        <span>Coste: {item.cost.toFixed(2)}€ | PVP: {parseFloat(item.price).toFixed(2)}€</span>
+                                                        <span style={{ fontWeight: '700', color: colors.primary }}>Ganancia: {(item.margin * item.sold).toFixed(2)}€</span>
+                                                    </div>
                                                     <div style={{ height: '6px', background: 'white', borderRadius: '3px', marginTop: '0.75rem', overflow: 'hidden', border: `1px solid ${colors.border}` }}>
                                                         <div style={{ 
                                                             width: `${Math.min((item.sold / 50) * 100, 100)}%`, 

@@ -46,7 +46,7 @@ const Recipes = () => {
     const [activeCategory, setActiveCategory] = useState('raciones');
     const [activeSubcategory, setActiveSubcategory] = useState(null);
 
-    const MODO_APERTURA_RAPIDA = true; // Activa la vista puramente orientada a carta e ignora escandallos
+    const MODO_APERTURA_RAPIDA = false; // Activa la vista de escandallos y productos
     
     // Mobile Responsiveness
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
