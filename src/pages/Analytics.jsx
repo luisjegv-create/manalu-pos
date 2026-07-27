@@ -73,6 +73,45 @@ const Analytics = () => {
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
     const [expandedSale, setExpandedSale] = useState(null);
 
+    // Start / End Service States & Handlers
+    const [serviceStatus, setServiceStatus] = useState(() => {
+        const start = localStorage.getItem('manalu_service_start');
+        const end = localStorage.getItem('manalu_service_end');
+        const isActive = localStorage.getItem('manalu_service_active') === 'true';
+        return { start, end, isActive };
+    });
+
+    const handleStartService = () => {
+        if (confirm('¿Deseas iniciar un nuevo servicio de bar en este momento?')) {
+            const nowIso = new Date().toISOString();
+            localStorage.setItem('manalu_service_start', nowIso);
+            localStorage.removeItem('manalu_service_end');
+            localStorage.setItem('manalu_service_active', 'true');
+            
+            setServiceStatus({
+                start: nowIso,
+                end: null,
+                isActive: true
+            });
+            setDateRange('service');
+        }
+    };
+
+    const handleEndService = () => {
+        if (confirm('¿Deseas finalizar el servicio de bar actual?')) {
+            const nowIso = new Date().toISOString();
+            localStorage.setItem('manalu_service_end', nowIso);
+            localStorage.setItem('manalu_service_active', 'false');
+            
+            setServiceStatus(prev => ({
+                ...prev,
+                end: nowIso,
+                isActive: false
+            }));
+            setDateRange('service');
+        }
+    };
+
     // Light Theme Colors
     const colors = useMemo(() => ({
         bg: '#f1f5f9',
@@ -121,6 +160,19 @@ const Analytics = () => {
                 start.setHours(0, 0, 0, 0);
             }
             end = new Date(now);
+        } else if (unit === 'service') {
+            const startStr = localStorage.getItem('manalu_service_start');
+            const endStr = localStorage.getItem('manalu_service_end');
+            const isActive = localStorage.getItem('manalu_service_active') === 'true';
+            if (startStr) {
+                start = new Date(startStr);
+                end = (endStr && !isActive) ? new Date(endStr) : new Date(now);
+            } else {
+                start = new Date(now);
+                start.setHours(0, 0, 0, 0);
+                end = new Date(now);
+                end.setHours(23, 59, 59, 999);
+            }
         } else if (unit === 'custom') {
             start = new Date(altStart || startDate);
             start.setHours(0,0,0,0);
@@ -215,13 +267,14 @@ const Analytics = () => {
     }, [dateRange, getFilteredSalesInRange]);
 
     const isSingleDay = useMemo(() => {
-        return dateRange === 'today' || dateRange === 'yesterday' || dateRange === 'shift' || (dateRange === 'custom' && startDate === endDate);
+        return dateRange === 'today' || dateRange === 'yesterday' || dateRange === 'shift' || dateRange === 'service' || (dateRange === 'custom' && startDate === endDate);
     }, [dateRange, startDate, endDate]);
 
     const handlePrintReport = () => {
         const periodLabel = dateRange === 'shift' ? 'Turno Actual' : 
                           dateRange === 'today' ? 'Hoy' : 
                           dateRange === 'yesterday' ? 'Ayer' : 
+                          dateRange === 'service' ? 'Servicio de Bar' : 
                           dateRange === 'custom' ? `Personalizado (${startDate})` : 'Reporte General';
         
         const periodInfo = {
@@ -238,6 +291,7 @@ const Analytics = () => {
         const periodLabel = dateRange === 'shift' ? 'Turno Actual' : 
                           dateRange === 'today' ? 'Hoy' : 
                           dateRange === 'yesterday' ? 'Ayer' : 
+                          dateRange === 'service' ? 'Servicio de Bar' : 
                           dateRange === 'custom' ? `Personalizado` : 'Reporte General';
         
         const periodInfo = {
@@ -859,7 +913,7 @@ const Analytics = () => {
                             {activeSection === 'expenses' && 'Control de Gastos'}
                         </h1>
                         <p style={{ color: colors.textMuted, marginTop: '0.35rem', fontSize: '1rem', fontWeight: '500' }}>
-                           {dateRange === 'shift' ? '✨ Jornada Actual (Desde último cierre)' : `Periodo: ${dateRange === 'today' ? 'Hoy' : dateRange === 'yesterday' ? 'Ayer' : dateRange === 'week' ? 'Semana' : dateRange === 'month' ? 'Mes' : dateRange === 'all' ? 'Todo' : 'Personalizado'}`}
+                           {dateRange === 'shift' ? '✨ Jornada Actual (Desde último cierre)' : dateRange === 'service' ? '🚀 Servicio Activo/Registrado' : `Periodo: ${dateRange === 'today' ? 'Hoy' : dateRange === 'yesterday' ? 'Ayer' : dateRange === 'week' ? 'Semana' : dateRange === 'month' ? 'Mes' : dateRange === 'all' ? 'Todo' : 'Personalizado'}`}
                         </p>
                     </div>
 
@@ -921,7 +975,7 @@ const Analytics = () => {
                             background: colors.surface, borderRadius: '14px', border: `1px solid ${colors.border}`,
                             boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
                         }}>
-                            {['shift', 'today', 'yesterday', 'week', 'month', 'all', 'custom'].map(r => (
+                            {['shift', 'service', 'today', 'yesterday', 'week', 'month', 'all', 'custom'].map(r => (
                                 <button
                                     key={r}
                                     onClick={() => setDateRange(r)}
@@ -935,7 +989,7 @@ const Analytics = () => {
                                         cursor: 'pointer', transition: 'all 0.2s', textTransform: 'capitalize'
                                     }}
                                 >
-                                    {r === 'shift' ? 'Turno' : r === 'today' ? 'Hoy' : r === 'yesterday' ? 'Ayer' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : r === 'all' ? 'Todo' : '📅'}
+                                    {r === 'shift' ? 'Turno' : r === 'service' ? 'Servicio' : r === 'today' ? 'Hoy' : r === 'yesterday' ? 'Ayer' : r === 'week' ? 'Semana' : r === 'month' ? 'Mes' : r === 'all' ? 'Todo' : '📅'}
                                 </button>
                             ))}
                         </div>
@@ -1029,6 +1083,84 @@ const Analytics = () => {
                 {/* --- DASHBOARD VIEW --- */}
                 {activeSection === 'dashboard' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        
+                        {/* SERVICE STATUS CONTROLLER */}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: isMobile ? 'column' : 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '1.25rem 1.75rem',
+                            background: colors.surface,
+                            borderRadius: '20px',
+                            border: `1px solid ${colors.border}`,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+                            gap: '1rem'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{
+                                    width: '12px', height: '12px', borderRadius: '50%',
+                                    background: serviceStatus.isActive ? colors.success : '#94a3b8',
+                                    boxShadow: serviceStatus.isActive ? `0 0 10px ${colors.success}` : 'none'
+                                }} />
+                                <div>
+                                    <div style={{ fontWeight: '800', color: colors.text, fontSize: '1rem' }}>
+                                        {serviceStatus.isActive ? 'Servicio Activo' : 'Fuera de Servicio'}
+                                    </div>
+                                    <div style={{ fontSize: '0.8rem', color: colors.textMuted, marginTop: '0.15rem' }}>
+                                        {serviceStatus.isActive 
+                                            ? `Iniciado a las ${new Date(serviceStatus.start).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (${new Date(serviceStatus.start).toLocaleDateString()})`
+                                            : serviceStatus.start && serviceStatus.end
+                                                ? `Último servicio: ${new Date(serviceStatus.start).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - ${new Date(serviceStatus.end).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} (${new Date(serviceStatus.start).toLocaleDateString()})`
+                                                : 'No hay servicios registrados hoy.'
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                {!serviceStatus.isActive ? (
+                                    <button
+                                        onClick={handleStartService}
+                                        style={{
+                                            padding: '0.65rem 1.25rem', background: colors.primary, color: 'white',
+                                            border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800',
+                                            fontSize: '0.85rem', boxShadow: '0 4px 10px rgba(79, 70, 229, 0.2)'
+                                        }}
+                                    >
+                                        🚀 Iniciar Servicio
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleEndService}
+                                        style={{
+                                            padding: '0.65rem 1.25rem', background: colors.danger, color: 'white',
+                                            border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '800',
+                                            fontSize: '0.85rem', boxShadow: '0 4px 10px rgba(220, 38, 38, 0.2)'
+                                        }}
+                                    >
+                                        🛑 Finalizar Servicio
+                                    </button>
+                                )}
+                                
+                                {serviceStatus.start && (
+                                    <button
+                                        onClick={() => setDateRange('service')}
+                                        style={{
+                                            padding: '0.65rem 1.25rem', 
+                                            background: dateRange === 'service' ? colors.primary : 'transparent',
+                                            color: dateRange === 'service' ? 'white' : colors.textMuted,
+                                            border: `1px solid ${dateRange === 'service' ? colors.primary : colors.border}`,
+                                            borderRadius: '12px', cursor: 'pointer', fontWeight: '800',
+                                            fontSize: '0.85rem', transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Ver Números de Servicio
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* SHIFT INFO BANNER */}
                         {dateRange === 'shift' && cashCloses && cashCloses.length > 0 && (
                             <div style={{ 
