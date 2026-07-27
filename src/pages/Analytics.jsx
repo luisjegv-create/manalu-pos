@@ -64,6 +64,11 @@ const Analytics = () => {
     const [startHour, setStartHour] = useState(0);
     const [endHour, setEndHour] = useState(23);
 
+    // Products Sold Sorting & Filtering
+    const [productSortField, setProductSortField] = useState('sold'); // sold | revenue | profit | name
+    const [productSortAsc, setProductSortAsc] = useState(false);
+    const [productSearch, setProductSearch] = useState('');
+
     // State for invoice generation and expanding sales
     const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, sale: null, customerData: { name: '', nif: '', address: '' } });
     const [expandedSale, setExpandedSale] = useState(null);
@@ -357,6 +362,112 @@ const Analytics = () => {
         return Object.entries(stats).map(([name, data]) => ({ name, ...data }));
     }, [filteredSales, colors]);
 
+    // --- DAILY EVOLUTION DATA ---
+    const dailyEvolution = useMemo(() => {
+        const groups = {};
+        filteredSales.forEach(sale => {
+            const d = new Date(sale.date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            if (!groups[dateStr]) {
+                groups[dateStr] = { date: dateStr, revenue: 0, count: 0 };
+            }
+            groups[dateStr].revenue += parseFloat(sale.total) || 0;
+            groups[dateStr].count += 1;
+        });
+        return Object.values(groups).sort((a, b) => a.date.localeCompare(b.date));
+    }, [filteredSales]);
+
+    // --- WEEKDAY STATS DATA ---
+    const weekdayStats = useMemo(() => {
+        const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const stats = days.map((name, index) => ({ name, index, revenue: 0, count: 0 }));
+        filteredSales.forEach(sale => {
+            const d = new Date(sale.date);
+            const dayIdx = d.getDay();
+            stats[dayIdx].revenue += parseFloat(sale.total) || 0;
+            stats[dayIdx].count += 1;
+        });
+        // Return Monday to Sunday order
+        return [stats[1], stats[2], stats[3], stats[4], stats[5], stats[6], stats[0]];
+    }, [filteredSales]);
+
+    // --- PRODUCTS SOLD DATA ---
+    const periodProductsSold = useMemo(() => {
+        const productMap = {};
+        filteredSales.forEach(sale => {
+            const items = typeof sale.items === 'string' ? JSON.parse(sale.items || '[]') : (sale.items || []);
+            items.forEach(item => {
+                if (!item.id) return;
+                if (!productMap[item.id]) {
+                    productMap[item.id] = {
+                        id: item.id,
+                        name: item.name,
+                        category: item.category || 'Otros',
+                        sold: 0,
+                        revenue: 0,
+                        cost: item.isWine ? (item.purchasePrice || 0) : getProductCost(item.id),
+                        price: parseFloat(item.price) || 0
+                    };
+                }
+                productMap[item.id].sold += parseInt(item.quantity) || 0;
+                productMap[item.id].revenue += (parseInt(item.quantity) || 0) * (parseFloat(item.price) || 0);
+            });
+        });
+        return Object.values(productMap).map(p => {
+            const totalCost = p.cost * p.sold;
+            const profit = p.revenue - totalCost;
+            return {
+                ...p,
+                totalCost,
+                profit
+            };
+        });
+    }, [filteredSales, getProductCost]);
+
+    const sortedPeriodProducts = useMemo(() => {
+        let list = [...periodProductsSold];
+        if (productSearch) {
+            const term = productSearch.toLowerCase();
+            list = list.filter(p => p.name.toLowerCase().includes(term) || p.category.toLowerCase().includes(term));
+        }
+        list.sort((a, b) => {
+            let valA = a[productSortField];
+            let valB = b[productSortField];
+            if (typeof valA === 'string') {
+                return productSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+            return productSortAsc ? valA - valB : valB - valA;
+        });
+        return list;
+    }, [periodProductsSold, productSortField, productSortAsc, productSearch]);
+
+    const exportProductsCSV = () => {
+        const headers = ["Producto", "Categoria", "Unidades Vendidas", "Ingresos", "Coste Total", "Margen"];
+        const rows = periodProductsSold.sort((a, b) => b.sold - a.sold).map(p => [
+            p.name,
+            p.category,
+            p.sold,
+            p.revenue.toFixed(2),
+            p.totalCost.toFixed(2),
+            p.profit.toFixed(2)
+        ]);
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
+            + headers.join(",") + "\n"
+            + rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+        const data = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", data);
+        link.setAttribute("download", `productos_vendidos_${dateRange}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const exportToCSV = () => {
         const headers = ["Fecha", "ID", "Mesa", "Metodo", "Total"];
         const rows = filteredSales.map(s => [
@@ -387,9 +498,9 @@ const Analytics = () => {
             productStats[p.id] = { ...p, sold: 0, revenue: 0, cost: getProductCost(p.id) };
         });
 
-        salesHistory.forEach(sale => {
-            if (!sale.items || !Array.isArray(sale.items)) return;
-            sale.items.forEach(item => {
+        filteredSales.forEach(sale => {
+            const items = typeof sale.items === 'string' ? JSON.parse(sale.items || '[]') : (sale.items || []);
+            items.forEach(item => {
                 if (productStats[item.id]) {
                     productStats[item.id].sold += item.quantity;
                     productStats[item.id].revenue += item.quantity * item.price;
@@ -414,7 +525,7 @@ const Analytics = () => {
             else if (isHighMargin) type = 'Puzzle';
             return { ...item, type, margin: itemMargin };
         }).sort((a, b) => b.revenue - a.revenue);
-    }, [salesHistory, salesProducts, getProductCost]); // Using full history for better classification sample size? Or filtered? Let's keep separate logic if needed.
+    }, [filteredSales, salesProducts, getProductCost]);
 
     const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
     const [showCalculator, setShowCalculator] = useState(false);
@@ -681,7 +792,8 @@ const Analytics = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                     <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="sales" icon={Receipt} label="Ventas" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
-                    <SidebarItem id="menu" icon={UtensilsCrossed} label="Ingeniería Menú" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="products" icon={UtensilsCrossed} label="Prod. Vendidos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="menu" icon={TrendingUp} label="Ingeniería Menú" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="cash" icon={Wallet} label="Caja y Z" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="expenses" icon={DollarSign} label="Gastos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                 </div>
@@ -725,6 +837,7 @@ const Analytics = () => {
                         <h1 style={{ margin: 0, fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: colors.text, letterSpacing: '-0.02em' }}>
                             {activeSection === 'dashboard' && 'Panel Principal'}
                             {activeSection === 'sales' && 'Reporte de Ventas'}
+                            {activeSection === 'products' && 'Productos Vendidos'}
                             {activeSection === 'menu' && 'Ingeniería de Menú'}
                             {activeSection === 'cash' && 'Gestión de Efectivo'}
                             {activeSection === 'expenses' && 'Control de Gastos'}
@@ -771,9 +884,9 @@ const Analytics = () => {
                                 <ArrowLeft size={18} /> Volver
                             </button>
                         </div>
-                        {!isMobile && activeSection === 'sales' && (
+                        {!isMobile && (activeSection === 'sales' || activeSection === 'products') && (
                             <button
-                                onClick={exportToCSV}
+                                onClick={activeSection === 'products' ? exportProductsCSV : exportToCSV}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '0.5rem',
                                     padding: '0.75rem 1.25rem', background: 'white',
@@ -1105,6 +1218,67 @@ const Analytics = () => {
                                 </div>
                             </div>
                         </div>
+
+                        {/* DAILY EVOLUTION AND WEEKDAY ROW */}
+                        {dailyEvolution.length > 1 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: isMobile ? '1.5rem' : '1.5rem' }}>
+                                {/* DAILY EVOLUTION */}
+                                <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Evolución Diaria</h3>
+                                    <div style={{ display: 'flex', alignItems: 'flex-end', height: '180px', gap: '8px', paddingBottom: '1.5rem', overflowX: 'auto' }}>
+                                        {(() => {
+                                            const maxDailyRevenue = Math.max(...dailyEvolution.map(d => d.revenue), 1);
+                                            return dailyEvolution.map((dayData, idx) => {
+                                                const parts = dayData.date.split('-');
+                                                const shortDate = parts.length === 3 ? `${parts[2]}/${parts[1]}` : dayData.date;
+                                                return (
+                                                    <div key={idx} style={{ flex: 1, minWidth: '45px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', height: '100%', justifyContent: 'flex-end' }}>
+                                                        <div style={{ fontSize: '0.65rem', fontWeight: '800', color: colors.text }}>{dayData.revenue.toFixed(0)}€</div>
+                                                        <div 
+                                                            title={`${dayData.date}: ${dayData.revenue.toFixed(2)}€ (${dayData.count} tickets)`}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: `${(dayData.revenue / maxDailyRevenue) * 75}%`,
+                                                                background: colors.primary,
+                                                                borderRadius: '4px 4px 0 0',
+                                                                transition: 'all 0.3s ease',
+                                                                minHeight: '4px',
+                                                                boxShadow: '0 -2px 6px rgba(79, 70, 229, 0.15)'
+                                                            }} 
+                                                        />
+                                                        <span style={{ fontSize: '0.65rem', color: colors.textMuted, fontWeight: '700' }}>{shortDate}</span>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* WEEKDAY STATS */}
+                                <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
+                                    <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: '800', color: colors.text }}>Ventas por Día de Semana</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        {(() => {
+                                            const maxWeekdayRevenue = Math.max(...weekdayStats.map(d => d.revenue), 1);
+                                            return weekdayStats.map((dayData, idx) => (
+                                                <div key={idx}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.15rem', fontSize: '0.8rem', fontWeight: '700' }}>
+                                                        <span style={{ color: colors.text }}>{dayData.name}</span>
+                                                        <span style={{ color: colors.primary }}>{dayData.revenue.toFixed(0)}€ <span style={{ fontSize: '0.65rem', color: colors.textMuted }}>({dayData.count} tkts)</span></span>
+                                                    </div>
+                                                    <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                                                        <div style={{ 
+                                                            width: `${(dayData.revenue / maxWeekdayRevenue) * 100}%`, 
+                                                            height: '100%', background: dayData.revenue > 0 ? colors.primary : '#e2e8f0', borderRadius: '3px' 
+                                                        }} />
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* CATEGORY SUMMARY CARDS */}
                         <div style={{ padding: '1.5rem', background: colors.surface, borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}` }}>
@@ -1527,6 +1701,134 @@ const Analytics = () => {
                                     ))
                                 )}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- PRODUCTS VIEW --- */}
+                {activeSection === 'products' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Search and Filters */}
+                        <div style={{ 
+                            background: colors.surface, borderRadius: '16px', 
+                            padding: '1rem 1.5rem', display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem',
+                            alignItems: isMobile ? 'stretch' : 'center',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, background: '#f8fafc', padding: '0.5rem 1rem', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+                                <Search size={18} color={colors.textMuted} />
+                                <input 
+                                    type="text"
+                                    placeholder="Buscar producto o categoría..."
+                                    value={productSearch}
+                                    onChange={(e) => setProductSearch(e.target.value)}
+                                    style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', color: colors.text, fontWeight: '500' }}
+                                />
+                                {productSearch && <button onClick={() => setProductSearch('')} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><CloseIcon size={16}/></button>}
+                            </div>
+                            {isMobile && (
+                                <button
+                                    onClick={exportProductsCSV}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                        padding: '0.75rem', background: 'white', color: colors.text, border: `1px solid ${colors.border}`,
+                                        borderRadius: '12px', cursor: 'pointer', fontWeight: '700'
+                                    }}
+                                >
+                                    <Download size={18} /> Exportar CSV
+                                </button>
+                            )}
+                        </div>
+
+                        {/* KPI Summary Row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1rem' }}>
+                            <div style={{ padding: '1.25rem', background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Total Unidades Vendidas</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '900', color: colors.text }}>
+                                    {periodProductsSold.reduce((acc, p) => acc + p.sold, 0)} uds.
+                                </div>
+                            </div>
+                            <div style={{ padding: '1.25rem', background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Producto Más Vendido</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: '900', color: colors.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {periodProductsSold.length > 0 
+                                        ? [...periodProductsSold].sort((a,b) => b.sold - a.sold)[0].name 
+                                        : 'Ninguno'} 
+                                    <span style={{ fontSize: '0.85rem', color: colors.text, fontWeight: '700', marginLeft: '0.5rem' }}>
+                                        ({periodProductsSold.length > 0 ? [...periodProductsSold].sort((a,b) => b.sold - a.sold)[0].sold : 0} uds)
+                                    </span>
+                                </div>
+                            </div>
+                            <div style={{ padding: '1.25rem', background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Producto Más Rentable</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: '900', color: colors.success, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {periodProductsSold.length > 0 
+                                        ? [...periodProductsSold].sort((a,b) => b.profit - a.profit)[0].name 
+                                        : 'Ninguno'}
+                                    <span style={{ fontSize: '0.85rem', color: colors.text, fontWeight: '700', marginLeft: '0.5rem' }}>
+                                        ({periodProductsSold.length > 0 ? [...periodProductsSold].sort((a,b) => b.profit - a.profit)[0].profit.toFixed(2) : 0}€)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Products Sold Table */}
+                        <div style={{ background: colors.surface, borderRadius: '20px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)', padding: '1.5rem', overflowX: 'auto' }}>
+                            {sortedPeriodProducts.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '3rem', color: colors.textMuted }}>
+                                    No se encontraron productos vendidos en este periodo o con la búsqueda actual.
+                                </div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: `2px solid ${colors.border}` }}>
+                                            {[
+                                                { label: 'Producto', field: 'name' },
+                                                { label: 'Categoría', field: 'category' },
+                                                { label: 'Uds. Vendidas', field: 'sold' },
+                                                { label: 'Ingresos', field: 'revenue' },
+                                                { label: 'Coste Total', field: 'totalCost' },
+                                                { label: 'Margen Neto', field: 'profit' }
+                                            ].map((col) => (
+                                                <th 
+                                                    key={col.field}
+                                                    onClick={() => {
+                                                        if (productSortField === col.field) {
+                                                            setProductSortAsc(!productSortAsc);
+                                                        } else {
+                                                            setProductSortField(col.field);
+                                                            setProductSortAsc(col.field === 'name' || col.field === 'category');
+                                                        }
+                                                    }}
+                                                    style={{ 
+                                                        padding: '1rem', textAlign: col.field === 'name' || col.field === 'category' ? 'left' : 'right', 
+                                                        color: colors.text, fontWeight: '800', cursor: 'pointer', userSelect: 'none'
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', justifyContent: col.field === 'name' || col.field === 'category' ? 'flex-start' : 'flex-end' }}>
+                                                        {col.label}
+                                                        {productSortField === col.field && (productSortAsc ? ' ↑' : ' ↓')}
+                                                    </div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedPeriodProducts.map((p, idx) => (
+                                            <tr key={idx} style={{ borderBottom: `1px solid ${colors.border}`, transition: 'background 0.2s' }}>
+                                                <td style={{ padding: '1rem', fontWeight: '700', color: colors.text }}>{p.name}</td>
+                                                <td style={{ padding: '1rem', color: colors.textMuted, textTransform: 'capitalize' }}>{p.category}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '800', color: colors.text }}>{p.sold}</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '700', color: colors.text }}>{p.revenue.toFixed(2)}€</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', color: colors.textMuted }}>{p.totalCost.toFixed(2)}€</td>
+                                                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '900', color: p.profit >= 0 ? colors.success : colors.danger }}>
+                                                    {p.profit.toFixed(2)}€
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 )}
