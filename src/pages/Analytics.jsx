@@ -234,6 +234,22 @@ const Analytics = () => {
         });
     };
 
+    const handlePrintTicketReport = () => {
+        const periodLabel = dateRange === 'shift' ? 'Turno Actual' : 
+                          dateRange === 'today' ? 'Hoy' : 
+                          dateRange === 'yesterday' ? 'Ayer' : 
+                          dateRange === 'custom' ? `Personalizado` : 'Reporte General';
+        
+        const periodInfo = {
+            label: periodLabel,
+            hours: isSingleDay ? `${startHour.toString().padStart(2, '0')}:00 - ${endHour.toString().padStart(2, '0')}:59` : 'Día Completo'
+        };
+
+        import('../utils/printHelpers').then(module => {
+            module.printDailyTicketReport(dashboardStats, categoryStats, periodProductsSold, periodInfo, restaurantInfo || {});
+        });
+    };
+
     // --- DASHBOARD DATA ---
     const dashboardStats = useMemo(() => {
         const getPeriodStats = (sales, exps) => {
@@ -967,6 +983,20 @@ const Analytics = () => {
                             }}
                         >
                             <Printer size={18} /> Reporte
+                        </button>
+
+                        <button
+                            onClick={handlePrintTicketReport}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.65rem 1rem', background: colors.success,
+                                color: 'white', border: 'none',
+                                borderRadius: '12px', cursor: 'pointer', fontWeight: '800',
+                                boxShadow: '0 4px 10px rgba(5, 150, 105, 0.25)', transition: 'all 0.2s',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <Receipt size={18} /> Imprimir Tíquet
                         </button>
 
                         {dateRange === 'custom' && (

@@ -1470,3 +1470,189 @@ export const printDailyReport = (stats, categoryStats, periodInfo, companyInfo =
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
+
+export const printDailyTicketReport = (stats, categoryStats, periodProducts, periodInfo, companyInfo = {}) => {
+    const printWindow = window.open('', '', 'width=400,height=700');
+
+    if (!printWindow) {
+        alert('Por favor, permite las ventanas emergentes para imprimir el reporte.');
+        return;
+    }
+
+    const date = new Date().toLocaleDateString('es-ES');
+    const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+    const sortedProducts = [...periodProducts].sort((a, b) => b.sold - a.sold);
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ticket Estadísticas - ${periodInfo.label}</title>
+            <style>
+                body {
+                    font-family: 'Courier New', Courier, monospace;
+                    width: 290px;
+                    margin: 0 auto;
+                    padding: 5px;
+                    color: black;
+                    font-size: 13px;
+                    line-height: 1.4;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid black;
+                    padding-bottom: 8px;
+                    margin-bottom: 12px;
+                }
+                .title {
+                    font-size: 1.1rem;
+                    font-weight: bold;
+                    margin: 4px 0;
+                    text-transform: uppercase;
+                }
+                .meta {
+                    font-size: 0.8rem;
+                }
+                .section {
+                    margin-bottom: 12px;
+                    border-bottom: 1px dashed black;
+                    padding-bottom: 8px;
+                }
+                .section-title {
+                    font-weight: bold;
+                    text-align: center;
+                    margin-bottom: 6px;
+                    font-size: 0.9rem;
+                    text-transform: uppercase;
+                    border-top: 1px dashed black;
+                    padding-top: 4px;
+                }
+                .row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 3px;
+                }
+                .bold { font-weight: bold; }
+                .product-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 12px;
+                }
+                .product-table th {
+                    border-bottom: 1px solid black;
+                    text-align: left;
+                    font-weight: bold;
+                }
+                .product-table td {
+                    padding: 3px 0;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 15px;
+                    font-size: 0.75rem;
+                }
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { margin: 5px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div style="font-weight: bold; font-size: 0.95rem;">
+                    ${companyInfo.businessName || companyInfo.name || 'MANALU POS'}
+                </div>
+                <div class="title">INFORME DE GESTIÓN</div>
+                <div class="meta">PERIODO: ${periodInfo.label.toUpperCase()}</div>
+                <div class="meta">TRAMO: ${periodInfo.hours || 'TODO EL DÍA'}</div>
+                <div class="meta">IMPRESO: ${date} ${time}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">RESUMEN GENERAL</div>
+                <div class="row">
+                    <span>Facturación:</span>
+                    <span class="bold">${stats.totalRevenue.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span>Tickets:</span>
+                    <span class="bold">${stats.ticketCount}</span>
+                </div>
+                <div class="row">
+                    <span>Comensales:</span>
+                    <span class="bold">${stats.totalDiners}</span>
+                </div>
+                <div class="row">
+                    <span>Ticket Medio:</span>
+                    <span class="bold">${stats.avgTicket.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span>Gasto x Pers:</span>
+                    <span class="bold">${stats.avgPerDiner.toFixed(2)}€</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">MÉTODOS DE COBRO</div>
+                <div class="row">
+                    <span>Efectivo:</span>
+                    <span class="bold">${stats.cashRaw.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span>Tarjeta:</span>
+                    <span class="bold">${stats.cardRaw.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span>Propinas (TJ):</span>
+                    <span class="bold">${stats.cardTipsRaw.toFixed(2)}€</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">VENTAS POR CATEGORÍA</div>
+                ${categoryStats.map(cat => `
+                    <div class="row">
+                        <span>${cat.name}:</span>
+                        <span>${cat.count} uds / <b>${cat.revenue.toFixed(2)}€</b></span>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="section" style="border-bottom: none; padding-bottom: 0;">
+                <div class="section-title">VENTAS POR PRODUCTO</div>
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70%; text-align: left;">Cant Articulo</th>
+                            <th style="width: 30%; text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedProducts.map(p => `
+                            <tr>
+                                <td>${p.sold}x ${p.name.slice(0, 22)}</td>
+                                <td style="text-align: right;">${p.revenue.toFixed(2)}€</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="footer">
+                * FIN DE INFORME *<br>
+                SISTEMA GESTIÓN MANALÚ
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+};
