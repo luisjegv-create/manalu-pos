@@ -30,6 +30,7 @@ import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
 import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
 import ExpenseManagement from '../components/Inventory/ExpenseManagement';
+import StaffExpensesManagement from '../components/Inventory/StaffExpensesManagement';
 
 const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection, colors }) => (
     <button
@@ -317,8 +318,13 @@ const Analytics = () => {
                     return itemAcc + (cost * (item.quantity || 1));
                 }, 0);
             }, 0);
-            const generalExp = (exps || []).reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
-            return { revenue, productCost, generalExp, totalDiscounts, net: revenue - productCost - generalExp };
+            
+            // Separate Sueldos (staff expenses) from other general expenses
+            const staffExp = (exps || []).filter(e => e.category === 'Sueldos').reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+            const otherExp = (exps || []).filter(e => e.category !== 'Sueldos').reduce((acc, e) => acc + (parseFloat(e.amount) || 0), 0);
+            const generalExp = staffExp + otherExp;
+
+            return { revenue, productCost, staffExp, otherExp, generalExp, totalDiscounts, net: revenue - productCost - generalExp };
         };
 
         const getFilteredExpsInRange = (unit = 'today', offset = 0) => {
@@ -399,6 +405,9 @@ const Analytics = () => {
             avgPerDiner, avgPerDinerChange,
             cashRaw, cardRaw, cardTipsRaw,
             totalDiscounts: currentStats.totalDiscounts,
+            productCost: currentStats.productCost,
+            staffExp: currentStats.staffExp,
+            otherExp: currentStats.otherExp,
             hours, maxHour
         };
     }, [filteredSales, comparisonSales, expenses, getProductCost, dateRange]);
@@ -865,7 +874,8 @@ const Analytics = () => {
                     <SidebarItem id="products" icon={UtensilsCrossed} label="Prod. Vendidos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="menu" icon={TrendingUp} label="Ingeniería Menú" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="cash" icon={Wallet} label="Caja y Z" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
-                    <SidebarItem id="expenses" icon={DollarSign} label="Gastos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="expenses" icon={DollarSign} label="Gastos Gral." activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="staff_expenses" icon={Users} label="Gastos Personal" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                 </div>
 
                 <button
@@ -910,7 +920,8 @@ const Analytics = () => {
                             {activeSection === 'products' && 'Productos Vendidos'}
                             {activeSection === 'menu' && 'Ingeniería de Menú'}
                             {activeSection === 'cash' && 'Gestión de Efectivo'}
-                            {activeSection === 'expenses' && 'Control de Gastos'}
+                            {activeSection === 'expenses' && 'Gastos Generales'}
+                            {activeSection === 'staff_expenses' && 'Gastos de Personal'}
                         </h1>
                         <p style={{ color: colors.textMuted, marginTop: '0.35rem', fontSize: '1rem', fontWeight: '500' }}>
                            {dateRange === 'shift' ? '✨ Jornada Actual (Desde último cierre)' : dateRange === 'service' ? '🚀 Servicio Activo/Registrado' : `Periodo: ${dateRange === 'today' ? 'Hoy' : dateRange === 'yesterday' ? 'Ayer' : dateRange === 'week' ? 'Semana' : dateRange === 'month' ? 'Mes' : dateRange === 'all' ? 'Todo' : 'Personalizado'}`}
@@ -1316,16 +1327,35 @@ const Analytics = () => {
                             </div>
                         </div>
 
-                        {/* Net Profit Details Alert Tip */}
+                        {/* P&L SUMMARY CARD */}
                         <div style={{ 
-                            padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', 
-                            background: colors.surface, borderRadius: '16px', border: `1px solid ${colors.border}`
+                            background: colors.surface, borderRadius: '24px', border: `1px solid ${colors.border}`,
+                            padding: '1.75rem', marginTop: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
                         }}>
-                            <div style={{ background: `${colors.primary}20`, padding: '0.6rem', borderRadius: '10px' }}>
-                                <Info size={20} color={colors.primary} />
-                            </div>
-                            <div style={{ fontSize: '0.95rem', color: colors.text, fontWeight: '500', lineHeight: '1.5' }}>
-                                <b style={{ color: colors.primary, fontWeight: '800' }}>Cálculo Intelectual:</b> El beneficio neto mostrado es una estimación real obtenida restando el <b style={{ color: colors.text }}>coste de producto (escandallos)</b> y los <b style={{ color: colors.text }}>gastos generales</b> facturados en el periodo.
+                            <h3 style={{ margin: '0 0 1.25rem 0', fontSize: '1.1rem', fontWeight: '800', color: colors.text, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <TrendingUp size={20} color={colors.success} /> Resumen de Rendimiento (P&G)
+                            </h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', gap: '1rem', alignItems: 'center' }}>
+                                <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: colors.textMuted, marginBottom: '0.25rem' }}>INGRESOS</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: colors.text }}>+{dashboardStats.totalRevenue.toFixed(2)}€</div>
+                                </div>
+                                <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: colors.textMuted, marginBottom: '0.25rem' }}>COSTE PRODUCTO</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: colors.danger }}>-{dashboardStats.productCost.toFixed(2)}€</div>
+                                </div>
+                                <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: colors.textMuted, marginBottom: '0.25rem' }}>GASTOS PERSONAL</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: colors.danger }}>-{dashboardStats.staffExp.toFixed(2)}€</div>
+                                </div>
+                                <div style={{ padding: '0.75rem 1rem', background: '#f8fafc', borderRadius: '12px', border: `1px solid ${colors.border}` }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '700', color: colors.textMuted, marginBottom: '0.25rem' }}>GASTOS GENERALES</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: '800', color: colors.danger }}>-{dashboardStats.otherExp.toFixed(2)}€</div>
+                                </div>
+                                <div style={{ padding: '0.75rem 1rem', background: `${colors.success}08`, borderRadius: '12px', border: `2px solid ${colors.success}30` }}>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: colors.success, marginBottom: '0.25rem' }}>BENEFICIO NETO</div>
+                                    <div style={{ fontSize: '1.2rem', fontWeight: '900', color: colors.success }}>{dashboardStats.netProfit.toFixed(2)}€</div>
+                                </div>
                             </div>
                         </div>
 
@@ -2002,6 +2032,11 @@ const Analytics = () => {
                 {/* --- EXPENSES VIEW --- */}
                 {activeSection === 'expenses' && (
                     <ExpenseManagement />
+                )}
+
+                {/* --- STAFF EXPENSES VIEW --- */}
+                {activeSection === 'staff_expenses' && (
+                    <StaffExpensesManagement />
                 )}
             </div>
 

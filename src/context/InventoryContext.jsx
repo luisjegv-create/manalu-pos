@@ -98,15 +98,19 @@ export const InventoryProvider = ({ children }) => {
         try {
             // 1. Fetch from Supabase with timeout/catch
             let ingData = null, prodData = null, recData = null, settingsData = null, wineDataActual = null;
+            let expData = null, supData = null, invData = null;
             let syncSuccess = false;
 
             try {
-                const [ingRes, prodRes, recRes, setRes, wineRes] = await Promise.all([
+                const [ingRes, prodRes, recRes, setRes, wineRes, expRes, supRes, invRes] = await Promise.all([
                     supabase.from('ingredients').select('*'),
                     supabase.from('products').select('*'),
                     supabase.from('recipes').select('*'),
                     supabase.from('restaurant_settings').select('*').single(),
-                    supabase.from('wines').select('*')
+                    supabase.from('wines').select('*'),
+                    supabase.from('expenses').select('*'),
+                    supabase.from('suppliers').select('*'),
+                    supabase.from('invoices').select('*')
                 ]);
 
                 if (!prodRes.error) {
@@ -115,6 +119,9 @@ export const InventoryProvider = ({ children }) => {
                     recData = recRes.data;
                     settingsData = setRes.data;
                     wineDataActual = wineRes.data;
+                    expData = expRes.data || [];
+                    supData = supRes.data || [];
+                    invData = invRes.data || [];
                     syncSuccess = true;
                     
                     // SAVE BACKUPS (Stripping heavy base64 images to save space)
@@ -123,6 +130,9 @@ export const InventoryProvider = ({ children }) => {
                     if (recData && recData.length > 0) safeSetItem('manalu_backup_recipes', JSON.stringify(recData));
                     if (settingsData) safeSetItem('manalu_backup_settings', JSON.stringify(settingsData));
                     if (wineDataActual && wineDataActual.length > 0) safeSetItem('manalu_backup_wines', JSON.stringify(stripLargeImages(wineDataActual)));
+                    if (expData && expData.length > 0) safeSetItem('manalu_backup_expenses', JSON.stringify(expData));
+                    if (supData && supData.length > 0) safeSetItem('manalu_backup_suppliers', JSON.stringify(supData));
+                    if (invData && invData.length > 0) safeSetItem('manalu_backup_invoices', JSON.stringify(invData));
                     
                     const now = new Date().toISOString();
                     setLastSyncDate(now);
@@ -140,6 +150,9 @@ export const InventoryProvider = ({ children }) => {
                 recData = safeParse('manalu_backup_recipes', []);
                 wineDataActual = safeParse('manalu_backup_wines', []);
                 settingsData = safeParse('manalu_backup_settings', null);
+                expData = safeParse('manalu_backup_expenses', []);
+                supData = safeParse('manalu_backup_suppliers', []);
+                invData = safeParse('manalu_backup_invoices', []);
             }
 
             // 3. Update Provider State
@@ -180,6 +193,18 @@ export const InventoryProvider = ({ children }) => {
                     recMap[r.product_id].push({ ingredientId: r.ingredient_id, quantity: r.quantity });
                 });
                 setRecipes(recMap);
+            }
+
+            if (expData) {
+                setExpenses(expData.map(e => ({ ...e, concept: e.description, paymentMethod: e.payment_method })));
+            }
+
+            if (supData) {
+                setSuppliers(supData);
+            }
+
+            if (invData) {
+                setInvoices(invData);
             }
 
             // Optional: Background Migrations (Only if sync was successful)

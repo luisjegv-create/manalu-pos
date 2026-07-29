@@ -19,7 +19,7 @@ const ExpenseManagement = () => {
         notes: ''
     });
 
-    const expenseCategories = ['Alquiler', 'Suministros (Luz/Agua)', 'Sueldos', 'Impuestos', 'Marketing', 'Compras/Mercadería', 'Transporte', 'Otros'];
+    const expenseCategories = ['Alquiler', 'Suministros (Luz/Agua)', 'Impuestos', 'Marketing', 'Compras/Mercadería', 'Transporte', 'Otros'];
     const paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia', 'Domiciliado'];
     const statuses = ['Pagado', 'Pendiente'];
 
@@ -41,6 +41,8 @@ const ExpenseManagement = () => {
         const categoryData = {};
 
         expenses.forEach(exp => {
+            if (exp.category === 'Sueldos') return; // Skip staff expenses in general expense management
+
             const expDate = new Date(exp.date);
             const expMonth = expDate.getMonth() + 1;
             const expYear = expDate.getFullYear();
@@ -85,6 +87,8 @@ const ExpenseManagement = () => {
     // Filtered Expenses for List
     const filteredExpenses = useMemo(() => {
         return expenses.filter(exp => {
+            if (exp.category === 'Sueldos') return false; // Hide staff expenses here
+
             const expDate = new Date(exp.date);
 
             const matchCategory = filterCategory === 'Todas' || exp.category === filterCategory;
