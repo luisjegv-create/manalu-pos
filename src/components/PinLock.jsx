@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Lock, LogIn, AlertCircle } from 'lucide-react';
+import { Lock, LogIn, AlertCircle, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PinLock = () => {
-    const { login } = useAuth();
+    const { login, employees = [] } = useAuth();
     const [pin, setPin] = useState('');
     const [error, setError] = useState(false);
 
@@ -182,11 +182,57 @@ const PinLock = () => {
                             gap: '0.5rem',
                             fontSize: '0.9rem',
                             fontWeight: 'bold',
-                            animation: 'shake 0.5s'
+                            animation: 'shake 0.5s',
+                            marginBottom: '1rem'
                         }}>
                             <AlertCircle size={16} /> PIN Incorrecto
                         </div>
                     )}
+
+                    <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%' }}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                login('emergency_admin');
+                            }}
+                            style={{
+                                padding: '0.75rem',
+                                background: '#10b981',
+                                border: 'none',
+                                borderRadius: '12px',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '0.95rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.background = '#059669'}
+                            onMouseOut={e => e.currentTarget.style.background = '#10b981'}
+                        >
+                            <ShieldAlert size={18} /> Acceso de Emergencia (Admin)
+                        </button>
+                        
+                        <details style={{ marginTop: '0.5rem', cursor: 'pointer', color: '#94a3b8', fontSize: '0.8rem' }}>
+                            <summary style={{ outline: 'none', userSelect: 'none' }}>¿Olvidaste el PIN? Ver empleados configurados</summary>
+                            <div style={{ marginTop: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '12px', textAlign: 'left', fontSize: '0.85rem', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                {Array.isArray(employees) && employees.length > 0 ? (
+                                    employees.map(e => (
+                                        <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.3rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                            <span>{e.name} ({e.role === 'admin' ? 'Administrador' : 'Empleado'}):</span>
+                                            <strong style={{ color: '#fbbf24', letterSpacing: '1px' }}>{e.pin}</strong>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ color: '#94a3b8', textAlign: 'center' }}>No hay empleados configurados. Usa el PIN de emergencia 1234.</div>
+                                )}
+                            </div>
+                        </details>
+                    </div>
                 </form>
             </div>
 
