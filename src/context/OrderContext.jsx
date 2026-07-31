@@ -648,8 +648,8 @@ export const OrderProvider = ({ children }) => {
                 // Save to Supabase
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
-                // Fallback for missing columns (card_tips or customer_info)
-                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                // Fallback for missing columns (card_tips, customer_info, ticket_number, diners)
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                     console.log("Fallback: missing column detected, retrying...");
                     const fallbackBill = [...finalBill];
                     if (cardTips > 0) {
@@ -810,7 +810,7 @@ export const OrderProvider = ({ children }) => {
             let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
 
             // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                 const fallbackBill = [...partialItems];
                 if (cardTips > 0) {
                     fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
@@ -899,7 +899,7 @@ export const OrderProvider = ({ children }) => {
             }]).select();
 
             // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
                 const fallbackBill = [...itemsToPay];
                 if (customerData) {
                     fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
