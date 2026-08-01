@@ -21,7 +21,8 @@ const PaymentModal = ({
     setIsFullInvoice,
     customerTaxData,
     setCustomerTaxData,
-    handleCloseTable
+    handleCloseTable,
+    isClosing = false
 }) => {
     const [amountReceived, setAmountReceived] = React.useState('');
     const [cardTips, setCardTips] = React.useState('');
@@ -233,17 +234,19 @@ const PaymentModal = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <button
                         className="btn-primary"
-                        style={{ background: '#10b981', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                        disabled={isClosing}
+                        style={{ background: '#10b981', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem', opacity: isClosing ? 0.6 : 1, cursor: isClosing ? 'not-allowed' : 'pointer' }}
                         onClick={() => handleCloseTable('Efectivo', amountReceived)}
                     >
-                        <Banknote size={20} /> Efectivo
+                        <Banknote size={20} /> {isClosing ? 'Cobrando...' : 'Efectivo'}
                     </button>
                     <button
                         className="btn-primary"
-                        style={{ background: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                        disabled={isClosing}
+                        style={{ background: '#3b82f6', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem', opacity: isClosing ? 0.6 : 1, cursor: isClosing ? 'not-allowed' : 'pointer' }}
                         onClick={() => handleCloseTable('Tarjeta', 0, cardTips)}
                     >
-                        <CreditCard size={20} /> Tarjeta
+                        <CreditCard size={20} /> {isClosing ? 'Cobrando...' : 'Tarjeta'}
                     </button>
                 </div>
             </motion.div>

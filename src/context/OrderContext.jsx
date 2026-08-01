@@ -14,6 +14,7 @@ export const OrderProvider = ({ children }) => {
     const { deductStockForOrder, incrementTicketNumber } = useInventory();
     const { recordSale } = useCustomers();
     const { reservations } = useEvents();
+    const checkoutInProgress = React.useRef({});
 
     const stripItem = (item) => {
         if (!item) return item;
@@ -539,22 +540,28 @@ export const OrderProvider = ({ children }) => {
     const sendToKitchen = async () => {
         if (!currentTable || order.length === 0) return;
 
+        // Take a snapshot and clear order state immediately to prevent duplicate sends on network latency
+        const orderSnapshot = [...order];
+        const customerSnapshot = selectedCustomer;
+        clearOrder();
+        setSelectedCustomer(null);
+
         try {
-            deductStockForOrder(order);
+            deductStockForOrder(orderSnapshot);
         } catch (e) {
             console.error("Error deducting stock:", e);
         }
 
         try {
-            if (selectedCustomer) {
-                recordSale(selectedCustomer.id, calculateOrderTotal(order), order);
+            if (customerSnapshot) {
+                recordSale(customerSnapshot.id, calculateOrderTotal(orderSnapshot), orderSnapshot);
             }
         } catch (e) {
             console.error("Error recording sale for customer:", e);
         }
 
         // Filter items for kitchen: exclude drinks and wines
-        const kitchenItems = order
+        const kitchenItems = orderSnapshot
             .filter(item => item.category !== 'bebidas' && item.category !== 'vinos')
             .map(item => ({
                 ...item,
@@ -568,7 +575,7 @@ export const OrderProvider = ({ children }) => {
                 const { data, error } = await supabase.from('kitchen_orders').insert([{
                     table_name: currentTable.name,
                     items: JSON.stringify(kitchenItems),
-                    customer_info: selectedCustomer ? JSON.stringify(selectedCustomer) : null,
+                    customer_info: customerSnapshot ? JSON.stringify(customerSnapshot) : null,
                     status: 'pending'
                 }]).select();
 
@@ -578,7 +585,7 @@ export const OrderProvider = ({ children }) => {
                         items: kitchenItems,
                         timestamp: new Date(data[0].created_at),
                         table: data[0].table_name,
-                        customer: selectedCustomer
+                        customer: customerSnapshot
                     };
                     setKitchenOrders(prev => [...prev, newKo]);
                 }
@@ -588,11 +595,11 @@ export const OrderProvider = ({ children }) => {
         }
 
         try {
-            // Always update bill and clear order (even if only drinks/wines)
+            // Always update bill (even if only drinks/wines)
             setTableBills(prev => {
                 const currentBill = prev[currentTable.id] || [];
                 const newBill = [...currentBill];
-                order.forEach(newItem => {
+                orderSnapshot.forEach(newItem => {
                     const cleanItem = stripItem(newItem);
                     const existingInBill = newBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
                     if (existingInBill) {
@@ -603,8 +610,6 @@ export const OrderProvider = ({ children }) => {
                 });
                 return { ...prev, [currentTable.id]: newBill };
             });
-            clearOrder();
-            setSelectedCustomer(null);
         } catch (e) {
             console.error("Error updating table bills:", e);
         }
@@ -618,141 +623,151 @@ export const OrderProvider = ({ children }) => {
     };
 
     const closeTable = async (tableId, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null, tips = 0) => {
-        const finalBill = tableBills[tableId];
-        const cardTips = parseFloat(tips) || 0;
+        if (checkoutInProgress.current[tableId]) {
+            console.warn("Mesa ya en proceso de cobro:", tableId);
+            return null;
+        }
+        checkoutInProgress.current[tableId] = true;
 
-        if (finalBill && finalBill.length > 0) {
-            try {
-                const billTotal = calculateOrderTotal(finalBill);
-                const discountAmount = (billTotal * discountPercent) / 100;
-                const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+        try {
+            const finalBill = tableBills[tableId];
+            const cardTips = parseFloat(tips) || 0;
 
-                // Assign sequential ticket number
-                const ticketNumber = await incrementTicketNumber();
+            if (finalBill && finalBill.length > 0) {
+                try {
+                    const billTotal = calculateOrderTotal(finalBill);
+                    const discountAmount = (billTotal * discountPercent) / 100;
+                    const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
 
-                const tableObj = tables.find(t => t.id === tableId);
-                const diners = tableObj ? (tableObj.diners || 1) : 1;
+                    // Assign sequential ticket number
+                    const ticketNumber = await incrementTicketNumber();
 
-                // Build sale record
-                const saleRecord = {
-                    total,
-                    payment_method: paymentMethod,
-                    items: JSON.stringify(finalBill),
-                    table_id: tableId,
-                    ticket_number: ticketNumber,
-                    customer_info: customerData ? JSON.stringify(customerData) : null,
-                    card_tips: cardTips,
-                    diners: diners
-                };
-
-                // Save to Supabase
-                let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
-
-                // Fallback for missing columns (card_tips, customer_info, ticket_number, diners)
-                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
-                    console.log("Fallback: missing column detected, retrying...");
-                    const fallbackBill = [...finalBill];
-                    if (cardTips > 0) {
-                        fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
-                    }
-                    if (customerData) {
-                        fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
-                    }
-                    const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
-                    delete retryRecord.card_tips;
-                    delete retryRecord.customer_info;
-                    delete retryRecord.ticket_number;
-                    delete retryRecord.diners;
-                    const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
-                    data = retryData;
-                    error = retryError;
-                }
-
-                if (error) {
-                    console.error("DEBUG - closeTable Supabase Error:", error);
-                    throw new Error(`Error en base de datos: ${error.message}`);
-                }
-
-                if (data && data.length > 0) {
-                    const newSale = {
-                        ...data[0],
-                        date: new Date(data[0].created_at),
-                        total: parseFloat(data[0].total),
-                        items: JSON.parse(data[0].items),
-                        paymentMethod: data[0].payment_method,
-                        tableId: data[0].table_id,
-                        ticket_number: data[0].ticket_number || ticketNumber,
-                        card_tips: parseFloat(data[0].card_tips) || cardTips,
-                        diners: parseInt(data[0].diners) || diners
-                    };
-                    
-                    setSalesHistory(prev => {
-                        const updated = [newSale, ...prev].slice(0, 500);
-                        safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
-                        return updated;
-                    });
-
-                    // Update customer loyalty if applicable
-                    if (customerData && customerData.id) {
-                        recordSale(customerData.id, total);
-                    }
-
-                    // Clear table / Destroy Ticket
-                    setTableOrders(prev => {
-                        const next = { ...prev };
-                        delete next[tableId];
-                        return next;
-                    });
-                    setTableBills(prev => {
-                        const next = { ...prev };
-                        delete next[tableId];
-                        return next;
-                    });
-                    setTables(prev => prev.filter(t => t.id !== tableId));
-                    if (currentTable && currentTable.id === tableId) {
-                        setCurrentTable(null);
-                    }
-                    
-                    // NEW: Cleanup any left-over kitchen orders in local state for this table so it doesn't appear occupied
                     const tableObj = tables.find(t => t.id === tableId);
-                    if (tableObj) {
-                        setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
-                        // Mark all kitchen orders for this table as completed in DB
-                        try {
-                            await supabase.from('kitchen_orders')
-                                .update({ status: 'completed' })
-                                .eq('table_name', tableObj.name)
-                                .neq('status', 'completed');
-                        } catch (e) {
-                            console.error("Error clearing kitchen orders on closeTable:", e);
+                    const diners = tableObj ? (tableObj.diners || 1) : 1;
+
+                    // Build sale record
+                    const saleRecord = {
+                        total,
+                        payment_method: paymentMethod,
+                        items: JSON.stringify(finalBill),
+                        table_id: tableId,
+                        ticket_number: ticketNumber,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips,
+                        diners: diners
+                    };
+
+                    // Save to Supabase
+                    let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+
+                    // Fallback for missing columns (card_tips, customer_info, ticket_number, diners)
+                    if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                        console.log("Fallback: missing column detected, retrying...");
+                        const fallbackBill = [...finalBill];
+                        if (cardTips > 0) {
+                            fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
                         }
+                        if (customerData) {
+                            fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
+                        }
+                        const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
+                        delete retryRecord.card_tips;
+                        delete retryRecord.customer_info;
+                        delete retryRecord.ticket_number;
+                        delete retryRecord.diners;
+                        const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
+                        data = retryData;
+                        error = retryError;
                     }
 
-                    return newSale;
-                }
-            } catch (err) {
-                console.error("DEBUG - closeTable Failure:", err);
-                alert(`⚠️ Error al cerrar la mesa:\n${err.message}`);
-                return null;
-            }
-        }
+                    if (error) {
+                        console.error("DEBUG - closeTable Supabase Error:", error);
+                        throw new Error(`Error en base de datos: ${error.message}`);
+                    }
 
-        // Cleanup if bill was empty
-        updateTableStatus(tableId, 'free');
-        const tableObj = tables.find(t => t.id === tableId);
-        if (tableObj) {
-            setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
-            supabase.from('kitchen_orders')
-                .update({ status: 'completed' })
-                .eq('table_name', tableObj.name)
-                .neq('status', 'completed')
-                .then();
+                    if (data && data.length > 0) {
+                        const newSale = {
+                            ...data[0],
+                            date: new Date(data[0].created_at),
+                            total: parseFloat(data[0].total),
+                            items: JSON.parse(data[0].items),
+                            paymentMethod: data[0].payment_method,
+                            tableId: data[0].table_id,
+                            ticket_number: data[0].ticket_number || ticketNumber,
+                            card_tips: parseFloat(data[0].card_tips) || cardTips,
+                            diners: parseInt(data[0].diners) || diners
+                        };
+                        
+                        setSalesHistory(prev => {
+                            const updated = [newSale, ...prev].slice(0, 500);
+                            safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
+                            return updated;
+                        });
+
+                        // Update customer loyalty if applicable
+                        if (customerData && customerData.id) {
+                            recordSale(customerData.id, total);
+                        }
+
+                        // Clear table / Destroy Ticket
+                        setTableOrders(prev => {
+                            const next = { ...prev };
+                            delete next[tableId];
+                            return next;
+                        });
+                        setTableBills(prev => {
+                            const next = { ...prev };
+                            delete next[tableId];
+                            return next;
+                        });
+                        setTables(prev => prev.filter(t => t.id !== tableId));
+                        if (currentTable && currentTable.id === tableId) {
+                            setCurrentTable(null);
+                        }
+                        
+                        // NEW: Cleanup any left-over kitchen orders in local state for this table so it doesn't appear occupied
+                        const tableObj = tables.find(t => t.id === tableId);
+                        if (tableObj) {
+                            setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+                            // Mark all kitchen orders for this table as completed in DB
+                            try {
+                                await supabase.from('kitchen_orders')
+                                    .update({ status: 'completed' })
+                                    .eq('table_name', tableObj.name)
+                                    .neq('status', 'completed');
+                            } catch (e) {
+                                console.error("Error clearing kitchen orders on closeTable:", e);
+                            }
+                        }
+
+                        return newSale;
+                    }
+                } catch (err) {
+                    console.error("DEBUG - closeTable Failure:", err);
+                    alert(`⚠️ Error al cerrar la mesa:\n${err.message}`);
+                    return null;
+                }
+            }
+
+            // Cleanup if bill was empty
+            updateTableStatus(tableId, 'free');
+            const tableObj = tables.find(t => t.id === tableId);
+            if (tableObj) {
+                setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+                supabase.from('kitchen_orders')
+                    .update({ status: 'completed' })
+                    .eq('table_name', tableObj.name)
+                    .neq('status', 'completed')
+                    .then();
+            }
+            
+            if (currentTable && currentTable.id === tableId) {
+                setCurrentTable(null);
+            }
+            return null;
+        } finally {
+            delete checkoutInProgress.current[tableId];
         }
-        
-        if (currentTable && currentTable.id === tableId) {
-            setCurrentTable(null);
-        }
-        return null;
     };
 
     const forceClearTable = (tableId) => {

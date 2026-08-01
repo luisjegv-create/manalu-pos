@@ -42,6 +42,29 @@ const safeSetItem = (key, value) => {
     }
 };
 
+const safeSetItemWithFallback = (key, value, fallbackCreator = null) => {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            console.warn(`LocalStorage quota exceeded for ${key}. Attempting fallback...`);
+            if (fallbackCreator) {
+                try {
+                    const fallbackValue = fallbackCreator();
+                    localStorage.setItem(key, fallbackValue);
+                    console.log(`Saved fallback for ${key} successfully.`);
+                    return true;
+                } catch (fallbackError) {
+                    console.error(`Failed to save fallback for ${key}:`, fallbackError);
+                }
+            }
+        }
+        console.error(`Error saving ${key}:`, e);
+        return false;
+    }
+};
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useInventory = () => useContext(InventoryContext);
 
@@ -96,40 +119,68 @@ export const InventoryProvider = ({ children }) => {
         else setIsSyncing(true);
 
         try {
-            // 1. Fetch from Supabase with timeout/catch
+            // 1. Fetch from Supabase with individual timeout/catch
             let ingData = null, prodData = null, recData = null, settingsData = null, wineDataActual = null;
             let expData = null, supData = null, invData = null;
             let syncSuccess = false;
 
             try {
+                const fetchTable = async (tableName, isSingle = false) => {
+                    try {
+                        const query = isSingle 
+                            ? supabase.from(tableName).select('*').single() 
+                            : supabase.from(tableName).select('*');
+                        
+                        // Add a timeout of 6 seconds to avoid hanging queries
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error(`Timeout fetching ${tableName}`)), 6000)
+                        );
+                        
+                        const res = await Promise.race([query, timeoutPromise]);
+                        if (res.error) {
+                            console.error(`Error fetching ${tableName}:`, res.error);
+                            return { data: null, error: res.error };
+                        }
+                        return { data: res.data, error: null };
+                    } catch (err) {
+                        console.error(`Exception fetching ${tableName}:`, err);
+                        return { data: null, error: err };
+                    }
+                };
+
                 const [ingRes, prodRes, recRes, setRes, wineRes, expRes, supRes, invRes] = await Promise.all([
-                    supabase.from('ingredients').select('*'),
-                    supabase.from('products').select('*'),
-                    supabase.from('recipes').select('*'),
-                    supabase.from('restaurant_settings').select('*').single(),
-                    supabase.from('wines').select('*'),
-                    supabase.from('expenses').select('*'),
-                    supabase.from('suppliers').select('*'),
-                    supabase.from('invoices').select('*')
+                    fetchTable('ingredients'),
+                    fetchTable('products'),
+                    fetchTable('recipes'),
+                    fetchTable('restaurant_settings', true),
+                    fetchTable('wines'),
+                    fetchTable('expenses'),
+                    fetchTable('suppliers'),
+                    fetchTable('invoices')
                 ]);
 
-                if (!prodRes.error) {
-                    ingData = ingRes.data;
+                // We consider product sync successful if we got products and ingredients
+                if (prodRes.data && prodRes.data.length > 0) {
                     prodData = prodRes.data;
-                    recData = recRes.data;
-                    settingsData = setRes.data;
-                    wineDataActual = wineRes.data;
-                    expData = expRes.data || [];
-                    supData = supRes.data || [];
-                    invData = invRes.data || [];
+                    ingData = ingRes.data || safeParse('manalu_backup_ingredients', []);
+                    recData = recRes.data || safeParse('manalu_backup_recipes', []);
+                    settingsData = setRes.data || safeParse('manalu_backup_settings', null);
+                    wineDataActual = wineRes.data || safeParse('manalu_backup_wines', []);
+                    expData = expRes.data || safeParse('manalu_backup_expenses', []);
+                    supData = supRes.data || safeParse('manalu_backup_suppliers', []);
+                    invData = invRes.data || safeParse('manalu_backup_invoices', []);
                     syncSuccess = true;
                     
-                    // SAVE BACKUPS (Stripping heavy base64 images to save space)
-                    if (prodData && prodData.length > 0) safeSetItem('manalu_backup_products', JSON.stringify(stripLargeImages(prodData)));
+                    // SAVE BACKUPS (Try storing full data first, fallback to stripping base64 images if quota exceeded)
+                    safeSetItemWithFallback('manalu_backup_products', JSON.stringify(prodData), () => {
+                        return JSON.stringify(stripLargeImages(prodData));
+                    });
                     if (ingData && ingData.length > 0) safeSetItem('manalu_backup_ingredients', JSON.stringify(ingData));
                     if (recData && recData.length > 0) safeSetItem('manalu_backup_recipes', JSON.stringify(recData));
                     if (settingsData) safeSetItem('manalu_backup_settings', JSON.stringify(settingsData));
-                    if (wineDataActual && wineDataActual.length > 0) safeSetItem('manalu_backup_wines', JSON.stringify(stripLargeImages(wineDataActual)));
+                    safeSetItemWithFallback('manalu_backup_wines', JSON.stringify(wineDataActual), () => {
+                        return JSON.stringify(stripLargeImages(wineDataActual));
+                    });
                     if (expData && expData.length > 0) safeSetItem('manalu_backup_expenses', JSON.stringify(expData));
                     if (supData && supData.length > 0) safeSetItem('manalu_backup_suppliers', JSON.stringify(supData));
                     if (invData && invData.length > 0) safeSetItem('manalu_backup_invoices', JSON.stringify(invData));
@@ -207,7 +258,7 @@ export const InventoryProvider = ({ children }) => {
                 setInvoices(invData);
             }
 
-            // Optional: Background Migrations (Only if sync was successful)
+            // Optional: Background Migrations (Only if sync was successful, non-blocking)
             if (syncSuccess) {
                 try {
                     const localIngs = safeParse('manalu_ingredients', []);
@@ -218,7 +269,12 @@ export const InventoryProvider = ({ children }) => {
                     if (prodData) {
                         const tapasProducts = prodData.filter(p => p.category === 'tapas');
                         if (tapasProducts.length > 0) {
-                            await supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas');
+                            setTimeout(() => {
+                                supabase.from('products').update({ category: 'raciones' }).eq('category', 'tapas')
+                                    .then(({ error }) => {
+                                        if (error) console.warn("Failed background tapas category migration:", error);
+                                    });
+                            }, 1000);
                         }
                     }
                 } catch (migrationError) {

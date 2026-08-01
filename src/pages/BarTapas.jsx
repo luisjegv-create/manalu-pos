@@ -200,6 +200,8 @@ const BarTapas = () => {
     const [isInvitation, setIsInvitation] = useState(false);
     const [isFullInvoice, setIsFullInvoice] = useState(false);
     const [customerTaxData, setCustomerTaxData] = useState({ name: '', nif: '', address: '' });
+    const [isClosing, setIsClosing] = useState(false);
+    const [isSendingOrder, setIsSendingOrder] = useState(false);
 
     const handleProductClick = (product) => {
         if (product.price_type === 'weighted') {
@@ -262,6 +264,8 @@ const BarTapas = () => {
 
 
     const handleConfirmPartialPayment = async (method, mode = 'products', customAmountVal = 0) => {
+        if (!currentTable || isClosing) return;
+        setIsClosing(true);
         let saleData = null;
         let itemsForTicket = [];
         let totalVal = 0;
@@ -336,6 +340,8 @@ const BarTapas = () => {
         } catch (err) {
             console.error("DEBUG - handleConfirmPartialPayment Failure:", err);
             alert(`⚠️ Error al procesar el pago:\n${err.message || 'Error desconocido'}\n\nPor favor, contacta con soporte o revisa la consola.`);
+        } finally {
+            setIsClosing(false);
         }
     };
 
@@ -412,64 +418,81 @@ const BarTapas = () => {
 
 
     const handleSendOrder = async (isSilent = false, withoutPrinting = false) => {
-        if (order.length === 0) return;
+        if (order.length === 0 || isSendingOrder) return;
+        setIsSendingOrder(true);
 
-        // Filter items
-        const foodItems = order.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
-        const drinkItems = order.filter(item => item.category === 'bebidas' || item.category === 'vinos');
+        try {
+            // Filter items
+            const foodItems = order.filter(item => item.category !== 'bebidas' && item.category !== 'vinos');
+            const drinkItems = order.filter(item => item.category === 'bebidas' || item.category === 'vinos');
 
-        const tableName = currentTable ? currentTable.name : 'Barra';
+            const tableName = currentTable ? currentTable.name : 'Barra';
 
-        if (!withoutPrinting) {
-            // Print combined tickets
-            printServiceTickets(tableName, foodItems, drinkItems);
-        }
-
-        await sendToKitchen();
-        if (!isSilent) {
-            // Return to the active tickets screen so they can quickly serve the next customer
-            if (searchParams.get('mode') === 'quick') {
-                navigate('/bar-tapas?mode=quick');
-            } else {
-                navigate('/tables');
+            if (!withoutPrinting) {
+                // Print combined tickets
+                printServiceTickets(tableName, foodItems, drinkItems);
             }
+
+            await sendToKitchen();
+            if (!isSilent) {
+                // Return to the active tickets screen so they can quickly serve the next customer
+                if (searchParams.get('mode') === 'quick') {
+                    navigate('/bar-tapas?mode=quick');
+                } else {
+                    navigate('/tables');
+                }
+            }
+        } catch (err) {
+            console.error("Error in handleSendOrder:", err);
+            alert("Error al guardar la comanda.");
+        } finally {
+            setIsSendingOrder(false);
         }
     };
 
     const handleCloseTable = async (method = 'Efectivo', received = 0, tips = 0) => {
-        if (!currentTable) return;
-        const currentBill = [...bill]; // Snapshot for printing
-        const total = totalBill;
+        if (!currentTable || isClosing) return;
+        setIsClosing(true);
 
-        const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null, tips);
-        if (saleData) {
-            // Print final ticket with ID
-            printBillTicket(
-                currentTable ? currentTable.name : 'Mesa',
-                currentBill,
-                total,
-                restaurantInfo,
-                discountPercent,
-                isInvitation,
-                saleData.ticket_number || saleData.id.slice(-8),
-                isFullInvoice ? customerTaxData : null,
-                null,
-                received,
-                tips
-            );
-            setShowTicket(false);
-            setDiscountPercent(0);
-            setIsInvitation(false);
-            setIsFullInvoice(false);
+        try {
+            const currentBill = [...bill]; // Snapshot for printing
+            const total = totalBill;
 
-            if (searchParams.get('mode') === 'quick') {
-                closeTabFallback(currentTable.id);
-                navigate('/bar-tapas?mode=quick');
+            const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null, tips);
+            if (saleData) {
+                // Print final ticket with ID
+                printBillTicket(
+                    currentTable ? currentTable.name : 'Mesa',
+                    currentBill,
+                    total,
+                    restaurantInfo,
+                    discountPercent,
+                    isInvitation,
+                    saleData.ticket_number || saleData.id.slice(-8),
+                    isFullInvoice ? customerTaxData : null,
+                    null,
+                    received,
+                    tips
+                );
+                setShowTicket(false);
+                setDiscountPercent(0);
+                setIsInvitation(false);
+                setIsFullInvoice(false);
+
+                if (searchParams.get('mode') === 'quick') {
+                    closeTabFallback(currentTable.id);
+                    navigate('/bar-tapas?mode=quick');
+                } else {
+                    navigate('/tables');
+                }
             } else {
-                navigate('/tables');
+                alert('Error al cerrar la mesa.');
             }
-        } else {
-            alert('Error al cerrar la mesa.');
+        } catch (err) {
+            console.error("Error in handleCloseTable:", err);
+            alert("Error al cerrar la mesa.");
+        } finally {
+            setIsClosing(false);
         }
     };
 
@@ -1064,6 +1087,8 @@ const BarTapas = () => {
                         updateBillQuantity={updateBillQuantity}
                         updateDiners={updateDiners}
                         renameTable={renameTable}
+                        isClosing={isClosing}
+                        isSendingOrder={isSendingOrder}
                     />
                 )}
             </div>
@@ -1194,6 +1219,7 @@ const BarTapas = () => {
                 setCustomerTaxData={setCustomerTaxData}
                 removeProductFromBill={removeProductFromBill}
                 handleCloseTable={handleCloseTable}
+                isClosing={isClosing}
             />
 
             {/* Quick Product Creator Modal */}

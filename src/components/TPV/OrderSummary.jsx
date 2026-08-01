@@ -42,7 +42,9 @@ const OrderSummary = ({
     forceClearTable,
     updateBillQuantity,
     updateDiners,
-    renameTable
+    renameTable,
+    isClosing = false,
+    isSendingOrder = false
 }) => {
     const [openQuickNotes, setOpenQuickNotes] = React.useState({});
 
@@ -54,7 +56,7 @@ const OrderSummary = ({
     };
 
     const handleFastPay = async (method) => {
-        if (!currentTable) return;
+        if (!currentTable || isClosing || isSendingOrder) return;
         
         try {
             // 1. If there's an active draft order, send it first
@@ -631,6 +633,7 @@ const OrderSummary = ({
                                 <button
                                     className="btn-primary"
                                     onClick={() => setIsPaymentModalOpen(true)}
+                                    disabled={isSendingOrder || isClosing}
                                     style={{
                                         padding: '1.25rem',
                                         display: 'flex',
@@ -643,7 +646,8 @@ const OrderSummary = ({
                                         border: 'none',
                                         boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
                                         color: 'white',
-                                        cursor: 'pointer'
+                                        cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer',
+                                        opacity: (isSendingOrder || isClosing) ? 0.6 : 1
                                     }}
                                 >
                                     <Wine size={26} />
@@ -652,6 +656,7 @@ const OrderSummary = ({
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     <button
                                         onClick={() => handleFastPay('Efectivo')}
+                                        disabled={isSendingOrder || isClosing}
                                         style={{ 
                                             flex: 1, 
                                             background: 'linear-gradient(135deg, #059669, #10b981)', 
@@ -665,7 +670,8 @@ const OrderSummary = ({
                                             gap: '0.25rem', 
                                             fontWeight: '800', 
                                             fontSize: '0.75rem', 
-                                            cursor: 'pointer',
+                                            cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer',
+                                            opacity: (isSendingOrder || isClosing) ? 0.6 : 1,
                                             boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
                                         }}
                                     >
@@ -674,6 +680,7 @@ const OrderSummary = ({
                                     </button>
                                     <button
                                         onClick={() => handleFastPay('Tarjeta')}
+                                        disabled={isSendingOrder || isClosing}
                                         style={{ 
                                             flex: 1, 
                                             background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', 
@@ -687,7 +694,8 @@ const OrderSummary = ({
                                             gap: '0.25rem', 
                                             fontWeight: '800', 
                                             fontSize: '0.75rem', 
-                                            cursor: 'pointer',
+                                            cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer',
+                                            opacity: (isSendingOrder || isClosing) ? 0.6 : 1,
                                             boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)'
                                         }}
                                     >
@@ -704,15 +712,17 @@ const OrderSummary = ({
                             <>
                                 <button
                                     onClick={() => handleSendOrder(false, true)}
-                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: '#475569', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}
+                                    disabled={isSendingOrder || isClosing || order.length === 0}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: '#475569', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', opacity: (isSendingOrder || isClosing || order.length === 0) ? 0.6 : 1, cursor: (isSendingOrder || isClosing || order.length === 0) ? 'not-allowed' : 'pointer' }}
                                 >
-                                    <Send size={14} /> SOLO GUARDAR
+                                    <Send size={14} /> {isSendingOrder ? 'GUARDANDO...' : 'SOLO GUARDAR'}
                                 </button>
                                 <button
                                     onClick={() => handleFastPay('Tarjeta')}
-                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)' }}
+                                    disabled={isSendingOrder || isClosing}
+                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.3)', opacity: (isSendingOrder || isClosing) ? 0.6 : 1, cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer' }}
                                 >
-                                    <CreditCard size={14} /> TARJETA DIRECTO
+                                    <CreditCard size={14} /> {isClosing ? 'COBRANDO...' : 'TARJETA DIRECTO'}
                                 </button>
                             </>
                         ) : (bill && bill.length > 0) ? (
