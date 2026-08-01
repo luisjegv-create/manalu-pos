@@ -719,7 +719,18 @@ const BarTapas = () => {
                             {/* Quick Mode Button (Added) */}
                             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                                 {/* Database/Sync Status Indicator */}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '0.5rem' }}>
+                                <div 
+                                    onClick={() => {
+                                        const lastError = localStorage.getItem('manalu_last_sync_error');
+                                        if (lastError) {
+                                            alert(`Detalle del error de sincronización:\n\n${lastError}\n\nIntenta pulsar el botón de sincronización de nuevo.`);
+                                        } else {
+                                            alert("La sincronización con la base de datos se realizó correctamente. Si aún no ves las imágenes, recarga la página.");
+                                        }
+                                    }}
+                                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '0.5rem', cursor: 'pointer' }}
+                                    title="Haz clic para ver el estado detallado de sincronización"
+                                >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                                         <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isSyncing ? '#f59e0b' : (salesProducts.filter(p => p.image && p.image.startsWith('data:image')).length > 0 ? '#10b981' : '#ef4444') }}></span>
                                         <span style={{ fontWeight: '600', color: isSyncing ? '#f59e0b' : (salesProducts.filter(p => p.image && p.image.startsWith('data:image')).length > 0 ? '#10b981' : '#ef4444') }}>

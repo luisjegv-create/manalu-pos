@@ -144,20 +144,43 @@ export const InventoryProvider = ({ children }) => {
                         return { data: res.data, error: null };
                     } catch (err) {
                         console.error(`Exception fetching ${tableName}:`, err);
-                        return { data: null, error: err };
+                        return { data: null, error: { message: err.message || String(err) } };
                     }
                 };
 
                 const [ingRes, prodRes, recRes, setRes, wineRes, expRes, supRes, invRes] = await Promise.all([
                     fetchTable('ingredients'),
-                    fetchTable('products', false, 25000), // 25s timeout for products (heavy base64 images)
+                    fetchTable('products', false, 60000), // 60s timeout for products (heavy base64 images)
                     fetchTable('recipes'),
                     fetchTable('restaurant_settings', true),
-                    fetchTable('wines', false, 25000), // 25s timeout for wines (base64 images)
+                    fetchTable('wines', false, 60000), // 60s timeout for wines (base64 images)
                     fetchTable('expenses'),
                     fetchTable('suppliers'),
                     fetchTable('invoices')
                 ]);
+
+                // Record sync errors for diagnostic purposes
+                const syncErrors = [];
+                [
+                    { name: 'ingredientes', res: ingRes },
+                    { name: 'productos', res: prodRes },
+                    { name: 'recetas', res: recRes },
+                    { name: 'configuracion', res: setRes },
+                    { name: 'vinos', res: wineRes },
+                    { name: 'gastos', res: expRes },
+                    { name: 'proveedores', res: supRes },
+                    { name: 'facturas', res: invRes }
+                ].forEach(item => {
+                    if (item.res.error) {
+                        syncErrors.push(`${item.name} (${item.res.error.message || JSON.stringify(item.res.error)})`);
+                    }
+                });
+
+                if (syncErrors.length > 0) {
+                    localStorage.setItem('manalu_last_sync_error', 'Errores detectados: ' + syncErrors.join(', '));
+                } else {
+                    localStorage.removeItem('manalu_last_sync_error');
+                }
 
                 // We consider product sync successful if we got products and ingredients
                 if (prodRes.data && prodRes.data.length > 0) {
