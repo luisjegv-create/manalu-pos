@@ -540,6 +540,7 @@ const BarTapas = () => {
                 {(!isMobile || mobileActiveTab === 'menu' || mobileActiveTab === 'tables') && (
                     <div style={{
                         flex: '1',
+                        minWidth: 0,
                         display: 'flex',
                         flexDirection: 'column',
                         borderRight: isMobile ? 'none' : '1px solid var(--glass-border)',
@@ -663,7 +664,7 @@ const BarTapas = () => {
                         )}
 
                         <header className="header-card" style={{
-                            padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between'
+                            padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'space-between', flexWrap: 'wrap'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <button
@@ -766,7 +767,7 @@ const BarTapas = () => {
                                                 background: 'rgba(255,255,255,0.1)',
                                                 color: 'white',
                                                 fontSize: '1.1rem',
-                                                width: '280px',
+                                                width: '180px',
                                                 outline: 'none',
                                                 boxShadow: '0 0 10px rgba(59, 130, 246, 0.3)',
                                                 transition: 'all 0.3s ease'
