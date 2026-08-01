@@ -302,37 +302,32 @@ const BarTapas = () => {
             }
 
             if (saleData) {
-                // IMPORTANT: Print AFTER any potential navigation or complex state updates
-                // to avoid the print window being closed or blocked by browser logic.
-                // Also uses a small timeout to let the UI settle.
-                setTimeout(() => {
-                    printBillTicket(
-                        currentTable ? currentTable.name : 'Mesa',
-                        itemsForTicket,
-                        totalVal,
-                        restaurantInfo,
-                        discountPercent,
-                        isInvitation,
-                        saleData.ticket_number || saleData.id.slice(-8),
-                        isFullInvoice ? customerTaxData : null
-                    );
-                }, 100);
+                // Print immediately before state updates and navigation
+                printBillTicket(
+                    currentTable ? currentTable.name : 'Mesa',
+                    itemsForTicket,
+                    totalVal,
+                    restaurantInfo,
+                    discountPercent,
+                    isInvitation,
+                    saleData.ticket_number || saleData.id.slice(-8),
+                    isFullInvoice ? customerTaxData : null
+                );
 
                 setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
                 setDiscountPercent(0);
                 setIsInvitation(false);
                 setIsFullInvoice(false);
 
-                // If this was the last part of the bill, the context will eventually reflect it.
-                // We keep the user on the page for a moment to see the success.
-
-                // Check if table is still active or closed
+                // Delay the navigation if the table was fully paid
                 if (!bill || bill.length === 0) {
-                    if (searchParams.get('mode') === 'quick') {
-                        navigate('/bar-tapas?mode=quick');
-                    } else {
-                        navigate('/tables');
-                    }
+                    setTimeout(() => {
+                        if (searchParams.get('mode') === 'quick') {
+                            navigate('/bar-tapas?mode=quick');
+                        } else {
+                            navigate('/tables');
+                        }
+                    }, 500);
                 }
             } else {
                 alert('No se pudo procesar el pago parcial. Por favor, revisa los datos.');
@@ -479,12 +474,15 @@ const BarTapas = () => {
                 setIsInvitation(false);
                 setIsFullInvoice(false);
 
-                if (searchParams.get('mode') === 'quick') {
-                    closeTabFallback(currentTable.id);
-                    navigate('/bar-tapas?mode=quick');
-                } else {
-                    navigate('/tables');
-                }
+                // Delay navigation to let the print iframe/popup load successfully
+                setTimeout(() => {
+                    if (searchParams.get('mode') === 'quick') {
+                        closeTabFallback(currentTable.id);
+                        navigate('/bar-tapas?mode=quick');
+                    } else {
+                        navigate('/tables');
+                    }
+                }, 500);
             } else {
                 alert('Error al cerrar la mesa.');
             }
