@@ -125,15 +125,15 @@ export const InventoryProvider = ({ children }) => {
             let syncSuccess = false;
 
             try {
-                const fetchTable = async (tableName, isSingle = false) => {
+                const fetchTable = async (tableName, isSingle = false, timeoutMs = 6000) => {
                     try {
                         const query = isSingle 
                             ? supabase.from(tableName).select('*').single() 
                             : supabase.from(tableName).select('*');
                         
-                        // Add a timeout of 6 seconds to avoid hanging queries
+                        // Add custom timeout to avoid hanging queries
                         const timeoutPromise = new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error(`Timeout fetching ${tableName}`)), 6000)
+                            setTimeout(() => reject(new Error(`Timeout fetching ${tableName}`)), timeoutMs)
                         );
                         
                         const res = await Promise.race([query, timeoutPromise]);
@@ -150,10 +150,10 @@ export const InventoryProvider = ({ children }) => {
 
                 const [ingRes, prodRes, recRes, setRes, wineRes, expRes, supRes, invRes] = await Promise.all([
                     fetchTable('ingredients'),
-                    fetchTable('products'),
+                    fetchTable('products', false, 25000), // 25s timeout for products (heavy base64 images)
                     fetchTable('recipes'),
                     fetchTable('restaurant_settings', true),
-                    fetchTable('wines'),
+                    fetchTable('wines', false, 25000), // 25s timeout for wines (base64 images)
                     fetchTable('expenses'),
                     fetchTable('suppliers'),
                     fetchTable('invoices')
