@@ -716,7 +716,19 @@ const BarTapas = () => {
                             </div>
 
                             {/* Quick Mode Button (Added) */}
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                {/* Database/Sync Status Indicator */}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginRight: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isSyncing ? '#f59e0b' : (salesProducts.filter(p => p.image).length > 0 ? '#10b981' : '#ef4444') }}></span>
+                                        <span style={{ fontWeight: '600', color: isSyncing ? '#f59e0b' : (salesProducts.filter(p => p.image).length > 0 ? '#10b981' : '#ef4444') }}>
+                                            {isSyncing ? 'Sincronizando...' : (salesProducts.filter(p => p.image).length > 0 ? 'Nube con Imágenes' : 'Modo local (Sin imágenes)')}
+                                        </span>
+                                    </div>
+                                    <div style={{ opacity: 0.7, fontSize: '0.65rem', marginTop: '0.1rem' }}>
+                                        Fotos: {salesProducts.filter(p => p.image).length} / {salesProducts.length}
+                                    </div>
+                                </div>
                                 {/* Sync Button */}
                                 <button
                                     onClick={forceSync}
