@@ -657,8 +657,12 @@ export const OrderProvider = ({ children }) => {
                         diners: diners
                     };
 
-                    // Save to Supabase
-                    let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+                    // Save to Supabase with 10s timeout
+                    const insertPromise = supabase.from('sales').insert([saleRecord]).select();
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("Tiempo de espera agotado al registrar venta en la nube")), 10000)
+                    );
+                    let { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
                     // Fallback for missing columns (card_tips, customer_info, ticket_number, diners)
                     if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
@@ -675,7 +679,12 @@ export const OrderProvider = ({ children }) => {
                         delete retryRecord.customer_info;
                         delete retryRecord.ticket_number;
                         delete retryRecord.diners;
-                        const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
+                        
+                        const retryPromise = supabase.from('sales').insert([retryRecord]).select();
+                        const retryTimeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error("Tiempo de espera agotado al reintentar registro de venta")), 10000)
+                        );
+                        const { data: retryData, error: retryError } = await Promise.race([retryPromise, retryTimeoutPromise]);
                         data = retryData;
                         error = retryError;
                     }
@@ -821,8 +830,12 @@ export const OrderProvider = ({ children }) => {
                 card_tips: cardTips
             };
 
-            // Save to Supabase
-            let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+            // Save to Supabase with 10s timeout
+            const insertPromise = supabase.from('sales').insert([saleRecord]).select();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Tiempo de espera agotado al registrar pago parcial")), 10000)
+            );
+            let { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
             // Fallback for missing columns
             if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
@@ -834,7 +847,12 @@ export const OrderProvider = ({ children }) => {
                 delete retryRecord.card_tips;
                 delete retryRecord.customer_info;
                 delete retryRecord.ticket_number;
-                const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
+                
+                const retryPromise = supabase.from('sales').insert([retryRecord]).select();
+                const retryTimeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Tiempo de espera agotado al reintentar pago parcial")), 10000)
+                );
+                const { data: retryData, error: retryError } = await Promise.race([retryPromise, retryTimeoutPromise]);
                 data = retryData;
                 error = retryError;
             }
@@ -904,7 +922,7 @@ export const OrderProvider = ({ children }) => {
             const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
             const finalToPay = Math.max(0, amount - discountAmount);
 
-            let { data, error } = await supabase.from('sales').insert([{
+            const insertPromise = supabase.from('sales').insert([{
                 total: finalToPay,
                 payment_method: paymentMethod,
                 items: JSON.stringify(itemsToPay),
@@ -912,6 +930,10 @@ export const OrderProvider = ({ children }) => {
                 ticket_number: ticketNumber,
                 customer_info: customerData ? JSON.stringify(customerData) : null
             }]).select();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Tiempo de espera agotado al registrar pago parcial")), 10000)
+            );
+            let { data, error } = await Promise.race([insertPromise, timeoutPromise]);
 
             // Fallback for missing columns
             if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
@@ -929,7 +951,12 @@ export const OrderProvider = ({ children }) => {
                 delete retryRecord.card_tips;
                 delete retryRecord.customer_info;
                 delete retryRecord.ticket_number;
-                const { data: retryData, error: retryError } = await supabase.from('sales').insert([retryRecord]).select();
+                
+                const retryPromise = supabase.from('sales').insert([retryRecord]).select();
+                const retryTimeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("Tiempo de espera agotado al reintentar pago parcial")), 10000)
+                );
+                const { data: retryData, error: retryError } = await Promise.race([retryPromise, retryTimeoutPromise]);
                 data = retryData;
                 error = retryError;
             }

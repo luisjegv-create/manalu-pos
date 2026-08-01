@@ -924,14 +924,23 @@ export const InventoryProvider = ({ children }) => {
 
     const incrementTicketNumber = async () => {
         const nextNumber = (restaurantInfo.last_ticket_number || 0) + 1;
-        const { error } = await supabase
-            .from('restaurant_settings')
-            .update({ last_ticket_number: nextNumber })
-            .eq('id', 1);
-
-        if (!error) {
-            setRestaurantInfo(prev => ({ ...prev, last_ticket_number: nextNumber }));
-            return nextNumber;
+        try {
+            const query = supabase
+                .from('restaurant_settings')
+                .update({ last_ticket_number: nextNumber })
+                .eq('id', 1);
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Tiempo de espera agotado al actualizar número de ticket")), 10000)
+            );
+            const { error } = await Promise.race([query, timeoutPromise]);
+            if (!error) {
+                setRestaurantInfo(prev => ({ ...prev, last_ticket_number: nextNumber }));
+                return nextNumber;
+            } else {
+                console.error("Error incrementing ticket number:", error);
+            }
+        } catch (e) {
+            console.error("Exception incrementing ticket number:", e);
         }
         return null;
     };
