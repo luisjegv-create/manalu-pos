@@ -11,7 +11,7 @@ const OrderContext = createContext();
 export const useOrder = () => useContext(OrderContext);
 
 export const OrderProvider = ({ children }) => {
-    const { deductStockForOrder, incrementTicketNumber } = useInventory();
+    const { deductStockForOrder, incrementTicketNumber, restaurantInfo, updateLocalTicketNumber } = useInventory();
     const { recordSale } = useCustomers();
     const { reservations } = useEvents();
     const checkoutInProgress = React.useRef({});
@@ -106,6 +106,110 @@ export const OrderProvider = ({ children }) => {
         progress: 0,
         totalSteps: 7
     });
+
+    // --- OFFLINE / RESILIENT MODE STATES & LOGIC ---
+    const [offlineSales, setOfflineSales] = useState(() => safeParse('manalu_pending_offline_sales', []));
+    const [isSyncingOffline, setIsSyncingOffline] = useState(false);
+
+    useEffect(() => {
+        safeSetItem('manalu_pending_offline_sales', JSON.stringify(offlineSales));
+    }, [offlineSales]);
+
+    const syncOfflineSales = async () => {
+        if (offlineSales.length === 0 || isSyncingOffline) return;
+        setIsSyncingOffline(true);
+        console.log(`[Offline Sync] Iniciando sincronización de ${offlineSales.length} ventas offline...`);
+        
+        let successCount = 0;
+        const remainingSales = [...offlineSales];
+        
+        for (let i = 0; i < offlineSales.length; i++) {
+            const sale = offlineSales[i];
+            try {
+                const saleRecord = {
+                    total: sale.total,
+                    payment_method: sale.payment_method,
+                    items: sale.items,
+                    table_id: sale.table_id,
+                    ticket_number: sale.ticket_number,
+                    customer_info: sale.customer_info,
+                    card_tips: sale.card_tips || 0,
+                    diners: sale.diners || 1,
+                    created_at: sale.created_at || new Date().toISOString()
+                };
+
+                // Try uploading to Supabase
+                let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+
+                // If ticket number duplicate conflict
+                if (error && error.message.includes('ticket_number') && (error.message.includes('duplicate') || error.message.includes('viola'))) {
+                    console.log(`[Offline Sync] Conflicto de Ticket Nº ${sale.ticket_number} duplicado, resolviendo...`);
+                    const freshTicketNumber = await incrementTicketNumber();
+                    if (freshTicketNumber) {
+                        saleRecord.ticket_number = freshTicketNumber;
+                        const retry = await supabase.from('sales').insert([saleRecord]).select();
+                        data = retry.data;
+                        error = retry.error;
+                    }
+                }
+
+                // If missing column fallback
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
+                    const fallbackRecord = { ...saleRecord };
+                    delete fallbackRecord.card_tips;
+                    delete fallbackRecord.customer_info;
+                    delete fallbackRecord.ticket_number;
+                    delete fallbackRecord.diners;
+                    const retryFallback = await supabase.from('sales').insert([fallbackRecord]).select();
+                    data = retryFallback.data;
+                    error = retryFallback.error;
+                }
+
+                if (error) {
+                    console.error(`[Offline Sync] Error al subir venta offline:`, error);
+                    break; // Stop sync list to keep order integrity
+                }
+
+                if (data && data.length > 0) {
+                    successCount++;
+                    // Remove by offline id
+                    const index = remainingSales.findIndex(s => s.id === sale.id);
+                    if (index !== -1) remainingSales.splice(index, 1);
+                }
+            } catch (err) {
+                console.error(`[Offline Sync] Excepción al sincronizar venta:`, err);
+                break;
+            }
+        }
+
+        setOfflineSales(remainingSales);
+        setIsSyncingOffline(false);
+
+        if (successCount > 0) {
+            console.log(`[Offline Sync] Sincronización exitosa: ${successCount} ventas subidas.`);
+            alert(`Sincronización completada: Se han subido ${successCount} venta(s) pendiente(s) a la nube.`);
+        }
+    };
+
+    // Auto-sync effect loop
+    useEffect(() => {
+        const handleOnline = () => {
+            console.log("[Offline Sync] Red online detectada, iniciando sincronización...");
+            syncOfflineSales();
+        };
+        window.addEventListener('online', handleOnline);
+        
+        const interval = setInterval(() => {
+            if (navigator.onLine && offlineSales.length > 0 && !isSyncingOffline) {
+                syncOfflineSales();
+            }
+        }, 45000);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            clearInterval(interval);
+        };
+    }, [offlineSales, isSyncingOffline]);
 
     const syncWithCloud = async () => {
         if (syncStatus.isSyncing) return;
@@ -752,9 +856,80 @@ export const OrderProvider = ({ children }) => {
                         return newSale;
                     }
                 } catch (err) {
-                    console.error("DEBUG - closeTable Failure:", err);
-                    alert(`⚠️ Error al cerrar la mesa:\n${err.message}`);
-                    return null;
+                    console.error("DEBUG - closeTable Failure. Falling back to OFFLINE mode:", err);
+                    
+                    const billTotal = calculateOrderTotal(finalBill);
+                    const discountAmount = (billTotal * discountPercent) / 100;
+                    const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+                    const tableObj = tables.find(t => t.id === tableId);
+                    const diners = tableObj ? (tableObj.diners || 1) : 1;
+                    
+                    // Assign sequential ticket number
+                    const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                    
+                    const offlineSale = {
+                        id: `offline-${Date.now()}`,
+                        total,
+                        payment_method: paymentMethod,
+                        items: JSON.stringify(finalBill),
+                        table_id: tableId,
+                        ticket_number: nextLocalTicketNumber,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips,
+                        diners: diners,
+                        created_at: new Date().toISOString(),
+                        isOffline: true
+                    };
+
+                    // Append to offline sales queue
+                    setOfflineSales(prev => [...prev, offlineSale]);
+
+                    // Append to local sales history so it's visible in list
+                    const localSaleForHistory = {
+                        ...offlineSale,
+                        date: new Date(offlineSale.created_at),
+                        total: parseFloat(offlineSale.total),
+                        items: finalBill,
+                        paymentMethod: offlineSale.payment_method,
+                        tableId: offlineSale.table_id,
+                        ticket_number: offlineSale.ticket_number,
+                        card_tips: offlineSale.card_tips,
+                        diners: offlineSale.diners
+                    };
+                    
+                    setSalesHistory(prev => {
+                        const updated = [localSaleForHistory, ...prev].slice(0, 500);
+                        safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
+                        return updated;
+                    });
+
+                    // Update last ticket number locally
+                    updateLocalTicketNumber(nextLocalTicketNumber);
+
+                    // Clear table / Destroy Ticket locally
+                    setTableOrders(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
+                    setTableBills(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
+                    setTables(prev => prev.filter(t => t.id !== tableId));
+                    if (currentTable && currentTable.id === tableId) {
+                        setCurrentTable(null);
+                    }
+
+                    // Clean up kitchen orders locally
+                    if (tableObj) {
+                        setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+                    }
+
+                    alert(`⚠️ MESA COBRADA EN MODO SIN CONEXIÓN (OFFLINE) ⚠️\n\nEl cobro se ha registrado localmente con el Ticket Nº ${nextLocalTicketNumber}.\n\nSe subirá automáticamente a la nube cuando vuelva la conexión.`);
+
+                    return localSaleForHistory;
                 }
             }
 
@@ -899,8 +1074,67 @@ export const OrderProvider = ({ children }) => {
                 return newSale;
             }
         } catch (err) {
-            console.error("DEBUG - payPartialTable Failure:", err);
-            alert(`⚠️ Error al cobrar:\n${err.message}`);
+            console.error("DEBUG - payPartialTable Failure. Falling back to OFFLINE mode:", err);
+            
+            if (partialItems && partialItems.length > 0) {
+                const total = calculateOrderTotal(partialItems);
+                const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                
+                const offlineSale = {
+                    id: `offline-${Date.now()}`,
+                    total,
+                    payment_method: paymentMethod,
+                    items: JSON.stringify(partialItems),
+                    table_id: tableId,
+                    ticket_number: nextLocalTicketNumber,
+                    card_tips: cardTips,
+                    created_at: new Date().toISOString(),
+                    isOffline: true
+                };
+
+                // Append to offline sales queue
+                setOfflineSales(prev => [...prev, offlineSale]);
+
+                // Append to local sales history
+                const localSaleForHistory = {
+                    ...offlineSale,
+                    date: new Date(offlineSale.created_at),
+                    total: parseFloat(offlineSale.total),
+                    items: partialItems,
+                    paymentMethod: offlineSale.payment_method,
+                    tableId: offlineSale.table_id,
+                    ticket_number: offlineSale.ticket_number,
+                    card_tips: offlineSale.card_tips
+                };
+
+                setSalesHistory(prev => [localSaleForHistory, ...prev]);
+                updateLocalTicketNumber(nextLocalTicketNumber);
+
+                // Update bill: deduct paid quantities
+                setTableBills(prev => {
+                    const currentBill = prev[tableId] || [];
+                    const nextBill = currentBill.map(item => {
+                        const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
+                        if (paidItem) {
+                            return { ...item, quantity: item.quantity - paidItem.quantity };
+                        }
+                        return item;
+                    }).filter(item => item.quantity > 0);
+
+                    if (nextBill.length === 0) {
+                        updateTableStatus(tableId, 'free');
+                        if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    }
+                    return { ...prev, [tableId]: nextBill };
+                });
+
+                alert(`⚠️ PAGO PARCIAL REGISTRADO SIN CONEXIÓN (OFFLINE) ⚠️\n\nEl cobro se ha guardado localmente con el Ticket Nº ${nextLocalTicketNumber}.\n\nSe subirá automáticamente cuando vuelva la conexión.`);
+
+                return localSaleForHistory;
+            }
             return null;
         }
         return null;
@@ -1011,9 +1245,76 @@ export const OrderProvider = ({ children }) => {
                 return newSale;
             }
         } catch (err) {
-            console.error("DEBUG - payValuePartialTable Failure:", err);
-            alert(`⚠️ Error al cobrar pago parcial:\n${err.message}`);
-            return null;
+            console.error("DEBUG - payValuePartialTable Failure. Falling back to OFFLINE mode:", err);
+            
+            const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+            const itemsToPay = [{
+                id: 'partial-payment',
+                uniqueId: `partial-${Date.now()}`,
+                name: 'PAGO PARCIAL (A CUENTA)',
+                price: amount,
+                quantity: 1
+            }];
+            const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
+            const finalToPay = Math.max(0, amount - discountAmount);
+
+            const offlineSale = {
+                id: `offline-${Date.now()}`,
+                total: finalToPay,
+                payment_method: paymentMethod,
+                items: JSON.stringify(itemsToPay),
+                table_id: tableId,
+                ticket_number: nextLocalTicketNumber,
+                customer_info: customerData ? JSON.stringify(customerData) : null,
+                created_at: new Date().toISOString(),
+                isOffline: true
+            };
+
+            // Append to offline sales queue
+            setOfflineSales(prev => [...prev, offlineSale]);
+
+            const localSaleForHistory = {
+                ...offlineSale,
+                date: new Date(offlineSale.created_at),
+                total: parseFloat(offlineSale.total),
+                items: itemsToPay,
+                paymentMethod: offlineSale.payment_method,
+                tableId: offlineSale.table_id,
+                ticket_number: offlineSale.ticket_number
+            };
+
+            setSalesHistory(prev => [localSaleForHistory, ...prev]);
+            updateLocalTicketNumber(nextLocalTicketNumber);
+
+            // Update bill: represent this as a negative item to reduce the total
+            setTableBills(prev => {
+                const currentBill = prev[tableId] || [];
+                const creditItem = {
+                    id: 'payment-credit',
+                    uniqueId: `credit-${Date.now()}`,
+                    name: `ABONO PAGO ${paymentMethod}`,
+                    price: -amount,
+                    quantity: 1,
+                    category: 'Pagos'
+                };
+
+                const nextBill = [...currentBill, creditItem];
+
+                // If total reaches 0 or less, close the table
+                const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+                if (totalRemaining <= 0.01) {
+                    updateTableStatus(tableId, 'free');
+                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                    const next = { ...prev };
+                    delete next[tableId];
+                    return next;
+                }
+                return { ...prev, [tableId]: nextBill };
+            });
+
+            alert(`⚠️ PAGO PARCIAL REGISTRADO SIN CONEXIÓN (OFFLINE) ⚠️\n\nEl cobro se ha guardado localmente con el Ticket Nº ${nextLocalTicketNumber}.\n\nSe subirá automáticamente cuando vuelva la conexión.`);
+
+            return localSaleForHistory;
         }
         return null;
     };
@@ -1681,6 +1982,8 @@ export const OrderProvider = ({ children }) => {
             performCashClose,
             syncWithCloud,
             updateDiners,
+            offlineSales,
+            syncOfflineSales,
             // --- BACKUP & RECOVERY ---
             saveEmergencyBackup: () => {
                 const snapshot = {

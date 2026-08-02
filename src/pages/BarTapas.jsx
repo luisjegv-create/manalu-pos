@@ -86,7 +86,9 @@ const BarTapas = () => {
         forceClearTable,
         updateBillQuantity,
         updateDiners,
-        renameTable
+        renameTable,
+        offlineSales,
+        syncOfflineSales
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
@@ -739,6 +741,33 @@ const BarTapas = () => {
                                         Fotos: {salesProducts.filter(p => p.image && p.image.startsWith('data:image')).length}
                                     </div>
                                 </div>
+                                {offlineSales && offlineSales.length > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm(`Tienes ${offlineSales.length} ventas guardadas localmente (sin conexión) pendientes de subir a la nube.\n\n¿Quieres intentar sincronizarlas ahora?`)) {
+                                                syncOfflineSales();
+                                            }
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.35rem',
+                                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                                            border: 'none',
+                                            color: 'white',
+                                            borderRadius: '8px',
+                                            padding: '0.4rem 0.8rem',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 10px rgba(245, 158, 11, 0.3)'
+                                        }}
+                                        title="Haz clic para sincronizar ventas pendientes"
+                                    >
+                                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'white' }}></span>
+                                        <span>{offlineSales.length} Offline</span>
+                                    </button>
+                                )}
                                 {/* Sync Button */}
                                 <button
                                     onClick={forceSync}

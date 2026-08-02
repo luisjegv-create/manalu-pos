@@ -917,6 +917,14 @@ export const InventoryProvider = ({ children }) => {
         if (!error) setRestaurantInfo(data);
     };
 
+    const updateLocalTicketNumber = (num) => {
+        setRestaurantInfo(prev => {
+            const next = { ...prev, last_ticket_number: num };
+            safeSetItem('manalu_backup_settings', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const checkProductAvailability = (productId) => {
         if (soldOutItems.includes(productId)) return false;
         return true;
@@ -1144,6 +1152,7 @@ export const InventoryProvider = ({ children }) => {
             physicalInventories,
             restaurantInfo,
             updateRestaurantInfo,
+            updateLocalTicketNumber,
             addIngredient,
             updateIngredient,
             deleteIngredient,
