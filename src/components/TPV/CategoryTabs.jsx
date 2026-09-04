@@ -2,12 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
     Utensils, Sandwich, Beer, Cake, Wine,
-    Coffee, Soup, Pizza, GlassWater, Beef, Baby
+    Coffee, Soup, Pizza, GlassWater, Beef, Baby, Fish
 } from 'lucide-react';
 
 const iconMap = {
     Utensils, Sandwich, Beer, Cake, Wine,
-    Coffee, Soup, Pizza, GlassWater, Beef, Baby
+    Coffee, Soup, Pizza, GlassWater, Beef, Baby, Fish
 };
 
 const CategoryTabs = ({ categories, activeCategory, setActiveCategory, isMobile }) => {

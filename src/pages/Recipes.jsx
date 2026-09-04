@@ -20,8 +20,15 @@ import {
     Camera,
     Coffee,
     Beef,
-    Baby
+    Baby,
+    Wine,
+    Fish
 } from 'lucide-react';
+
+const categoryIcons = {
+    Utensils, Sandwich, Beer, Cake, Wine,
+    Coffee, Beef, Baby, Fish
+};
 import { motion, AnimatePresence } from 'framer-motion';
 import { compressImage } from '../utils/imageHelpers';
 import { categories as categoriesData } from '../data/products';
@@ -212,36 +219,32 @@ const Recipes = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Categorías</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-                            {categoriesData.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => { setActiveCategory(cat.id); setActiveSubcategory(null); }}
-                                    style={{
-                                        padding: '0.5rem',
-                                        background: activeCategory === cat.id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
-                                        border: 'none',
-                                        borderRadius: '8px',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        fontSize: '0.7rem',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        gap: '0.25rem',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {cat.id === 'raciones' && <Utensils size={14} />}
-                                    {cat.id === 'bocatas' && <Sandwich size={14} />}
-                                    {cat.id === 'hamburguesas' && <Beef size={14} />}
-                                    {cat.id === 'platos_infantiles' && <Baby size={14} />}
-                                    {cat.id === 'bebidas' && <Beer size={14} />}
-                                    {cat.id === 'vinos' && <Beer size={14} />} {/* Using Beer for lack of Wine icon in current view but verified Wine is imported */}
-                                    {cat.id === 'postres' && <Cake size={14} />}
-                                    {cat.id === 'cafes' && <Coffee size={14} />}
-                                    {cat.name}
-                                </button>
-                            ))}
+                            {categoriesData.map(cat => {
+                                const IconComp = categoryIcons[cat.icon] || Utensils;
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => { setActiveCategory(cat.id); setActiveSubcategory(null); }}
+                                        style={{
+                                            padding: '0.5rem',
+                                            background: activeCategory === cat.id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '0.7rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            gap: '0.25rem',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <IconComp size={14} />
+                                        {cat.name}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -403,14 +406,9 @@ const Recipes = () => {
                                             value={productForm.category}
                                             onChange={(e) => setProductForm({ ...productForm, category: e.target.value, subcategory: null })}
                                         >
-                                            <option value="raciones">Raciones</option>
-                                            <option value="bocatas">Bocatas</option>
-                                            <option value="hamburguesas">Hamburguesas</option>
-                                            <option value="platos_infantiles">Platos Infantiles</option>
-                                            <option value="bebidas">Bebidas</option>
-                                            <option value="vinos">Vinos</option>
-                                            <option value="cafes">Cafés</option>
-                                            <option value="postres">Postres</option>
+                                            {categoriesData.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            ))}
                                             <option value="otros">Otros</option>
                                         </select>
                                     </div>

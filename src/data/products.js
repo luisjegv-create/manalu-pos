@@ -5,6 +5,9 @@ export const categories = [
         icon: 'Utensils',
         subcategories: ['embutidos', 'quesos', 'raciones frias', 'raciones calientes']
     },
+    { id: 'carnes', name: 'Carnes', icon: 'Beef' },
+    { id: 'pescados', name: 'Pescados', icon: 'Fish' },
+    { id: 'mariscos', name: 'Mariscos', icon: 'Fish' },
     { id: 'bocatas', name: 'Bocatas', icon: 'Sandwich' },
     { id: 'hamburguesas', name: 'Hamburguesas', icon: 'Beef' },
     { id: 'platos_infantiles', name: 'Infantiles', icon: 'Baby' },

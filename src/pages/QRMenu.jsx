@@ -133,6 +133,9 @@ const QRMenu = () => {
 
     const categories = [
         { id: 'raciones', name: 'Raciones', icon: '🥘' },
+        { id: 'carnes', name: 'Carnes', icon: '🥩' },
+        { id: 'pescados', name: 'Pescados', icon: '🐟' },
+        { id: 'mariscos', name: 'Mariscos', icon: '🦐' },
         { id: 'bocatas', name: 'Bocatas', icon: '🥪' },
         { id: 'hamburguesas', name: 'Hamburguesas', icon: '🍔' },
         { id: 'platos_infantiles', name: 'Infantiles', icon: '👶' },
