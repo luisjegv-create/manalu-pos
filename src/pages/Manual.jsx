@@ -106,7 +106,7 @@ const Manual = () => {
             </div>
 
             <div style={{ marginTop: '3rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                <p>Aplicación desarrollada para Sonia - Tapas y Bocatas & Manalu Eventos</p>
+                <p>Aplicación desarrollada para Sonia - Manalú "La Taberna" & Manalu Eventos</p>
             </div>
         </div>
     );

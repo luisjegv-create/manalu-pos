@@ -726,7 +726,7 @@ const QRMenu = () => {
                                 fontWeight: '500',
                                 lineHeight: '1.4'
                             }}>
-                                Bienvenido a <span style={{ color: '#fbbf24', fontSize: '1.15rem', fontWeight: 'bold' }}>Tapas y Bocatas</span>, donde cada bocado es una experiencia
+                                Bienvenido a <span style={{ color: '#fbbf24', fontSize: '1.15rem', fontWeight: 'bold' }}>Manalú "La Taberna"</span>, donde cada bocado es una experiencia
                             </p>
                         </div>
 

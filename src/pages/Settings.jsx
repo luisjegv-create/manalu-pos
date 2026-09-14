@@ -398,12 +398,20 @@ const Settings = () => {
 
                         <div style={{ display: 'grid', gap: '1rem' }}>
                             <div className="form-group">
-                                <label>Nombre Comercial</label>
-                                <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                <label>Nombre de la Taberna (Encabezado Tiquets)</label>
+                                <input 
+                                    value={formData.businessName || 'Manalú "La Taberna"'} 
+                                    onChange={e => setFormData({ ...formData, businessName: e.target.value })} 
+                                    placeholder='Manalú "La Taberna"'
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Razón Social / Propietario</label>
+                                <input value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                             </div>
                             <div className="form-group">
                                 <label>Dirección</label>
-                                <input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                                <input value={formData.address || ''} onChange={e => setFormData({ ...formData, address: e.target.value })} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                                 <div className="form-group">

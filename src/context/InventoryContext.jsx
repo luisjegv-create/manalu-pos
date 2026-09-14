@@ -86,11 +86,12 @@ export const InventoryProvider = ({ children }) => {
 
     const [restaurantInfo, setRestaurantInfo] = useState({
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
+        businessName: 'Manalú "La Taberna"',
         address: 'Calle Principal, 123',
         phone: '600 000 000',
         nif: 'B12345678',
         email: 'info@manalu.com',
-        website: 'www.tapasybocatas.es',
+        website: 'www.manalulataberna.es',
         website2: 'www.manalueventos.com',
         logo: '/logo-principal.png',
         last_ticket_number: 0,
@@ -250,7 +251,8 @@ export const InventoryProvider = ({ children }) => {
                 if (finalGemUrl && !finalGemUrl.startsWith('http')) finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
                 setRestaurantInfo({
                     ...settingsData,
-                    logo: settingsData.logo_url || settingsData.logo,
+                    businessName: settingsData.business_name || settingsData.businessName || 'Manalú "La Taberna"',
+                    logo: settingsData.logo_url || settingsData.logo || '/logo-principal.png',
                     last_ticket_number: settingsData.last_ticket_number || 0,
                     gemUrl: finalGemUrl
                 });
@@ -903,18 +905,24 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const updateRestaurantInfo = async (data) => {
-        const { error } = await supabase.from('restaurant_settings').upsert({
-            id: 1,
-            name: data.name,
-            address: data.address,
-            phone: data.phone,
-            nif: data.nif,
-            email: data.email,
-            logo_url: data.logo,
-            last_ticket_number: data.last_ticket_number,
-            gem_url: data.gemUrl
-        });
-        if (!error) setRestaurantInfo(data);
+        try {
+            await supabase.from('restaurant_settings').upsert({
+                id: 1,
+                name: data.name,
+                business_name: data.businessName,
+                address: data.address,
+                phone: data.phone,
+                nif: data.nif,
+                email: data.email,
+                logo_url: data.logo,
+                last_ticket_number: data.last_ticket_number,
+                gem_url: data.gemUrl
+            });
+        } catch (err) {
+            console.warn("Supabase upsert error in restaurant_settings:", err);
+        }
+        setRestaurantInfo(data);
+        safeSetItem('manalu_backup_settings', JSON.stringify(data));
     };
 
     const updateLocalTicketNumber = (num) => {

@@ -48,7 +48,7 @@ const BarTapas = () => {
     // Safety fallback for restaurant info
     const restaurantInfo = contextRestaurantInfo || {
         name: 'Luis Jesus García-Valcárcel López-Tofiño',
-        businessName: 'TAPAS Y BOCATAS / MANALU EVENTOS',
+        businessName: 'Manalú "La Taberna"',
         address: 'Calle Principal, 123',
         nif: 'B12345678',
         logo: '/logo-principal.png'
