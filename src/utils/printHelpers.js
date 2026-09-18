@@ -890,8 +890,8 @@ export const printRestockList = (items) => {
     printWindow.document.write(htmlContent);
     printWindow.document.close();
 };
-
 export const printCashCloseTicket = (closeData, companyInfo = {}) => {
+    const company = getCleanCompanyInfo(companyInfo);
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -902,11 +902,22 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
     const date = new Date(closeData.date || new Date()).toLocaleDateString();
     const time = new Date(closeData.date || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    const grossRevenue = parseFloat(closeData.total || 0);
+    const cashSales = parseFloat(closeData.efectivo || 0);
+    const cardSales = parseFloat(closeData.tarjeta || 0);
+    const startingCash = parseFloat(closeData.fondo_caja || 0);
+    const staffExp = parseFloat(closeData.staffExp || 0);
+    const otherExp = parseFloat(closeData.otherExp || 0);
+    const totalExp = parseFloat(closeData.totalExp || (staffExp + otherExp));
+    const cashExpenses = parseFloat(closeData.cashExpenses || 0);
+    const expectedCashInDrawer = closeData.efectivo_esperado !== undefined ? parseFloat(closeData.efectivo_esperado) : (startingCash + cashSales - cashExpenses);
+    const netProfit = closeData.netProfit !== undefined ? parseFloat(closeData.netProfit) : (grossRevenue - totalExp);
+
     const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>CIERRE Z - ${date}</title>
+            <title>CIERRE Z Y BALANCE - ${date}</title>
             <style>
                 body {
                     font-family: 'Courier New', Courier, monospace;
@@ -922,24 +933,23 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
                     margin-bottom: 15px;
                 }
                 .title {
-                    font-size: 1.4rem;
+                    font-size: 1.3rem;
                     font-weight: bold;
-                    margin: 0;
+                    margin: 5px 0 0 0;
                 }
                 .meta {
-                    font-size: 0.9rem;
-                    margin-top: 5px;
+                    font-size: 0.85rem;
                 }
                 .section {
-                    margin-bottom: 15px;
+                    margin-bottom: 12px;
                     border-bottom: 1px dashed #666;
-                    padding-bottom: 10px;
+                    padding-bottom: 8px;
                 }
                 .row {
                     display: flex;
                     justify-content: space-between;
-                    margin-bottom: 5px;
-                    font-size: 1rem;
+                    margin-bottom: 4px;
+                    font-size: 0.95rem;
                 }
                 .label { font-weight: normal; }
                 .value { font-weight: bold; }
@@ -947,11 +957,19 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
                     border-top: 2px solid black;
                     margin-top: 5px;
                     padding-top: 5px;
+                    font-size: 1.1rem;
+                }
+                .net-row {
+                    border-top: 2px double black;
+                    border-bottom: 2px double black;
+                    margin-top: 6px;
+                    padding: 6px 0;
                     font-size: 1.2rem;
+                    background: #f8fafc;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 20px;
+                    margin-top: 15px;
                     font-size: 0.8rem;
                     font-style: italic;
                 }
@@ -963,12 +981,12 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
         </head>
         <body>
             <div class="header">
-                <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px;">
-                    ${companyInfo.businessName || companyInfo.name || 'Manalú "La Taberna"'}
+                ${company.logo ? `<div style="text-align: center; margin-bottom: 6px;"><img src="${company.logo}" style="max-width: 140px; max-height: 70px; object-fit: contain;" /></div>` : ''}
+                <div style="font-weight: bold; font-size: 1.1rem;">
+                    ${company.businessName}
                 </div>
                 <h1 class="title">CIERRE DE CAJA (Z)</h1>
-                <div class="meta">FECHA: ${date}</div>
-                <div class="meta">HORA: ${time}</div>
+                <div class="meta">FECHA: ${date} - HORA: ${time}</div>
             </div>
 
             <div class="section">
@@ -980,44 +998,72 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
 
             <div class="section">
                 <div class="row">
-                    <span class="label">Ventas Tarjeta:</span>
-                    <span class="value">${(closeData.tarjeta || 0).toFixed(2)}€</span>
+                    <span class="label">Cobros Efectivo:</span>
+                    <span class="value">${cashSales.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span class="label">Cobros Tarjeta:</span>
+                    <span class="value">${cardSales.toFixed(2)}€</span>
                 </div>
                 ${closeData.cardTips > 0 ? `
-                    <div class="row" style="padding-left: 10px; font-style: italic;">
-                        <span class="label"> (de las cuales Propina):</span>
+                    <div class="row" style="padding-left: 10px; font-style: italic; font-size: 0.85rem;">
+                        <span class="label">(Propina Tarjeta):</span>
                         <span class="value">${(closeData.cardTips || 0).toFixed(2)}€</span>
                     </div>
                 ` : ''}
-                <div class="row">
-                    <span class="label">Fondo Inic. (Cambio):</span>
-                    <span class="value">${(closeData.fondo_caja || 0).toFixed(2)}€</span>
-                </div>
-                <div class="row">
-                    <span class="label">Efectivo en Caja:</span>
-                    <span class="value">${(closeData.efectivo || 0).toFixed(2)}€</span>
-                </div>
-                ${closeData.efectivo_esperado ? `
-                <div class="row" style="font-size: 0.85rem; font-style: italic; color: #333;">
-                    <span class="label">- Efectivo esperado:</span>
-                    <span class="value">${(closeData.efectivo_esperado || 0).toFixed(2)}€</span>
-                </div>` : ''}
                 <div class="row total-row">
-                    <span class="label">TOTAL VENTAS (Facturado):</span>
-                    <span class="value">${(closeData.total || 0).toFixed(2)}€</span>
+                    <span class="label">FACTURACIÓN BRUTA:</span>
+                    <span class="value">${grossRevenue.toFixed(2)}€</span>
                 </div>
             </div>
 
+            <div class="section">
+                <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">DESGLOSE DE GASTOS:</div>
+                <div class="row">
+                    <span class="label">Gastos Personal:</span>
+                    <span class="value">-${staffExp.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span class="label">Gastos Varios:</span>
+                    <span class="value">-${otherExp.toFixed(2)}€</span>
+                </div>
+                <div class="row" style="font-weight: bold; border-top: 1px dashed #aaa; padding-top: 3px; margin-top: 3px;">
+                    <span class="label">TOTAL GASTOS:</span>
+                    <span class="value">-${totalExp.toFixed(2)}€</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 4px;">CONTROL DE CAJA Y CAMBIO:</div>
+                <div class="row">
+                    <span class="label">Cambio Inic. (Fondo):</span>
+                    <span class="value">+${startingCash.toFixed(2)}€</span>
+                </div>
+                <div class="row">
+                    <span class="label">Gastos en Efectivo:</span>
+                    <span class="value">-${cashExpenses.toFixed(2)}€</span>
+                </div>
+                <div class="row total-row">
+                    <span class="label">EFECTIVO EN CAJA:</span>
+                    <span class="value">${expectedCashInDrawer.toFixed(2)}€</span>
+                </div>
+            </div>
+
+            <div class="net-row row">
+                <span class="label" style="font-weight: 900;">INGRESO NETO REAL:</span>
+                <span class="value" style="font-weight: 900;">${netProfit.toFixed(2)}€</span>
+            </div>
+
             ${closeData.notes ? `
-                <div class="section">
-                    <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 5px;">OBSERVACIONES:</div>
+                <div class="section" style="margin-top: 10px;">
+                    <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 3px;">OBSERVACIONES:</div>
                     <div style="font-size: 0.8rem;">${closeData.notes}</div>
                 </div>
             ` : ''}
 
             <div class="footer">
-                Reporte generado por Manalu TPV<br>
-                ${new Date().toLocaleString()}
+                Sistema Manalú POS/Gestión<br>
+                www.manalulataberna.es
             </div>
 
             <script>

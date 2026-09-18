@@ -23,7 +23,8 @@ import {
     Calendar,
     X as CloseIcon,
     Calculator,
-    Coins
+    Coins,
+    Plus
 } from 'lucide-react';
 import CashCalculator from '../components/CashCalculator';
 import { useOrder } from '../context/OrderContext';
@@ -55,7 +56,7 @@ const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection, c
 const Analytics = () => {
     const navigate = useNavigate();
     const { salesHistory, cashCloses, performCashClose, deleteSale, deleteCashClose, syncWithCloud, syncStatus } = useOrder();
-    const { salesProducts, getProductCost, expenses, restaurantInfo } = useInventory(); // Added restaurantInfo
+    const { salesProducts, getProductCost, expenses, addExpense, deleteExpense, restaurantInfo } = useInventory();
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
     const [dateRange, setDateRange] = useState('today');
@@ -610,10 +611,77 @@ const Analytics = () => {
     const [showCalculator, setShowCalculator] = useState(false);
     const [countedCash, setCountedCash] = useState('');
     const [closeNotes, setCloseNotes] = useState('');
-    const [startingCash, setStartingCash] = useState(''); // Fondo de caja (cambio)
+    const [startingCash, setStartingCash] = useState(() => localStorage.getItem('manalu_starting_cash') || '150');
 
-    const expectedCash = dashboardStats.cashRaw + parseFloat(startingCash || 0);
+    useEffect(() => {
+        if (startingCash !== undefined && startingCash !== null) {
+            localStorage.setItem('manalu_starting_cash', startingCash);
+        }
+    }, [startingCash]);
+
+    // Quick Expense Modal State
+    const [quickExpenseModal, setQuickExpenseModal] = useState({ isOpen: false, type: 'staff' });
+    const [quickExpForm, setQuickExpForm] = useState({ concept: '', amount: '', paymentMethod: 'Efectivo', category: 'Sueldos', notes: '' });
+
+    const handleSaveQuickExpense = async (e) => {
+        e.preventDefault();
+        if (!quickExpForm.concept || !quickExpForm.amount) {
+            alert('Por favor, indica el concepto y el importe del gasto.');
+            return;
+        }
+        const amountNum = parseFloat(quickExpForm.amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            alert('El importe debe ser un valor numérico mayor a 0.');
+            return;
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        await addExpense({
+            concept: quickExpForm.concept,
+            amount: amountNum,
+            category: quickExpenseModal.type === 'staff' ? 'Sueldos' : (quickExpForm.category || 'Varios'),
+            date: todayStr,
+            paymentMethod: quickExpForm.paymentMethod || 'Efectivo',
+            status: 'Pagado',
+            notes: quickExpForm.notes || ''
+        });
+
+        setQuickExpForm({ concept: '', amount: '', paymentMethod: 'Efectivo', category: 'Sueldos', notes: '' });
+        setQuickExpenseModal({ isOpen: false, type: 'staff' });
+    };
+
+    // Calculate Today's Expenses Breakdown
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    const todayExpenses = useMemo(() => {
+        return (expenses || []).filter(e => {
+            if (!e.date) return false;
+            const eDate = new Date(e.date).toISOString().split('T')[0];
+            return eDate === todayStr;
+        });
+    }, [expenses, todayStr]);
+
+    const todayStaffExp = useMemo(() => {
+        return todayExpenses
+            .filter(e => e.category === 'Sueldos')
+            .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    }, [todayExpenses]);
+
+    const todayOtherExp = useMemo(() => {
+        return todayExpenses
+            .filter(e => e.category !== 'Sueldos')
+            .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    }, [todayExpenses]);
+
+    const todayTotalExp = todayStaffExp + todayOtherExp;
+
+    const todayCashExpenses = useMemo(() => {
+        return todayExpenses
+            .filter(e => String(e.paymentMethod || e.payment_method || 'Efectivo').toLowerCase() === 'efectivo')
+            .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    }, [todayExpenses]);
+
+    const expectedCash = (dashboardStats.cashRaw || 0) + (parseFloat(startingCash) || 0) - todayCashExpenses;
     const discrepancy = parseFloat(countedCash || 0) - expectedCash;
+    const realNetProfit = (dashboardStats.totalRevenue || 0) - todayTotalExp;
 
     return (
         <div style={{ 
@@ -870,6 +938,7 @@ const Analytics = () => {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                     <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
+                    <SidebarItem id="daily_control" icon={Calculator} label="Control Diario & Balance" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="sales" icon={Receipt} label="Ventas" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="products" icon={UtensilsCrossed} label="Prod. Vendidos" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
                     <SidebarItem id="menu" icon={TrendingUp} label="Ingeniería Menú" activeSection={activeSection} setActiveSection={setActiveSection} colors={colors} />
@@ -916,6 +985,7 @@ const Analytics = () => {
                     <div>
                         <h1 style={{ margin: 0, fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: '800', color: colors.text, letterSpacing: '-0.02em' }}>
                             {activeSection === 'dashboard' && 'Panel Principal'}
+                            {activeSection === 'daily_control' && 'Control Diario & Balance'}
                             {activeSection === 'sales' && 'Reporte de Ventas'}
                             {activeSection === 'products' && 'Productos Vendidos'}
                             {activeSection === 'menu' && 'Ingeniería de Menú'}
@@ -1485,6 +1555,282 @@ const Analytics = () => {
                                 ))}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* --- DAILY CONTROL & BALANCE VIEW --- */}
+                {activeSection === 'daily_control' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+                        {/* TOP BANNER / CAMBIO INICIAL */}
+                        <div style={{
+                            background: colors.surface,
+                            borderRadius: '24px',
+                            padding: isMobile ? '1.5rem' : '2rem',
+                            border: `1px solid ${colors.border}`,
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+                            display: 'grid',
+                            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+                            gap: '1.5rem',
+                            alignItems: 'center'
+                        }}>
+                            {/* Cambio Inicial Card */}
+                            <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
+                                <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Coins size={18} color={colors.warning} /> Cambio Inicial (Fondo de Caja)
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input
+                                        type="number"
+                                        value={startingCash}
+                                        onChange={(e) => setStartingCash(e.target.value)}
+                                        placeholder="150.00"
+                                        style={{
+                                            fontSize: '1.75rem', fontWeight: '900', color: colors.warning,
+                                            background: 'transparent', border: 'none', borderBottom: `2px solid ${colors.warning}`,
+                                            width: '130px', outline: 'none'
+                                        }}
+                                    />
+                                    <span style={{ fontSize: '1.5rem', fontWeight: '900', color: colors.warning }}>€</span>
+                                </div>
+                                <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: colors.textMuted }}>Fondo en metálico al abrir el servicio.</p>
+                            </div>
+
+                            {/* Service Status & Actions */}
+                            <div style={{ padding: '1.25rem', background: serviceStatus.isActive ? `${colors.success}10` : '#f8fafc', borderRadius: '16px', border: `1px solid ${serviceStatus.isActive ? colors.success + '40' : colors.border}` }}>
+                                <div style={{ fontSize: '0.85rem', color: serviceStatus.isActive ? colors.success : colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Calendar size={18} /> Estado del Servicio
+                                </div>
+                                <div style={{ fontWeight: '800', fontSize: '1.1rem', color: colors.text, marginBottom: '0.5rem' }}>
+                                    {serviceStatus.isActive ? '🟢 Servicio Activo' : '🔴 Servicio Finalizado/Inactivo'}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {!serviceStatus.isActive ? (
+                                        <button onClick={handleStartService} style={{ padding: '0.5rem 0.85rem', background: colors.success, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                            ▶ Iniciar Servicio
+                                        </button>
+                                    ) : (
+                                        <button onClick={handleEndService} style={{ padding: '0.5rem 0.85rem', background: colors.danger, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                            ⏹ Finalizar Servicio
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Quick Add Expense Buttons */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <button
+                                    onClick={() => {
+                                        setQuickExpForm({ concept: '', amount: '', paymentMethod: 'Efectivo', category: 'Sueldos', notes: '' });
+                                        setQuickExpenseModal({ isOpen: true, type: 'staff' });
+                                    }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                        padding: '0.85rem', background: colors.primary, color: 'white',
+                                        border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)', fontSize: '0.9rem'
+                                    }}
+                                >
+                                    <Plus size={18} /> Gasto de Personal (Camarero/Limpieza)
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setQuickExpForm({ concept: '', amount: '', paymentMethod: 'Efectivo', category: 'Varios', notes: '' });
+                                        setQuickExpenseModal({ isOpen: true, type: 'general' });
+                                    }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                        padding: '0.85rem', background: '#0284c7', color: 'white',
+                                        border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)', fontSize: '0.9rem'
+                                    }}
+                                >
+                                    <Plus size={18} /> Gasto Vario (Hielo/Pan/Mercado)
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* LIVE FINANCIAL CARDS SUMMARY */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                            gap: '1.25rem'
+                        }}>
+                            {/* Facturación Bruta */}
+                            <div style={{ background: colors.surface, padding: '1.5rem', borderRadius: '20px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>Facturación Bruta (Hoy)</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: colors.text, margin: '0.4rem 0' }}>{(dashboardStats.totalRevenue || 0).toFixed(2)}€</div>
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>💵 Efectivo: {(dashboardStats.cashRaw || 0).toFixed(2)}€</span>
+                                    <span>💳 Tarjeta: {(dashboardStats.cardRaw || 0).toFixed(2)}€</span>
+                                </div>
+                            </div>
+
+                            {/* Gastos de Personal */}
+                            <div style={{ background: colors.surface, padding: '1.5rem', borderRadius: '20px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.8rem', color: colors.danger, fontWeight: '700', textTransform: 'uppercase' }}>Gastos Personal (Hoy)</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: colors.danger, margin: '0.4rem 0' }}>-{todayStaffExp.toFixed(2)}€</div>
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted }}>Sueldos y extras anotados hoy</div>
+                            </div>
+
+                            {/* Gastos Varios */}
+                            <div style={{ background: colors.surface, padding: '1.5rem', borderRadius: '20px', border: `1px solid ${colors.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.8rem', color: colors.warning, fontWeight: '700', textTransform: 'uppercase' }}>Gastos Varios (Hoy)</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: colors.warning, margin: '0.4rem 0' }}>-{todayOtherExp.toFixed(2)}€</div>
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted }}>Compras puntuales e imprevistos</div>
+                            </div>
+
+                            {/* Efectivo Esperado en Caja */}
+                            <div style={{ background: colors.surface, padding: '1.5rem', borderRadius: '20px', border: `2px dashed ${colors.success}`, boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                                <div style={{ fontSize: '0.8rem', color: colors.success, fontWeight: '800', textTransform: 'uppercase' }}>Efectivo Esperado en Caja</div>
+                                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: colors.success, margin: '0.4rem 0' }}>{expectedCash.toFixed(2)}€</div>
+                                <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>Fondo ({startingCash}€) + Efec. ({(dashboardStats.cashRaw || 0).toFixed(2)}€) - Gastos Efec. ({todayCashExpenses.toFixed(2)}€)</div>
+                            </div>
+                        </div>
+
+                        {/* NET PROFIT HIGHLIGHT CARD */}
+                        <div style={{
+                            background: realNetProfit >= 0 
+                                ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' 
+                                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                            padding: isMobile ? '1.5rem' : '2.25rem',
+                            borderRadius: '24px',
+                            color: 'white',
+                            display: 'flex',
+                            flexDirection: isMobile ? 'column' : 'row',
+                            justifyContent: 'space-between',
+                            alignItems: isMobile ? 'flex-start' : 'center',
+                            boxShadow: realNetProfit >= 0 ? '0 10px 25px rgba(5, 150, 105, 0.3)' : '0 10px 25px rgba(220, 38, 38, 0.3)',
+                            gap: '1.5rem'
+                        }}>
+                            <div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>
+                                    🚀 INGRESO NETO REAL DEL DÍA / SERVICIO (Facturación - Gastos Totales)
+                                </div>
+                                <div style={{ fontSize: isMobile ? '2.25rem' : '3.25rem', fontWeight: '900', marginTop: '0.25rem' }}>
+                                    {realNetProfit.toFixed(2)}€
+                                </div>
+                                <div style={{ fontSize: '0.9rem', opacity: 0.85, marginTop: '0.25rem' }}>
+                                    Facturación Bruta ({(dashboardStats.totalRevenue || 0).toFixed(2)}€) - Total Gastos ({todayTotalExp.toFixed(2)}€)
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '1rem', width: isMobile ? '100%' : 'auto' }}>
+                                <button
+                                    onClick={() => {
+                                        printCashCloseTicket({
+                                            salesCount: dashboardStats.ticketCount,
+                                            tarjeta: dashboardStats.cardRaw,
+                                            efectivo: dashboardStats.cashRaw,
+                                            cardTips: dashboardStats.cardTipsRaw,
+                                            fondo_caja: parseFloat(startingCash || 0),
+                                            total: dashboardStats.totalRevenue,
+                                            staffExp: todayStaffExp,
+                                            otherExp: todayOtherExp,
+                                            totalExp: todayTotalExp,
+                                            cashExpenses: todayCashExpenses,
+                                            efectivo_esperado: expectedCash,
+                                            netProfit: realNetProfit,
+                                            date: new Date()
+                                        }, restaurantInfo);
+                                    }}
+                                    style={{
+                                        flex: isMobile ? 1 : 'none',
+                                        padding: '1rem 1.5rem',
+                                        background: 'white',
+                                        color: realNetProfit >= 0 ? '#047857' : '#b91c1c',
+                                        border: 'none', borderRadius: '16px',
+                                        fontWeight: '900', fontSize: '1rem', cursor: 'pointer',
+                                        boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                                    }}
+                                >
+                                    <Printer size={20} /> Imprimir Balance Z
+                                </button>
+                                <button
+                                    onClick={() => setIsCloseModalOpen(true)}
+                                    style={{
+                                        flex: isMobile ? 1 : 'none',
+                                        padding: '1rem 1.5rem',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        color: 'white',
+                                        border: '1px solid rgba(255,255,255,0.4)', borderRadius: '16px',
+                                        fontWeight: '900', fontSize: '1rem', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
+                                    }}
+                                >
+                                    <Receipt size={20} /> Ejecutar Cierre Z
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* LIVE TABLE OF TODAY'S EXPENSES */}
+                        <div style={{ background: colors.surface, borderRadius: '24px', padding: isMobile ? '1.5rem' : '2rem', border: `1px solid ${colors.border}`, boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: colors.text }}>Gastos Anotados Hoy ({todayExpenses.length})</h3>
+                                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: colors.textMuted }}>Registro detallado de salidas de dinero registradas en la fecha actual.</p>
+                                </div>
+                            </div>
+
+                            {todayExpenses.length === 0 ? (
+                                <div style={{ padding: '3rem', textAlign: 'center', color: colors.textMuted, background: '#f8fafc', borderRadius: '16px', border: `1px dashed ${colors.border}` }}>
+                                    No se han registrado gastos de personal ni gastos varios para el día de hoy.
+                                </div>
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: `2px solid ${colors.border}`, textAlign: 'left', color: colors.textMuted }}>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Concepto</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Categoría</th>
+                                                <th style={{ padding: '0.75rem 1rem' }}>Forma de Pago</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Importe</th>
+                                                <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {todayExpenses.map(exp => (
+                                                <tr key={exp.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
+                                                    <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: colors.text }}>
+                                                        {exp.concept || exp.description}
+                                                        {exp.notes && <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: 'normal' }}>{exp.notes}</div>}
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem' }}>
+                                                        <span style={{
+                                                            padding: '0.25rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '800',
+                                                            background: exp.category === 'Sueldos' ? `${colors.primary}15` : `${colors.warning}15`,
+                                                            color: exp.category === 'Sueldos' ? colors.primary : colors.warning
+                                                        }}>
+                                                            {exp.category === 'Sueldos' ? 'Personal' : (exp.category || 'Varios')}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', fontWeight: '600', color: colors.textMuted }}>
+                                                        {exp.paymentMethod || exp.payment_method || 'Efectivo'}
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: '900', color: colors.danger }}>
+                                                        -{(parseFloat(exp.amount) || 0).toFixed(2)}€
+                                                    </td>
+                                                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                if (confirm(`¿Eliminar el gasto "${exp.concept || exp.description}"?`)) {
+                                                                    deleteExpense(exp.id);
+                                                                }
+                                                            }}
+                                                            style={{ background: 'none', border: 'none', color: colors.danger, cursor: 'pointer', padding: '0.4rem', borderRadius: '8px' }}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 )}
 
@@ -2134,6 +2480,132 @@ const Analytics = () => {
                                     IMPRIMIR FACTURA
                                 </button>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* --- QUICK EXPENSE MODAL --- */}
+            <AnimatePresence>
+                {quickExpenseModal.isOpen && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '1rem'
+                    }}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            style={{ 
+                                width: '100%', maxWidth: '450px', padding: '2rem', 
+                                background: colors.surface, borderRadius: '24px', 
+                                border: `1px solid ${colors.border}`, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                                position: 'relative' 
+                            }}
+                        >
+                            <button
+                                onClick={() => setQuickExpenseModal({ isOpen: false, type: 'staff' })}
+                                style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: '#f1f5f9', border: 'none', borderRadius: '12px', padding: '0.5rem', cursor: 'pointer', color: colors.textMuted }}
+                            >
+                                <CloseIcon size={20} />
+                            </button>
+
+                            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                                <div style={{ 
+                                    width: '56px', height: '56px', borderRadius: '16px', 
+                                    background: quickExpenseModal.type === 'staff' ? `${colors.primary}15` : `${colors.warning}15`, 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem auto' 
+                                }}>
+                                    {quickExpenseModal.type === 'staff' ? <Users color={colors.primary} size={28} /> : <DollarSign color={colors.warning} size={28} />}
+                                </div>
+                                <h3 style={{ margin: 0, color: colors.text, fontSize: '1.35rem', fontWeight: '800' }}>
+                                    {quickExpenseModal.type === 'staff' ? 'Añadir Gasto de Personal' : 'Añadir Gasto Vario'}
+                                </h3>
+                                <p style={{ color: colors.textMuted, fontSize: '0.85rem', marginTop: '0.35rem' }}>
+                                    {quickExpenseModal.type === 'staff' ? 'Sueldos, extras de camareros, servicio de limpieza...' : 'Compras rápidas, pan, hielo, suministros puntuales...'}
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSaveQuickExpense} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: colors.text, fontWeight: '700', marginBottom: '0.35rem' }}>Concepto *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={quickExpForm.concept}
+                                        onChange={(e) => setQuickExpForm({ ...quickExpForm, concept: e.target.value })}
+                                        style={{ width: '100%', padding: '0.85rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '600', outline: 'none' }}
+                                        placeholder={quickExpenseModal.type === 'staff' ? "Ej: Extra camarero Juan (Turno Noche)" : "Ej: Compras pan / hielo"}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', color: colors.text, fontWeight: '700', marginBottom: '0.35rem' }}>Importe (€) *</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={quickExpForm.amount}
+                                            onChange={(e) => setQuickExpForm({ ...quickExpForm, amount: e.target.value })}
+                                            style={{ width: '100%', padding: '0.85rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.danger, fontWeight: '800', outline: 'none' }}
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', color: colors.text, fontWeight: '700', marginBottom: '0.35rem' }}>Forma de Pago</label>
+                                        <select
+                                            value={quickExpForm.paymentMethod}
+                                            onChange={(e) => setQuickExpForm({ ...quickExpForm, paymentMethod: e.target.value })}
+                                            style={{ width: '100%', padding: '0.85rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '700', outline: 'none' }}
+                                        >
+                                            <option value="Efectivo">💵 Efectivo (Caja)</option>
+                                            <option value="Tarjeta">💳 Tarjeta / Banco</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {quickExpenseModal.type !== 'staff' && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.8rem', color: colors.text, fontWeight: '700', marginBottom: '0.35rem' }}>Categoría</label>
+                                        <select
+                                            value={quickExpForm.category}
+                                            onChange={(e) => setQuickExpForm({ ...quickExpForm, category: e.target.value })}
+                                            style={{ width: '100%', padding: '0.85rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, fontWeight: '700', outline: 'none' }}
+                                        >
+                                            <option value="Varios">Varios / Compras</option>
+                                            <option value="Alimentación">Alimentación / Género</option>
+                                            <option value="Bebidas">Bebidas / Cervezas</option>
+                                            <option value="Mantenimiento">Mantenimiento / Limpieza</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.8rem', color: colors.text, fontWeight: '700', marginBottom: '0.35rem' }}>Notas u Observaciones (Opcional)</label>
+                                    <textarea
+                                        value={quickExpForm.notes}
+                                        onChange={(e) => setQuickExpForm({ ...quickExpForm, notes: e.target.value })}
+                                        rows={2}
+                                        style={{ width: '100%', padding: '0.75rem', background: '#f8fafc', border: `1px solid ${colors.border}`, borderRadius: '12px', color: colors.text, outline: 'none', resize: 'none', fontSize: '0.85rem' }}
+                                        placeholder="Detalles adicionales..."
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    style={{
+                                        width: '100%', padding: '1rem', marginTop: '0.5rem',
+                                        background: quickExpenseModal.type === 'staff' ? colors.primary : '#0284c7',
+                                        border: 'none', borderRadius: '14px',
+                                        color: 'white', fontWeight: '900', cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontSize: '1rem'
+                                    }}
+                                >
+                                    GUARDAR GASTO
+                                </button>
+                            </form>
                         </motion.div>
                     </div>
                 )}
