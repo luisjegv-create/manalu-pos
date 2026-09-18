@@ -216,7 +216,30 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+const getCleanCompanyInfo = (info = {}) => {
+    let name = info.name || 'Luis Jesus García-Valcárcel López-Tofiño';
+    if (!name || name.toLowerCase().includes('tapas y bocatas') || name.toLowerCase().includes('tapas & bocatas') || name.toLowerCase().includes('manalu eventos')) {
+        name = 'Luis Jesus García-Valcárcel López-Tofiño';
+    }
+
+    let businessName = info.businessName || 'Manalú "La Taberna"';
+    if (!businessName || businessName.toLowerCase().includes('tapas y bocatas') || businessName.toLowerCase().includes('tapas & bocatas')) {
+        businessName = 'Manalú "La Taberna"';
+    }
+
+    return {
+        ...info,
+        name,
+        businessName,
+        address: info.address || 'C/ Principal 123',
+        nif: info.nif || info.cif || '12345678A',
+        phone: info.phone || '600 000 000',
+        logo: info.logo || '/logo-principal.png'
+    };
+};
+
 export const printDepositTicket = (depositData, companyInfo = {}) => {
+    const company = getCleanCompanyInfo(companyInfo);
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -294,11 +317,11 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
         </head>
         <body>
             <div class="header">
-                ${companyInfo.logo ? `<div style="text-align: center; margin-bottom: 8px;"><img src="${companyInfo.logo}" style="max-width: 140px; max-height: 70px; object-fit: contain;" /></div>` : '<div style="text-align: center; margin-bottom: 8px;"><img src="/logo-principal.png" style="max-width: 140px; max-height: 70px; object-fit: contain;" /></div>'}
-                <div class="company-name" style="font-size: 1.3rem; font-weight: 900;">${companyInfo.businessName || 'Manalú "La Taberna"'}</div>
-                <div class="meta" style="font-size: 0.85rem; font-weight: bold;">${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</div>
-                <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
-                <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
+                ${company.logo ? `<div style="text-align: center; margin-bottom: 8px;"><img src="${company.logo}" style="max-width: 140px; max-height: 70px; object-fit: contain;" /></div>` : ''}
+                <div class="company-name" style="font-size: 1.3rem; font-weight: 900;">${company.businessName}</div>
+                <div class="meta" style="font-size: 0.85rem; font-weight: bold;">${company.name}</div>
+                <div class="meta">${company.address}</div>
+                <div class="meta">NIF/CIF: ${company.nif}</div>
                 <div class="separator"></div>
                 <div class="title">${depositData.type === 'payment' ? 'RECIBO DE DEPÓSITO' : 'DEVOLUCIÓN DE DEPÓSITO'}</div>
                 <div class="meta">
@@ -320,7 +343,7 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
 
             <div class="footer">
                 ${depositData.type === 'payment' ? 'Gracias por su confianza.' : 'Devolución procesada correctamente.'}<br>
-                www.tapasybocatas.es<br>
+                www.manalulataberna.es<br>
                 www.manalueventos.com
             </div>
 
@@ -339,6 +362,7 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
 };
 
 export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null, amountReceived = 0, cardTips = 0) => {
+    const company = getCleanCompanyInfo(companyInfo);
     const printWindow = window.open('', '', 'width=400,height=600');
 
     if (!printWindow) {
@@ -440,12 +464,12 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
         </head>
         <body>
             <div class="header">
-                ${companyInfo.logo ? `<div style="text-align: center; margin-bottom: 8px;"><img src="${companyInfo.logo}" style="max-width: 160px; max-height: 80px; object-fit: contain;" /></div>` : '<div style="text-align: center; margin-bottom: 8px;"><img src="/logo-principal.png" style="max-width: 160px; max-height: 80px; object-fit: contain;" /></div>'}
-                <div class="company-name" style="font-size: 1.3rem; font-weight: 900; margin-bottom: 4px;">${companyInfo.businessName || 'Manalú "La Taberna"'}</div>
-                <div class="meta" style="font-size: 0.8rem; font-weight: bold; margin-bottom: 2px;">${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</div>
+                ${company.logo ? `<div style="text-align: center; margin-bottom: 8px;"><img src="${company.logo}" style="max-width: 160px; max-height: 80px; object-fit: contain;" /></div>` : ''}
+                <div class="company-name" style="font-size: 1.3rem; font-weight: 900; margin-bottom: 4px;">${company.businessName}</div>
+                <div class="meta" style="font-size: 0.8rem; font-weight: bold; margin-bottom: 2px;">${company.name}</div>
                 <div style="font-size: 0.7rem; color: #666; margin-bottom: 5px;">Razón Social</div>
-                <div class="meta">${companyInfo.address || 'C/ Principal 123'}</div>
-                <div class="meta">NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}</div>
+                <div class="meta">${company.address}</div>
+                <div class="meta">NIF/CIF: ${company.nif}</div>
                 <div class="separator"></div>
                 <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">
                     ${customerData ? 'FACTURA' : 'TICKET'} Nº: ${ticketNumber || 'BORRADOR'}
@@ -534,7 +558,7 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
 
             <div class="footer">
                 ¡Gracias por su visita!<br>
-                www.tapasybocatas.es<br>
+                www.manalulataberna.es<br>
                 www.manalueventos.com
             </div>
 
@@ -553,6 +577,7 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
 };
 
 export const printA4Invoice = (event, companyInfo = {}) => {
+    const company = getCleanCompanyInfo(companyInfo);
     const printWindow = window.open('', '', 'width=800,height=1000');
 
     if (!printWindow) {
@@ -681,12 +706,12 @@ export const printA4Invoice = (event, companyInfo = {}) => {
         <body>
             <div class="invoice-header">
                 <div class="company-info">
-                    <h1>${companyInfo.name || 'Luis Jesus García-Valcárcel López-Tofiño'}</h1>
+                    <h1>${company.name}</h1>
                     <p>
-                        ${companyInfo.businessName || 'Manalú "La Taberna"'}<br>
-                        ${companyInfo.address || 'C/ Principal 123'}<br>
-                        NIF/CIF: ${companyInfo.nif || companyInfo.cif || '12345678A'}<br>
-                        Tel: ${companyInfo.phone || '600 000 000'}
+                        ${company.businessName}<br>
+                        ${company.address}<br>
+                        NIF/CIF: ${company.nif}<br>
+                        Tel: ${company.phone}
                     </p>
                 </div>
                 <div class="invoice-title">
@@ -1455,7 +1480,7 @@ export const printDailyReport = (stats, categoryStats, periodInfo, companyInfo =
 
                 <div class="footer">
                     Reporte automático generado por Sistema Manalú POS/Gestión.<br>
-                    www.tapasybocatas.es | www.manalueventos.com
+                    www.manalulataberna.es | www.manalueventos.com
                 </div>
             </div>
 

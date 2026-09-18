@@ -249,9 +249,21 @@ export const InventoryProvider = ({ children }) => {
             if (settingsData) {
                 let finalGemUrl = settingsData.gem_url || settingsData.gemUrl || 'https://gemini.google.com/gem/a75e2ed2d82d';
                 if (finalGemUrl && !finalGemUrl.startsWith('http')) finalGemUrl = 'https://gemini.google.com/gem/a75e2ed2d82d';
+                
+                let cleanName = settingsData.name || 'Luis Jesus García-Valcárcel López-Tofiño';
+                if (cleanName.toLowerCase().includes('tapas y bocatas') || cleanName.toLowerCase().includes('tapas & bocatas') || cleanName.toLowerCase().includes('manalu eventos')) {
+                    cleanName = 'Luis Jesus García-Valcárcel López-Tofiño';
+                }
+
+                let cleanBusinessName = settingsData.business_name || settingsData.businessName || 'Manalú "La Taberna"';
+                if (cleanBusinessName.toLowerCase().includes('tapas y bocatas') || cleanBusinessName.toLowerCase().includes('tapas & bocatas')) {
+                    cleanBusinessName = 'Manalú "La Taberna"';
+                }
+
                 setRestaurantInfo({
                     ...settingsData,
-                    businessName: settingsData.business_name || settingsData.businessName || 'Manalú "La Taberna"',
+                    name: cleanName,
+                    businessName: cleanBusinessName,
                     logo: settingsData.logo_url || settingsData.logo || '/logo-principal.png',
                     last_ticket_number: settingsData.last_ticket_number || 0,
                     gemUrl: finalGemUrl
