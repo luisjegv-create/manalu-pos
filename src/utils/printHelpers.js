@@ -109,9 +109,18 @@ export const printKitchenTicket = (tableName, items, note = '', headerTitle = 'O
             ${note ? `<div class="note">NOTA: ${note}</div>` : ''}
 
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
-                    setTimeout(function() { window.close(); }, 500);
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
@@ -200,9 +209,18 @@ export const printServiceTickets = (tableName, foodItems, drinkItems) => {
         <body>
             ${bodyContent}
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
-                    setTimeout(function() { window.close(); }, 500);
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
@@ -348,9 +366,18 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
             </div>
 
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
-                    setTimeout(function() { window.close(); }, 500);
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
@@ -563,9 +590,18 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
             </div>
 
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
-                    setTimeout(function() { window.close(); }, 500);
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
@@ -1067,9 +1103,18 @@ export const printCashCloseTicket = (closeData, companyInfo = {}) => {
             </div>
 
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
-                    setTimeout(function() { window.close(); }, 500);
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
@@ -1718,8 +1763,18 @@ export const printDailyTicketReport = (stats, categoryStats, periodProducts, per
             </div>
 
             <script>
-                window.onload = function() {
+                function doPrint() {
+                    if (window._printed) return;
+                    window._printed = true;
                     window.print();
+                    setTimeout(function() { window.close(); }, 300);
+                }
+                if (document.readyState === 'complete') {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', doPrint);
+                    document.addEventListener('DOMContentLoaded', doPrint);
+                    setTimeout(doPrint, 100);
                 }
             </script>
         </body>
