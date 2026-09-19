@@ -609,7 +609,7 @@ const Analytics = () => {
 
     const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
     const [showCalculator, setShowCalculator] = useState(false);
-    const [countedCash, setCountedCash] = useState('');
+    const [countedCash, setCountedCash] = useState(() => localStorage.getItem('manalu_counted_cash') || '');
     const [closeNotes, setCloseNotes] = useState('');
     const [startingCash, setStartingCash] = useState(() => localStorage.getItem('manalu_starting_cash') || '150');
 
@@ -618,6 +618,12 @@ const Analytics = () => {
             localStorage.setItem('manalu_starting_cash', startingCash);
         }
     }, [startingCash]);
+
+    useEffect(() => {
+        if (countedCash !== undefined && countedCash !== null) {
+            localStorage.setItem('manalu_counted_cash', countedCash);
+        }
+    }, [countedCash]);
 
     // Quick Expense Modal State
     const [quickExpenseModal, setQuickExpenseModal] = useState({ isOpen: false, type: 'staff' });
@@ -779,18 +785,31 @@ const Analytics = () => {
                                                 onChange={(e) => setCountedCash(e.target.value)}
                                             />
                                         </div>
-                                    </div>
+                                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                                            borderRadius: '16px',
+                                            textAlign: 'center',
+                                            border: `1px dashed ${Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger}`
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '700' }}>DESCUADRE DE CAJA</div>
+                                            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
+                                                {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(2)}€
+                                            </div>
+                                        </div>
 
-                                    <div style={{
-                                        padding: '1rem',
-                                        background: Math.abs(discrepancy) < 0.05 ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                                        borderRadius: '16px',
-                                        textAlign: 'center',
-                                        border: `1px dashed ${Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger}`
-                                    }}>
-                                        <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '700' }}>DESCUADRE DE CAJA</div>
-                                        <div style={{ fontSize: '1.75rem', fontWeight: '900', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
-                                            {discrepancy > 0 ? '+' : ''}{discrepancy.toFixed(2)}€
+                                        <div style={{
+                                            padding: '1rem',
+                                            background: 'rgba(79, 70, 229, 0.05)',
+                                            borderRadius: '16px',
+                                            textAlign: 'center',
+                                            border: `1px dashed ${colors.primary}`
+                                        }}>
+                                            <div style={{ fontSize: '0.75rem', color: colors.primary, fontWeight: '700' }}>RECAUDACIÓN A RETIRAR</div>
+                                            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: colors.primary }}>
+                                                {Math.max(0, parseFloat(countedCash || 0) - parseFloat(startingCash || 0)).toFixed(2)}€
+                                            </div>
                                         </div>
                                     </div>
 
@@ -798,17 +817,17 @@ const Analytics = () => {
                                         <label style={{ display: 'block', color: colors.textMuted, fontSize: '0.8rem', marginBottom: '0.5rem', fontWeight: '700' }}>NOTAS / OBSERVACIONES</label>
                                         <textarea
                                             style={{ 
-                                                width: '100%', padding: '0.85rem', height: '80px', background: '#f8fafc', 
+                                                width: '100%', padding: '0.85rem', height: '70px', background: '#f8fafc', 
                                                 border: `1px solid ${colors.border}`, borderRadius: '12px', outline: 'none', 
                                                 resize: 'none', color: colors.text, fontSize: '0.9rem' 
                                             }}
                                             value={closeNotes}
                                             onChange={(e) => setCloseNotes(e.target.value)}
-                                            placeholder="Ej: Fallo en el cambio de lotería..."
+                                            placeholder="Ej: Cambio ajustado en billetes..."
                                         />
                                     </div>
 
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                                         <button
                                             onClick={() => setIsCloseModalOpen(false)}
                                             style={{ 
@@ -835,6 +854,8 @@ const Analytics = () => {
                                                 if (result && !result.error) {
                                                     printCashCloseTicket(result, restaurantInfo);
                                                     setIsCloseModalOpen(false);
+                                                    localStorage.removeItem('manalu_counted_cash');
+                                                    setCountedCash('');
                                                     alert("✅ Cierre Z guardado e impreso correctamente");
                                                 } else {
                                                     alert(`❌ Error al guardar el cierre: ${result?.error || "Desconocido"}`);
@@ -851,7 +872,7 @@ const Analytics = () => {
                                         >
                                             REALIZAR CIERRE Z
                                         </button>
-                                    </div>
+                                    </div>                   </div>
                                 </div>
 
                                 {/* Right Side: Calculator (Conditional) */}
@@ -1562,22 +1583,22 @@ const Analytics = () => {
                 {activeSection === 'daily_control' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                        {/* TOP BANNER / CAMBIO INICIAL */}
+                        {/* TOP BANNER / CAMBIO INICIAL Y FINAL */}
                         <div style={{
                             background: colors.surface,
                             borderRadius: '24px',
-                            padding: isMobile ? '1.5rem' : '2rem',
+                            padding: isMobile ? '1.25rem' : '1.75rem',
                             border: `1px solid ${colors.border}`,
                             boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
                             display: 'grid',
-                            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
-                            gap: '1.5rem',
+                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                            gap: '1.25rem',
                             alignItems: 'center'
                         }}>
                             {/* Cambio Inicial Card */}
                             <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '16px', border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: '0.85rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Coins size={18} color={colors.warning} /> Cambio Inicial (Fondo de Caja)
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Coins size={18} color={colors.warning} /> Cambio Inicial (Apertura)
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <input
@@ -1586,52 +1607,89 @@ const Analytics = () => {
                                         onChange={(e) => setStartingCash(e.target.value)}
                                         placeholder="150.00"
                                         style={{
-                                            fontSize: '1.75rem', fontWeight: '900', color: colors.warning,
+                                            fontSize: '1.5rem', fontWeight: '900', color: colors.warning,
                                             background: 'transparent', border: 'none', borderBottom: `2px solid ${colors.warning}`,
-                                            width: '130px', outline: 'none'
+                                            width: '110px', outline: 'none'
                                         }}
                                     />
-                                    <span style={{ fontSize: '1.5rem', fontWeight: '900', color: colors.warning }}>€</span>
+                                    <span style={{ fontSize: '1.3rem', fontWeight: '900', color: colors.warning }}>€</span>
                                 </div>
                                 <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: colors.textMuted }}>Fondo en metálico al abrir el servicio.</p>
                             </div>
 
+                            {/* Cambio Final Contado Card */}
+                            <div style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '16px', border: `2px solid ${countedCash ? colors.success : colors.border}` }}>
+                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <Wallet size={18} color={colors.success} /> Cambio Final (Cierre)
+                                    </span>
+                                    <button
+                                        onClick={() => setIsCloseModalOpen(true)}
+                                        style={{ background: `${colors.success}15`, border: `1px solid ${colors.success}`, color: colors.success, borderRadius: '6px', padding: '2px 8px', fontSize: '0.7rem', fontWeight: '800', cursor: 'pointer' }}
+                                    >
+                                        🧮 Arqueo Z
+                                    </button>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <input
+                                        type="number"
+                                        value={countedCash}
+                                        onChange={(e) => setCountedCash(e.target.value)}
+                                        placeholder={`Esp: ${expectedCash.toFixed(2)}€`}
+                                        style={{
+                                            fontSize: '1.5rem', fontWeight: '900', color: colors.success,
+                                            background: 'transparent', border: 'none', borderBottom: `2px solid ${colors.success}`,
+                                            width: '110px', outline: 'none'
+                                        }}
+                                    />
+                                    <span style={{ fontSize: '1.3rem', fontWeight: '900', color: colors.success }}>€</span>
+                                </div>
+                                <div style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem', color: colors.textMuted, display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>Esperado: {expectedCash.toFixed(2)}€</span>
+                                    {countedCash && (
+                                        <span style={{ fontWeight: '800', color: Math.abs(discrepancy) < 0.05 ? colors.success : colors.danger }}>
+                                            {discrepancy >= 0 ? '+' : ''}{discrepancy.toFixed(2)}€
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
                             {/* Service Status & Actions */}
                             <div style={{ padding: '1.25rem', background: serviceStatus.isActive ? `${colors.success}10` : '#f8fafc', borderRadius: '16px', border: `1px solid ${serviceStatus.isActive ? colors.success + '40' : colors.border}` }}>
-                                <div style={{ fontSize: '0.85rem', color: serviceStatus.isActive ? colors.success : colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Calendar size={18} /> Estado del Servicio
+                                <div style={{ fontSize: '0.8rem', color: serviceStatus.isActive ? colors.success : colors.textMuted, fontWeight: '700', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Calendar size={18} /> Estado Servicio
                                 </div>
-                                <div style={{ fontWeight: '800', fontSize: '1.1rem', color: colors.text, marginBottom: '0.5rem' }}>
-                                    {serviceStatus.isActive ? '🟢 Servicio Activo' : '🔴 Servicio Finalizado/Inactivo'}
+                                <div style={{ fontWeight: '800', fontSize: '1rem', color: colors.text, marginBottom: '0.5rem' }}>
+                                    {serviceStatus.isActive ? '🟢 Servicio Activo' : '🔴 Servicio Inactivo'}
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     {!serviceStatus.isActive ? (
                                         <button onClick={handleStartService} style={{ padding: '0.5rem 0.85rem', background: colors.success, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                            ▶ Iniciar Servicio
+                                            ▶ Iniciar
                                         </button>
                                     ) : (
                                         <button onClick={handleEndService} style={{ padding: '0.5rem 0.85rem', background: colors.danger, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                            ⏹ Finalizar Servicio
+                                            ⏹ Finalizar
                                         </button>
                                     )}
                                 </div>
                             </div>
 
                             {/* Quick Add Expense Buttons */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                 <button
                                     onClick={() => {
                                         setQuickExpForm({ concept: '', amount: '', paymentMethod: 'Efectivo', category: 'Sueldos', notes: '' });
                                         setQuickExpenseModal({ isOpen: true, type: 'staff' });
                                     }}
                                     style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                        padding: '0.85rem', background: colors.primary, color: 'white',
-                                        border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer',
-                                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.25)', fontSize: '0.9rem'
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                                        padding: '0.65rem', background: colors.primary, color: 'white',
+                                        border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer',
+                                        boxShadow: '0 3px 8px rgba(79, 70, 229, 0.2)', fontSize: '0.8rem'
                                     }}
                                 >
-                                    <Plus size={18} /> Gasto de Personal (Camarero/Limpieza)
+                                    <Plus size={16} /> Gasto Personal (Camareros)
                                 </button>
                                 <button
                                     onClick={() => {
@@ -1639,13 +1697,13 @@ const Analytics = () => {
                                         setQuickExpenseModal({ isOpen: true, type: 'general' });
                                     }}
                                     style={{
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                        padding: '0.85rem', background: '#0284c7', color: 'white',
-                                        border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer',
-                                        boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)', fontSize: '0.9rem'
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                                        padding: '0.65rem', background: '#0284c7', color: 'white',
+                                        border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer',
+                                        boxShadow: '0 3px 8px rgba(2, 132, 199, 0.2)', fontSize: '0.8rem'
                                     }}
                                 >
-                                    <Plus size={18} /> Gasto Vario (Hielo/Pan/Mercado)
+                                    <Plus size={16} /> Gasto Vario (Hielo/Pan)
                                 </button>
                             </div>
                         </div>
