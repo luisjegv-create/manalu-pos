@@ -388,7 +388,7 @@ export const printDepositTicket = (depositData, companyInfo = {}) => {
     printWindow.document.close();
 };
 
-export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null, amountReceived = 0, cardTips = 0) => {
+export const printBillTicket = (tableName, items, total, companyInfo = {}, discountPercent = 0, isInvitation = false, ticketNumber = '', customerData = null, taxRateOverride = null, amountReceived = 0, cardTips = 0, paymentDetails = null) => {
     const company = getCleanCompanyInfo(companyInfo);
     const printWindow = window.open('', '', 'width=400,height=600');
 
@@ -402,8 +402,8 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
     const discountAmount = (total * discountPercent) / 100;
     const finalTotal = isInvitation ? 0 : Math.max(0, total - discountAmount);
 
-    const received = parseFloat(amountReceived) || 0;
-    const change = received > finalTotal ? received - finalTotal : 0;
+    const received = parseFloat(paymentDetails?.cashReceived || amountReceived) || 0;
+    const change = received > finalTotal ? received - finalTotal : (parseFloat(paymentDetails?.change) || 0);
     const tips = parseFloat(cardTips) || 0;
 
     // Tax Breakdown (Spain standard for hospitality: 10%, Rental: 21%)
@@ -498,6 +498,11 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                 <div class="meta">${company.address}</div>
                 <div class="meta">NIF/CIF: ${company.nif}</div>
                 <div class="separator"></div>
+                ${paymentDetails?.isPartial ? `
+                    <div style="background: black; color: white; padding: 4px; font-size: 0.85rem; font-weight: bold; text-align: center; margin-bottom: 6px; border-radius: 4px; text-transform: uppercase;">
+                        *** COBRO PARCIAL ${paymentDetails.dinerPartText ? `· ${paymentDetails.dinerPartText}` : ''} ***
+                    </div>
+                ` : ''}
                 <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;">
                     ${customerData ? 'FACTURA' : 'TICKET'} Nº: ${ticketNumber || 'BORRADOR'}
                 </div>
@@ -570,7 +575,39 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                     </div>
                 ` : ''}
 
-                ${received > 0 ? `
+                ${paymentDetails?.method === 'Mixto' ? `
+                    <div class="separator"></div>
+                    <div style="font-weight: bold; font-size: 0.95rem; margin-bottom: 4px;">FORMA DE PAGO: MIXTO</div>
+                    <div class="total-row">
+                        <span>• Efectivo:</span>
+                        <span>${parseFloat(paymentDetails.cashAmount || 0).toFixed(2)}€</span>
+                    </div>
+                    ${(paymentDetails.cashReceived > 0 || received > 0) ? `
+                        <div class="total-row" style="font-size: 0.8rem; color: #444; padding-left: 8px;">
+                            <span>Entregado: ${parseFloat(paymentDetails.cashReceived || received).toFixed(2)}€ | Cambio: ${parseFloat(paymentDetails.change || change).toFixed(2)}€</span>
+                        </div>
+                    ` : ''}
+                    <div class="total-row">
+                        <span>• Tarjeta:</span>
+                        <span>${parseFloat(paymentDetails.cardAmount || 0).toFixed(2)}€</span>
+                    </div>
+                ` : paymentDetails?.method ? `
+                    <div class="separator"></div>
+                    <div class="total-row" style="font-weight: bold;">
+                        <span>FORMA DE PAGO:</span>
+                        <span>${paymentDetails.method.toUpperCase()}</span>
+                    </div>
+                    ${(paymentDetails.method === 'Efectivo' && received > 0) ? `
+                        <div class="total-row" style="font-size: 0.8rem; color: #444;">
+                            <span>Entregado:</span>
+                            <span>${received.toFixed(2)}€</span>
+                        </div>
+                        <div class="total-row" style="font-size: 0.8rem; color: #444; font-weight: bold;">
+                            <span>Cambio:</span>
+                            <span>${change.toFixed(2)}€</span>
+                        </div>
+                    ` : ''}
+                ` : received > 0 ? `
                     <div class="separator"></div>
                     <div class="total-row">
                         <span>Entregado:</span>
@@ -579,6 +616,19 @@ export const printBillTicket = (tableName, items, total, companyInfo = {}, disco
                     <div class="total-row" style="font-weight: bold;">
                         <span>Cambio:</span>
                         <span>${change.toFixed(2)}€</span>
+                    </div>
+                ` : ''}
+
+                ${(paymentDetails?.remainingBalance !== undefined && paymentDetails.remainingBalance > 0.01) ? `
+                    <div class="separator" style="border-bottom: 2px dashed black; margin-top: 8px;"></div>
+                    <div class="total-row" style="font-size: 1.05rem; font-weight: 900; background: #eee; padding: 4px;">
+                        <span>PENDIENTE EN MESA:</span>
+                        <span>${parseFloat(paymentDetails.remainingBalance).toFixed(2)}€</span>
+                    </div>
+                ` : paymentDetails?.isFinal ? `
+                    <div class="separator" style="border-bottom: 2px dashed black; margin-top: 8px;"></div>
+                    <div style="font-size: 0.95rem; font-weight: 900; text-align: center; padding: 4px; background: #eee; border: 1px solid black;">
+                        ¡CUENTA TOTALMENTE SALDADA!
                     </div>
                 ` : ''}
             </div>

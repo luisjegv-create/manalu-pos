@@ -43,6 +43,8 @@ const OrderSummary = ({
     updateBillQuantity,
     updateDiners,
     renameTable,
+    tablePaidAmount = 0,
+    pendingBalance = null,
     isClosing = false,
     isSendingOrder = false
 }) => {
@@ -575,9 +577,21 @@ const OrderSummary = ({
                 flexDirection: 'column',
                 gap: '1.25rem'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--color-text-muted)' }}>TOTAL CUENTA</span>
-                    <span style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--color-text)', lineHeight: '1' }}>{(order.length > 0 ? calculateTotal() : calculateBillTotal()).toFixed(2)}€</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {tablePaidAmount > 0 && order.length === 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#94a3b8', background: 'rgba(0,0,0,0.2)', padding: '0.3rem 0.6rem', borderRadius: '6px' }}>
+                            <span>Total Comanda: {(calculateBillTotal() + tablePaidAmount).toFixed(2)}€</span>
+                            <span style={{ color: '#10b981', fontWeight: 'bold' }}>Cobrado: -{tablePaidAmount.toFixed(2)}€</span>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: (tablePaidAmount > 0 && order.length === 0) ? '#fbbf24' : 'var(--color-text-muted)' }}>
+                            {(tablePaidAmount > 0 && order.length === 0) ? 'PENDIENTE' : 'TOTAL CUENTA'}
+                        </span>
+                        <span style={{ fontSize: '2.5rem', fontWeight: '900', color: (tablePaidAmount > 0 && order.length === 0) ? '#fbbf24' : 'var(--color-text)', lineHeight: '1' }}>
+                            {(order.length > 0 ? calculateTotal() : calculateBillTotal()).toFixed(2)}€
+                        </span>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -729,9 +743,22 @@ const OrderSummary = ({
                             <>
                                 <button
                                     onClick={() => setPartialPaymentModal({ isOpen: true, itemsToPay: [] })}
-                                    style={{ padding: '0.75rem', fontSize: '0.85rem', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontWeight: 'bold' }}
+                                    style={{
+                                        padding: '0.75rem',
+                                        fontSize: '0.85rem',
+                                        borderRadius: '10px',
+                                        background: 'rgba(59, 130, 246, 0.15)',
+                                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                                        color: '#93c5fd',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.4rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}
                                 >
-                                    <CreditCard size={14} /> DIVIDIR CUENTA
+                                    <span>✂️</span> DIVIDIR CUENTA
                                 </button>
                                 <button
                                     onClick={handlePrintPreTicket}

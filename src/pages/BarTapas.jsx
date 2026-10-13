@@ -77,6 +77,9 @@ const BarTapas = () => {
         currentTable,
         tableBills, // Added to fix the reference error
         tableOrders, // Added to fix the reference error
+        tablePaidAmounts,
+        getTablePendingBalance,
+        closeTableMixed,
         selectTable, // Added selectTable
         selectedCustomer,
         selectCustomer,
@@ -265,12 +268,22 @@ const BarTapas = () => {
     };
 
 
-    const handleConfirmPartialPayment = async (method, mode = 'products', customAmountVal = 0) => {
+    const handleConfirmPartialPayment = async (methodOrOptions, maybeMode = 'products', maybeCustomAmountVal = 0) => {
         if (!currentTable || isClosing) return;
         setIsClosing(true);
         let saleData = null;
         let itemsForTicket = [];
         let totalVal = 0;
+
+        const isObjectCall = typeof methodOrOptions === 'object' && methodOrOptions !== null;
+        const method = isObjectCall ? methodOrOptions.method : methodOrOptions;
+        const mode = isObjectCall ? methodOrOptions.mode : maybeMode;
+        const totalToPay = isObjectCall ? methodOrOptions.totalToPay : maybeCustomAmountVal;
+        const tips = isObjectCall ? (methodOrOptions.tips || 0) : 0;
+        const mixedDetails = isObjectCall ? methodOrOptions.mixedDetails : null;
+        const cashReceived = isObjectCall ? (methodOrOptions.cashReceived || 0) : 0;
+        const change = isObjectCall ? (methodOrOptions.change || 0) : 0;
+        const dinerPartText = isObjectCall ? methodOrOptions.dinerPartText : (mode === 'equal' ? 'Partes Iguales' : 'Pago Parcial');
 
         try {
             if (mode === 'products') {
@@ -282,14 +295,16 @@ const BarTapas = () => {
                     method,
                     discountPercent,
                     isInvitation,
-                    isFullInvoice ? customerTaxData : null
+                    isFullInvoice ? customerTaxData : null,
+                    tips,
+                    mixedDetails
                 );
             } else {
-                totalVal = customAmountVal;
+                totalVal = totalToPay;
                 itemsForTicket = [{
                     id: 'partial-payment',
                     uniqueId: `partial-${Date.now()}`,
-                    name: 'PAGO PARCIAL (A CUENTA)',
+                    name: `PAGO PARCIAL (${dinerPartText})`,
                     price: totalVal,
                     quantity: 1
                 }];
@@ -299,11 +314,26 @@ const BarTapas = () => {
                     method,
                     discountPercent,
                     isInvitation,
-                    isFullInvoice ? customerTaxData : null
+                    isFullInvoice ? customerTaxData : null,
+                    tips,
+                    mixedDetails
                 );
             }
 
             if (saleData) {
+                const isFullySettled = saleData.remaining !== undefined ? saleData.remaining <= 0.01 : (!bill || bill.length === 0);
+                const paymentDetails = {
+                    isPartial: true,
+                    dinerPartText,
+                    method,
+                    cashAmount: method === 'Mixto' ? (mixedDetails?.cashAmount || 0) : (method === 'Efectivo' ? totalVal : 0),
+                    cardAmount: method === 'Mixto' ? (mixedDetails?.cardAmount || 0) : (method === 'Tarjeta' ? totalVal : 0),
+                    cashReceived,
+                    change,
+                    remainingBalance: saleData.remaining !== undefined ? saleData.remaining : 0,
+                    isFinal: isFullySettled
+                };
+
                 // Print immediately before state updates and navigation
                 printBillTicket(
                     currentTable ? currentTable.name : 'Mesa',
@@ -312,8 +342,12 @@ const BarTapas = () => {
                     restaurantInfo,
                     discountPercent,
                     isInvitation,
-                    saleData.ticket_number || saleData.id.slice(-8),
-                    isFullInvoice ? customerTaxData : null
+                    saleData.ticket_number || (saleData.id ? saleData.id.slice(-8) : 'PARCIAL'),
+                    isFullInvoice ? customerTaxData : null,
+                    null,
+                    cashReceived,
+                    tips,
+                    paymentDetails
                 );
 
                 setPartialPaymentModal({ isOpen: false, itemsToPay: [] });
@@ -322,9 +356,10 @@ const BarTapas = () => {
                 setIsFullInvoice(false);
 
                 // Delay the navigation if the table was fully paid
-                if (!bill || bill.length === 0) {
+                if (isFullySettled) {
                     setTimeout(() => {
                         if (searchParams.get('mode') === 'quick') {
+                            closeTabFallback(currentTable.id);
                             navigate('/bar-tapas?mode=quick');
                         } else {
                             navigate('/tables');
@@ -457,6 +492,16 @@ const BarTapas = () => {
 
             const saleData = await closeTable(currentTable.id, method, discountPercent, isInvitation, isFullInvoice ? customerTaxData : null, tips);
             if (saleData) {
+                const paymentDetails = {
+                    method,
+                    cashAmount: method === 'Efectivo' ? total : 0,
+                    cardAmount: method === 'Tarjeta' ? total : 0,
+                    cashReceived: received,
+                    change: Math.max(0, received - total),
+                    remainingBalance: 0,
+                    isFinal: true
+                };
+
                 // Print final ticket with ID
                 printBillTicket(
                     currentTable ? currentTable.name : 'Mesa',
@@ -465,11 +510,12 @@ const BarTapas = () => {
                     restaurantInfo,
                     discountPercent,
                     isInvitation,
-                    saleData.ticket_number || saleData.id.slice(-8),
+                    saleData.ticket_number || (saleData.id ? saleData.id.slice(-8) : 'FINAL'),
                     isFullInvoice ? customerTaxData : null,
                     null,
                     received,
-                    tips
+                    tips,
+                    paymentDetails
                 );
                 setShowTicket(false);
                 setDiscountPercent(0);
@@ -491,6 +537,75 @@ const BarTapas = () => {
         } catch (err) {
             console.error("Error in handleCloseTable:", err);
             alert("Error al cerrar la mesa.");
+        } finally {
+            setIsClosing(false);
+        }
+    };
+
+    const handleCloseTableMixed = async ({ cashAmount, cardAmount, cashReceived = 0, tips = 0 }) => {
+        if (!currentTable || isClosing) return;
+        setIsClosing(true);
+
+        try {
+            const currentBill = [...bill];
+            const total = totalBill;
+
+            const saleResult = await closeTableMixed(
+                currentTable.id,
+                cashAmount,
+                cardAmount,
+                discountPercent,
+                isInvitation,
+                isFullInvoice ? customerTaxData : null,
+                tips
+            );
+
+            if (saleResult && saleResult.sales && saleResult.sales.length > 0) {
+                const ticketNums = saleResult.sales.map(s => s.ticket_number).filter(Boolean).join(' / ');
+                const paymentDetails = {
+                    method: 'Mixto',
+                    cashAmount,
+                    cardAmount,
+                    cashReceived,
+                    change: Math.max(0, cashReceived - cashAmount),
+                    remainingBalance: 0,
+                    isFinal: true
+                };
+
+                printBillTicket(
+                    currentTable ? currentTable.name : 'Mesa',
+                    currentBill,
+                    total,
+                    restaurantInfo,
+                    discountPercent,
+                    isInvitation,
+                    ticketNums || 'MIXTO',
+                    isFullInvoice ? customerTaxData : null,
+                    null,
+                    cashReceived,
+                    tips,
+                    paymentDetails
+                );
+
+                setShowTicket(false);
+                setDiscountPercent(0);
+                setIsInvitation(false);
+                setIsFullInvoice(false);
+
+                setTimeout(() => {
+                    if (searchParams.get('mode') === 'quick') {
+                        closeTabFallback(currentTable.id);
+                        navigate('/bar-tapas?mode=quick');
+                    } else {
+                        navigate('/tables');
+                    }
+                }, 500);
+            } else {
+                alert('Error al cerrar la mesa con pago mixto.');
+            }
+        } catch (err) {
+            console.error("Error in handleCloseTableMixed:", err);
+            alert(`⚠️ Error al cerrar mesa: ${err.message || 'Error desconocido'}`);
         } finally {
             setIsClosing(false);
         }
@@ -1138,6 +1253,8 @@ const BarTapas = () => {
                         updateBillQuantity={updateBillQuantity}
                         updateDiners={updateDiners}
                         renameTable={renameTable}
+                        tablePaidAmount={tablePaidAmounts[currentTable?.id] || 0}
+                        pendingBalance={getTablePendingBalance(currentTable?.id)}
                         isClosing={isClosing}
                         isSendingOrder={isSendingOrder}
                     />
@@ -1270,6 +1387,9 @@ const BarTapas = () => {
                 setCustomerTaxData={setCustomerTaxData}
                 removeProductFromBill={removeProductFromBill}
                 handleCloseTable={handleCloseTable}
+                onCloseMixed={handleCloseTableMixed}
+                onOpenSplitModal={() => { setShowTicket(false); setPartialPaymentModal({ isOpen: true, itemsToPay: [] }); }}
+                tablePaidAmount={tablePaidAmounts[currentTable?.id] || 0}
                 isClosing={isClosing}
             />
 
@@ -1483,8 +1603,9 @@ const BarTapas = () => {
                 customerTaxData={customerTaxData}
                 setCustomerTaxData={setCustomerTaxData}
                 handleConfirmPartialPayment={handleConfirmPartialPayment}
-                payValuePartialTable={payValuePartialTable}
                 currentTable={currentTable}
+                tablePaidAmount={tablePaidAmounts[currentTable?.id] || 0}
+                pendingBalance={getTablePendingBalance(currentTable?.id)}
             />
             <AnimatePresence>
                 {modifierModal.isOpen && modifierModal.product && (

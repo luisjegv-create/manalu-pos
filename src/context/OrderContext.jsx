@@ -63,6 +63,7 @@ export const OrderProvider = ({ children }) => {
     const [tableOrders, setTableOrders] = useState(() => safeParse('manalu_table_orders', {}));
 
     const [tableBills, setTableBills] = useState(() => safeParse('manalu_table_bills', {}));
+    const [tablePaidAmounts, setTablePaidAmounts] = useState(() => safeParse('manalu_table_paid_amounts', {}));
 
     // Active Orders/Tickets state
     const [tables, setTables] = useState(() => {
@@ -534,6 +535,18 @@ export const OrderProvider = ({ children }) => {
         safeSetItem('manalu_table_bills', JSON.stringify(tableBills));
     }, [tableBills]);
 
+    useEffect(() => {
+        safeSetItem('manalu_table_paid_amounts', JSON.stringify(tablePaidAmounts));
+    }, [tablePaidAmounts]);
+
+    const getTablePendingBalance = (tableId) => {
+        if (!tableId) return 0;
+        const rawBill = (tableBills[tableId] || []).filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+        const billTotal = rawBill.reduce((sum, item) => sum + (item.isInvitation ? 0 : (item.price * item.quantity)), 0);
+        const paid = tablePaidAmounts[tableId] || 0;
+        return Math.max(0, billTotal - paid);
+    };
+
     const [currentTable, setCurrentTable] = useState(null);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
@@ -731,17 +744,18 @@ export const OrderProvider = ({ children }) => {
             console.warn("Mesa ya en proceso de cobro:", tableId);
             return null;
         }
-        checkoutInProgress.current[tableId] = true;
-
         try {
-            const finalBill = tableBills[tableId];
+            const rawBill = tableBills[tableId] || [];
+            const finalBill = rawBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
             const cardTips = parseFloat(tips) || 0;
 
             if (finalBill && finalBill.length > 0) {
                 try {
                     const billTotal = calculateOrderTotal(finalBill);
-                    const discountAmount = (billTotal * discountPercent) / 100;
-                    const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+                    const alreadyPaid = tablePaidAmounts[tableId] || 0;
+                    const pendingTotal = Math.max(0, billTotal - alreadyPaid);
+                    const discountAmount = (pendingTotal * discountPercent) / 100;
+                    const total = isInvitation ? 0 : Math.max(0, pendingTotal - discountAmount);
 
                     // Assign sequential ticket number
                     const ticketNumber = await incrementTicketNumber();
@@ -833,6 +847,11 @@ export const OrderProvider = ({ children }) => {
                             delete next[tableId];
                             return next;
                         });
+                        setTablePaidAmounts(prev => {
+                            const next = { ...prev };
+                            delete next[tableId];
+                            return next;
+                        });
                         setTables(prev => prev.filter(t => t.id !== tableId));
                         if (currentTable && currentTable.id === tableId) {
                             setCurrentTable(null);
@@ -859,8 +878,10 @@ export const OrderProvider = ({ children }) => {
                     console.error("DEBUG - closeTable Failure. Falling back to OFFLINE mode:", err);
                     
                     const billTotal = calculateOrderTotal(finalBill);
-                    const discountAmount = (billTotal * discountPercent) / 100;
-                    const total = isInvitation ? 0 : Math.max(0, billTotal - discountAmount);
+                    const alreadyPaid = tablePaidAmounts[tableId] || 0;
+                    const pendingTotal = Math.max(0, billTotal - alreadyPaid);
+                    const discountAmount = (pendingTotal * discountPercent) / 100;
+                    const total = isInvitation ? 0 : Math.max(0, pendingTotal - discountAmount);
                     const tableObj = tables.find(t => t.id === tableId);
                     const diners = tableObj ? (tableObj.diners || 1) : 1;
                     
@@ -917,6 +938,11 @@ export const OrderProvider = ({ children }) => {
                         delete next[tableId];
                         return next;
                     });
+                    setTablePaidAmounts(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
                     setTables(prev => prev.filter(t => t.id !== tableId));
                     if (currentTable && currentTable.id === tableId) {
                         setCurrentTable(null);
@@ -965,6 +991,11 @@ export const OrderProvider = ({ children }) => {
             delete next[tableId];
             return next;
         });
+        setTablePaidAmounts(prev => {
+            const next = { ...prev };
+            delete next[tableId];
+            return next;
+        });
 
         const tableObj = tables.find(t => t.id === tableId);
         
@@ -985,145 +1016,475 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
-    const payPartialTable = async (tableId, partialItems, paymentMethod = 'Efectivo', tips = 0) => {
+    const closeTableMixed = async (tableId, cashAmount, cardAmount, discountPercent = 0, isInvitation = false, customerData = null, tips = 0) => {
+        if (checkoutInProgress.current[tableId]) {
+            console.warn("Mesa ya en proceso de cobro:", tableId);
+            return null;
+        }
+        checkoutInProgress.current[tableId] = true;
+
+        try {
+            const rawBill = tableBills[tableId] || [];
+            const finalBill = rawBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+            const cardTips = parseFloat(tips) || 0;
+            const tableObj = tables.find(t => t.id === tableId);
+            const diners = tableObj ? (tableObj.diners || 1) : 1;
+            const cashVal = parseFloat(cashAmount) || 0;
+            const cardVal = parseFloat(cardAmount) || 0;
+            const totalToCharge = cashVal + cardVal;
+
+            const salesCreated = [];
+            let ticketNumber1 = null;
+            let ticketNumber2 = null;
+
+            // 1. Efectivo part
+            if (cashVal > 0) {
+                ticketNumber1 = await incrementTicketNumber();
+                const cashRecord = {
+                    total: cashVal,
+                    payment_method: 'Efectivo',
+                    items: JSON.stringify(finalBill),
+                    table_id: tableId,
+                    ticket_number: ticketNumber1,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: 0,
+                    diners
+                };
+
+                let { data: cashData, error: cashError } = await supabase.from('sales').insert([cashRecord]).select();
+                if (cashError && (cashError.message.includes('card_tips') || cashError.message.includes('customer_info') || cashError.message.includes('ticket_number') || cashError.message.includes('diners') || cashError.message.includes('column'))) {
+                    const retryCash = { ...cashRecord };
+                    delete retryCash.card_tips;
+                    delete retryCash.customer_info;
+                    delete retryCash.ticket_number;
+                    delete retryCash.diners;
+                    const { data: retryData } = await supabase.from('sales').insert([retryCash]).select();
+                    cashData = retryData;
+                }
+
+                if (cashData && cashData.length > 0) {
+                    const s = {
+                        ...cashData[0],
+                        date: new Date(cashData[0].created_at),
+                        total: parseFloat(cashData[0].total),
+                        items: typeof cashData[0].items === 'string' ? JSON.parse(cashData[0].items) : cashData[0].items,
+                        paymentMethod: 'Efectivo',
+                        tableId,
+                        ticket_number: cashData[0].ticket_number || ticketNumber1,
+                        card_tips: 0,
+                        diners
+                    };
+                    salesCreated.push(s);
+                } else {
+                    const offlineCash = {
+                        id: `offline-${Date.now()}-cash`,
+                        total: cashVal,
+                        payment_method: 'Efectivo',
+                        items: JSON.stringify(finalBill),
+                        table_id: tableId,
+                        ticket_number: ticketNumber1,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: 0,
+                        diners,
+                        created_at: new Date().toISOString(),
+                        isOffline: true
+                    };
+                    setOfflineSales(prev => [...prev, offlineCash]);
+                    salesCreated.push({
+                        ...offlineCash,
+                        date: new Date(),
+                        paymentMethod: 'Efectivo',
+                        tableId,
+                        items: finalBill
+                    });
+                }
+            }
+
+            // 2. Tarjeta part
+            if (cardVal > 0) {
+                ticketNumber2 = await incrementTicketNumber();
+                const cardRecord = {
+                    total: cardVal,
+                    payment_method: 'Tarjeta',
+                    items: JSON.stringify(finalBill),
+                    table_id: tableId,
+                    ticket_number: ticketNumber2,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: cardTips,
+                    diners
+                };
+
+                let { data: cardData, error: cardError } = await supabase.from('sales').insert([cardRecord]).select();
+                if (cardError && (cardError.message.includes('card_tips') || cardError.message.includes('customer_info') || cardError.message.includes('ticket_number') || cardError.message.includes('diners') || cardError.message.includes('column'))) {
+                    const retryCard = { ...cardRecord };
+                    delete retryCard.card_tips;
+                    delete retryCard.customer_info;
+                    delete retryCard.ticket_number;
+                    delete retryCard.diners;
+                    const { data: retryData } = await supabase.from('sales').insert([retryCard]).select();
+                    cardData = retryData;
+                }
+
+                if (cardData && cardData.length > 0) {
+                    const s = {
+                        ...cardData[0],
+                        date: new Date(cardData[0].created_at),
+                        total: parseFloat(cardData[0].total),
+                        items: typeof cardData[0].items === 'string' ? JSON.parse(cardData[0].items) : cardData[0].items,
+                        paymentMethod: 'Tarjeta',
+                        tableId,
+                        ticket_number: cardData[0].ticket_number || ticketNumber2,
+                        card_tips: cardTips,
+                        diners
+                    };
+                    salesCreated.push(s);
+                } else {
+                    const offlineCard = {
+                        id: `offline-${Date.now()}-card`,
+                        total: cardVal,
+                        payment_method: 'Tarjeta',
+                        items: JSON.stringify(finalBill),
+                        table_id: tableId,
+                        ticket_number: ticketNumber2,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips,
+                        diners,
+                        created_at: new Date().toISOString(),
+                        isOffline: true
+                    };
+                    setOfflineSales(prev => [...prev, offlineCard]);
+                    salesCreated.push({
+                        ...offlineCard,
+                        date: new Date(),
+                        paymentMethod: 'Tarjeta',
+                        tableId,
+                        items: finalBill
+                    });
+                }
+            }
+
+            if (salesCreated.length > 0) {
+                setSalesHistory(prev => {
+                    const updated = [...salesCreated, ...prev].slice(0, 500);
+                    safeSetItem('manalu_sales_history_local', JSON.stringify(updated));
+                    return updated;
+                });
+            }
+
+            if (customerData && customerData.id) {
+                recordSale(customerData.id, totalToCharge);
+            }
+
+            // Clear table state
+            setTableOrders(prev => {
+                const next = { ...prev };
+                delete next[tableId];
+                return next;
+            });
+            setTableBills(prev => {
+                const next = { ...prev };
+                delete next[tableId];
+                return next;
+            });
+            setTablePaidAmounts(prev => {
+                const next = { ...prev };
+                delete next[tableId];
+                return next;
+            });
+            setTables(prev => prev.filter(t => t.id !== tableId));
+            if (currentTable && currentTable.id === tableId) {
+                setCurrentTable(null);
+            }
+
+            // Cleanup kitchen orders
+            if (tableObj) {
+                setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
+                try {
+                    await supabase.from('kitchen_orders')
+                        .update({ status: 'completed' })
+                        .eq('table_name', tableObj.name)
+                        .neq('status', 'completed');
+                } catch (e) {
+                    console.error("Error clearing kitchen orders on closeTableMixed:", e);
+                }
+            }
+
+            const ticketDisplay = ticketNumber1 && ticketNumber2 ? `${ticketNumber1} / ${ticketNumber2}` : (ticketNumber1 || ticketNumber2 || 'MIXTO');
+            return {
+                success: true,
+                ticket_number: ticketDisplay,
+                sales: salesCreated
+            };
+        } catch (err) {
+            console.error("Error in closeTableMixed:", err);
+            throw err;
+        } finally {
+            delete checkoutInProgress.current[tableId];
+        }
+    };
+
+    const payPartialTable = async (tableId, partialItems, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null, tips = 0, mixedDetails = null) => {
         const cardTips = parseFloat(tips) || 0;
         if (!partialItems || partialItems.length === 0) return null;
 
         try {
-            const total = calculateOrderTotal(partialItems);
+            const rawTotal = calculateOrderTotal(partialItems);
+            const discountAmount = isInvitation ? rawTotal : (rawTotal * (parseFloat(discountPercent) || 0) / 100);
+            const total = Math.max(0, rawTotal - discountAmount);
 
-            // Assign sequential ticket number
-            const ticketNumber = await incrementTicketNumber();
+            const salesCreated = [];
+            let ticketNumber1 = null;
+            let ticketNumber2 = null;
 
-            // Build sale record
-            const saleRecord = {
-                total,
-                payment_method: paymentMethod,
-                items: JSON.stringify(partialItems),
-                table_id: tableId,
-                ticket_number: ticketNumber,
-                card_tips: cardTips
-            };
+            if (paymentMethod === 'Mixto' && mixedDetails) {
+                const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
+                const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
 
-            // Save to Supabase with 10s timeout
-            const insertPromise = supabase.from('sales').insert([saleRecord]).select();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Tiempo de espera agotado al registrar pago parcial")), 10000)
-            );
-            let { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+                // 1. Efectivo part
+                if (cashVal > 0) {
+                    ticketNumber1 = await incrementTicketNumber();
+                    const cashRecord = {
+                        total: cashVal,
+                        payment_method: 'Efectivo',
+                        items: JSON.stringify(partialItems),
+                        table_id: tableId,
+                        ticket_number: ticketNumber1,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: 0
+                    };
 
-            // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
-                const fallbackBill = [...partialItems];
-                if (cardTips > 0) {
-                    fallbackBill.push({ id: 'tip-record', name: 'Propina', quantity: 1, price: cardTips, isTip: true });
+                    let { data: cashData, error: cashErr } = await supabase.from('sales').insert([cashRecord]).select();
+                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('column'))) {
+                        const retryCash = { ...cashRecord };
+                        delete retryCash.card_tips;
+                        delete retryCash.customer_info;
+                        delete retryCash.ticket_number;
+                        const { data: retryData } = await supabase.from('sales').insert([retryCash]).select();
+                        cashData = retryData;
+                    }
+
+                    if (cashData && cashData.length > 0) {
+                        salesCreated.push({
+                            ...cashData[0],
+                            date: new Date(cashData[0].created_at),
+                            total: parseFloat(cashData[0].total),
+                            items: partialItems,
+                            paymentMethod: 'Efectivo',
+                            tableId,
+                            ticket_number: cashData[0].ticket_number || ticketNumber1
+                        });
+                    }
                 }
-                const retryRecord = { ...saleRecord, items: JSON.stringify(fallbackBill) };
-                delete retryRecord.card_tips;
-                delete retryRecord.customer_info;
-                delete retryRecord.ticket_number;
-                
-                const retryPromise = supabase.from('sales').insert([retryRecord]).select();
-                const retryTimeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("Tiempo de espera agotado al reintentar pago parcial")), 10000)
-                );
-                const { data: retryData, error: retryError } = await Promise.race([retryPromise, retryTimeoutPromise]);
-                data = retryData;
-                error = retryError;
-            }
 
-            if (error) {
-                console.error("DEBUG - payPartialTable Supabase Error:", error);
-                throw new Error(`Error en base de datos: ${error.message}`);
-            }
+                // 2. Tarjeta part
+                if (cardVal > 0) {
+                    ticketNumber2 = await incrementTicketNumber();
+                    const cardRecord = {
+                        total: cardVal,
+                        payment_method: 'Tarjeta',
+                        items: JSON.stringify(partialItems),
+                        table_id: tableId,
+                        ticket_number: ticketNumber2,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips
+                    };
 
-            if (data && data.length > 0) {
-                const newSale = {
-                    ...data[0],
-                    date: new Date(data[0].created_at),
-                    total: parseFloat(data[0].total),
-                    items: JSON.parse(data[0].items),
-                    paymentMethod: data[0].payment_method,
-                    tableId: data[0].table_id,
-                    ticket_number: data[0].ticket_number || ticketNumber
+                    let { data: cardData, error: cardErr } = await supabase.from('sales').insert([cardRecord]).select();
+                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('column'))) {
+                        const retryCard = { ...cardRecord };
+                        delete retryCard.card_tips;
+                        delete retryCard.customer_info;
+                        delete retryCard.ticket_number;
+                        const { data: retryData } = await supabase.from('sales').insert([retryCard]).select();
+                        cardData = retryData;
+                    }
+
+                    if (cardData && cardData.length > 0) {
+                        salesCreated.push({
+                            ...cardData[0],
+                            date: new Date(cardData[0].created_at),
+                            total: parseFloat(cardData[0].total),
+                            items: partialItems,
+                            paymentMethod: 'Tarjeta',
+                            tableId,
+                            ticket_number: cardData[0].ticket_number || ticketNumber2,
+                            card_tips: cardTips
+                        });
+                    }
+                }
+            } else {
+                // Standard single payment
+                const ticketNumber = await incrementTicketNumber();
+                ticketNumber1 = ticketNumber;
+                const saleRecord = {
+                    total,
+                    payment_method: paymentMethod,
+                    items: JSON.stringify(partialItems),
+                    table_id: tableId,
+                    ticket_number: ticketNumber,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: cardTips
                 };
-                setSalesHistory(prev => [newSale, ...prev]);
 
-                // No customer loyality update for partial payments at this time
+                let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('column'))) {
+                    const retryRecord = { ...saleRecord };
+                    delete retryRecord.card_tips;
+                    delete retryRecord.customer_info;
+                    delete retryRecord.ticket_number;
+                    const { data: retryData } = await supabase.from('sales').insert([retryRecord]).select();
+                    data = retryData;
+                }
+
+                if (data && data.length > 0) {
+                    salesCreated.push({
+                        ...data[0],
+                        date: new Date(data[0].created_at),
+                        total: parseFloat(data[0].total),
+                        items: partialItems,
+                        paymentMethod: data[0].payment_method,
+                        tableId: data[0].table_id,
+                        ticket_number: data[0].ticket_number || ticketNumber,
+                        card_tips: cardTips
+                    });
+                }
+            }
+
+            if (salesCreated.length > 0) {
+                setSalesHistory(prev => [...salesCreated, ...prev]);
+
+                const currentBill = tableBills[tableId] || [];
+                const nextBill = currentBill.map(item => {
+                    const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
+                    if (paidItem) {
+                        return { ...item, quantity: item.quantity - paidItem.quantity };
+                    }
+                    return item;
+                }).filter(item => item.quantity > 0);
+                const remaining = calculateOrderTotal(nextBill);
 
                 // Update bill: deduct paid quantities
                 setTableBills(prev => {
-                    const currentBill = prev[tableId] || [];
-                    const nextBill = currentBill.map(item => {
-                        const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
-                        if (paidItem) {
-                            return { ...item, quantity: item.quantity - paidItem.quantity };
-                        }
-                        return item;
-                    }).filter(item => item.quantity > 0);
-
                     if (nextBill.length === 0) {
                         updateTableStatus(tableId, 'free');
                         if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                        setTablePaidAmounts(prevPa => {
+                            const nextPa = { ...prevPa };
+                            delete nextPa[tableId];
+                            return nextPa;
+                        });
+                        const tableObj = tables.find(t => t.id === tableId);
+                        if (tableObj) {
+                            setKitchenOrders(prevKo => prevKo.filter(ko => ko.table !== tableObj.name));
+                        }
                         const next = { ...prev };
                         delete next[tableId];
                         return next;
                     }
                     return { ...prev, [tableId]: nextBill };
                 });
-                return newSale;
+
+                return {
+                    ...salesCreated[0],
+                    sales: salesCreated,
+                    ticket_number: salesCreated.map(s => s.ticket_number).filter(Boolean).join(' / '),
+                    remaining
+                };
             }
         } catch (err) {
             console.error("DEBUG - payPartialTable Failure. Falling back to OFFLINE mode:", err);
             
             if (partialItems && partialItems.length > 0) {
-                const total = calculateOrderTotal(partialItems);
-                const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
-                
-                const offlineSale = {
-                    id: `offline-${Date.now()}`,
-                    total,
-                    payment_method: paymentMethod,
-                    items: JSON.stringify(partialItems),
-                    table_id: tableId,
-                    ticket_number: nextLocalTicketNumber,
-                    card_tips: cardTips,
-                    created_at: new Date().toISOString(),
-                    isOffline: true
-                };
+                const rawTotal = calculateOrderTotal(partialItems);
+                const discountAmount = isInvitation ? rawTotal : (rawTotal * (parseFloat(discountPercent) || 0) / 100);
+                const total = Math.max(0, rawTotal - discountAmount);
 
-                // Append to offline sales queue
-                setOfflineSales(prev => [...prev, offlineSale]);
+                const offlineSalesList = [];
+                if (paymentMethod === 'Mixto' && mixedDetails) {
+                    const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
+                    const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
 
-                // Append to local sales history
-                const localSaleForHistory = {
-                    ...offlineSale,
-                    date: new Date(offlineSale.created_at),
-                    total: parseFloat(offlineSale.total),
-                    items: partialItems,
-                    paymentMethod: offlineSale.payment_method,
-                    tableId: offlineSale.table_id,
-                    ticket_number: offlineSale.ticket_number,
-                    card_tips: offlineSale.card_tips
-                };
+                    if (cashVal > 0) {
+                        const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                        updateLocalTicketNumber(nextLocalTicketNumber);
+                        offlineSalesList.push({
+                            id: `offline-${Date.now()}-cash`,
+                            total: cashVal,
+                            payment_method: 'Efectivo',
+                            paymentMethod: 'Efectivo',
+                            items: partialItems,
+                            table_id: tableId,
+                            tableId,
+                            ticket_number: nextLocalTicketNumber,
+                            card_tips: 0,
+                            created_at: new Date().toISOString(),
+                            date: new Date(),
+                            isOffline: true
+                        });
+                    }
+                    if (cardVal > 0) {
+                        const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                        updateLocalTicketNumber(nextLocalTicketNumber);
+                        offlineSalesList.push({
+                            id: `offline-${Date.now()}-card`,
+                            total: cardVal,
+                            payment_method: 'Tarjeta',
+                            paymentMethod: 'Tarjeta',
+                            items: partialItems,
+                            table_id: tableId,
+                            tableId,
+                            ticket_number: nextLocalTicketNumber,
+                            card_tips: cardTips,
+                            created_at: new Date().toISOString(),
+                            date: new Date(),
+                            isOffline: true
+                        });
+                    }
+                } else {
+                    const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                    updateLocalTicketNumber(nextLocalTicketNumber);
+                    offlineSalesList.push({
+                        id: `offline-${Date.now()}`,
+                        total,
+                        payment_method: paymentMethod,
+                        paymentMethod,
+                        items: partialItems,
+                        table_id: tableId,
+                        tableId,
+                        ticket_number: nextLocalTicketNumber,
+                        card_tips: cardTips,
+                        created_at: new Date().toISOString(),
+                        date: new Date(),
+                        isOffline: true
+                    });
+                }
 
-                setSalesHistory(prev => [localSaleForHistory, ...prev]);
-                updateLocalTicketNumber(nextLocalTicketNumber);
+                setOfflineSales(prev => [...prev, ...offlineSalesList.map(s => ({ ...s, items: JSON.stringify(s.items) }))]);
+                setSalesHistory(prev => [...offlineSalesList, ...prev]);
 
-                // Update bill: deduct paid quantities
+                const currentBill = tableBills[tableId] || [];
+                const nextBill = currentBill.map(item => {
+                    const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
+                    if (paidItem) {
+                        return { ...item, quantity: item.quantity - paidItem.quantity };
+                    }
+                    return item;
+                }).filter(item => item.quantity > 0);
+                const remaining = calculateOrderTotal(nextBill);
+
                 setTableBills(prev => {
-                    const currentBill = prev[tableId] || [];
-                    const nextBill = currentBill.map(item => {
-                        const paidItem = partialItems.find(p => p.uniqueId === item.uniqueId);
-                        if (paidItem) {
-                            return { ...item, quantity: item.quantity - paidItem.quantity };
-                        }
-                        return item;
-                    }).filter(item => item.quantity > 0);
-
                     if (nextBill.length === 0) {
                         updateTableStatus(tableId, 'free');
                         if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                        setTablePaidAmounts(prevPa => {
+                            const nextPa = { ...prevPa };
+                            delete nextPa[tableId];
+                            return nextPa;
+                        });
+                        const tableObj = tables.find(t => t.id === tableId);
+                        if (tableObj) {
+                            setKitchenOrders(prevKo => prevKo.filter(ko => ko.table !== tableObj.name));
+                        }
                         const next = { ...prev };
                         delete next[tableId];
                         return next;
@@ -1131,20 +1492,23 @@ export const OrderProvider = ({ children }) => {
                     return { ...prev, [tableId]: nextBill };
                 });
 
-                alert(`⚠️ PAGO PARCIAL REGISTRADO SIN CONEXIÓN (OFFLINE) ⚠️\n\nEl cobro se ha guardado localmente con el Ticket Nº ${nextLocalTicketNumber}.\n\nSe subirá automáticamente cuando vuelva la conexión.`);
-
-                return localSaleForHistory;
+                return {
+                    ...offlineSalesList[0],
+                    sales: offlineSalesList,
+                    ticket_number: offlineSalesList.map(s => s.ticket_number).join(' / '),
+                    remaining
+                };
             }
             return null;
         }
         return null;
     };
 
-    const payValuePartialTable = async (tableId, amount, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null) => {
+    const payValuePartialTable = async (tableId, amount, paymentMethod = 'Efectivo', discountPercent = 0, isInvitation = false, customerData = null, tips = 0, mixedDetails = null) => {
         if (amount <= 0) return null;
+        const cardTips = parseFloat(tips) || 0;
 
         try {
-            const ticketNumber = await incrementTicketNumber();
             const itemsToPay = [{
                 id: 'partial-payment',
                 uniqueId: `partial-${Date.now()}`,
@@ -1153,101 +1517,171 @@ export const OrderProvider = ({ children }) => {
                 quantity: 1
             }];
 
-            const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
+            const discountAmount = isInvitation ? amount : (amount * (parseFloat(discountPercent) || 0) / 100);
             const finalToPay = Math.max(0, amount - discountAmount);
 
-            const insertPromise = supabase.from('sales').insert([{
-                total: finalToPay,
-                payment_method: paymentMethod,
-                items: JSON.stringify(itemsToPay),
-                table_id: tableId,
-                ticket_number: ticketNumber,
-                customer_info: customerData ? JSON.stringify(customerData) : null
-            }]).select();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Tiempo de espera agotado al registrar pago parcial")), 10000)
-            );
-            let { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+            const salesCreated = [];
+            let ticketNumber1 = null;
+            let ticketNumber2 = null;
 
-            // Fallback for missing columns
-            if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column')) && (error.message.includes('does not exist') || error.message.includes('schema cache'))) {
-                const fallbackBill = [...itemsToPay];
-                if (customerData) {
-                    fallbackBill.push({ id: 'customer-record', name: `Cliente: ${customerData.name || customerData.phone || 'Genérico'}`, quantity: 1, price: 0, isNote: true });
+            if (paymentMethod === 'Mixto' && mixedDetails) {
+                const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
+                const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
+
+                if (cashVal > 0) {
+                    ticketNumber1 = await incrementTicketNumber();
+                    const cashRecord = {
+                        total: cashVal,
+                        payment_method: 'Efectivo',
+                        items: JSON.stringify(itemsToPay),
+                        table_id: tableId,
+                        ticket_number: ticketNumber1,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: 0
+                    };
+                    let { data: cashData, error: cashErr } = await supabase.from('sales').insert([cashRecord]).select();
+                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('column'))) {
+                        const retryCash = { ...cashRecord };
+                        delete retryCash.card_tips;
+                        delete retryCash.customer_info;
+                        delete retryCash.ticket_number;
+                        const { data: retryData } = await supabase.from('sales').insert([retryCash]).select();
+                        cashData = retryData;
+                    }
+                    if (cashData && cashData.length > 0) {
+                        salesCreated.push({
+                            ...cashData[0],
+                            date: new Date(cashData[0].created_at),
+                            total: parseFloat(cashData[0].total),
+                            items: itemsToPay,
+                            paymentMethod: 'Efectivo',
+                            tableId,
+                            ticket_number: cashData[0].ticket_number || ticketNumber1
+                        });
+                    }
                 }
-                const retryRecord = {
+
+                if (cardVal > 0) {
+                    ticketNumber2 = await incrementTicketNumber();
+                    const cardRecord = {
+                        total: cardVal,
+                        payment_method: 'Tarjeta',
+                        items: JSON.stringify(itemsToPay),
+                        table_id: tableId,
+                        ticket_number: ticketNumber2,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips
+                    };
+                    let { data: cardData, error: cardErr } = await supabase.from('sales').insert([cardRecord]).select();
+                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('column'))) {
+                        const retryCard = { ...cardRecord };
+                        delete retryCard.card_tips;
+                        delete retryCard.customer_info;
+                        delete retryCard.ticket_number;
+                        const { data: retryData } = await supabase.from('sales').insert([retryCard]).select();
+                        cardData = retryData;
+                    }
+                    if (cardData && cardData.length > 0) {
+                        salesCreated.push({
+                            ...cardData[0],
+                            date: new Date(cardData[0].created_at),
+                            total: parseFloat(cardData[0].total),
+                            items: itemsToPay,
+                            paymentMethod: 'Tarjeta',
+                            tableId,
+                            ticket_number: cardData[0].ticket_number || ticketNumber2,
+                            card_tips: cardTips
+                        });
+                    }
+                }
+            } else {
+                const ticketNumber = await incrementTicketNumber();
+                ticketNumber1 = ticketNumber;
+                const saleRecord = {
                     total: finalToPay,
                     payment_method: paymentMethod,
-                    items: JSON.stringify(fallbackBill),
+                    items: JSON.stringify(itemsToPay),
                     table_id: tableId,
-                    ticket_number: ticketNumber
+                    ticket_number: ticketNumber,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: cardTips
                 };
-                delete retryRecord.card_tips;
-                delete retryRecord.customer_info;
-                delete retryRecord.ticket_number;
-                
-                const retryPromise = supabase.from('sales').insert([retryRecord]).select();
-                const retryTimeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("Tiempo de espera agotado al reintentar pago parcial")), 10000)
-                );
-                const { data: retryData, error: retryError } = await Promise.race([retryPromise, retryTimeoutPromise]);
-                data = retryData;
-                error = retryError;
+                let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('column'))) {
+                    const retryRecord = { ...saleRecord };
+                    delete retryRecord.card_tips;
+                    delete retryRecord.customer_info;
+                    delete retryRecord.ticket_number;
+                    const { data: retryData } = await supabase.from('sales').insert([retryRecord]).select();
+                    data = retryData;
+                }
+                if (data && data.length > 0) {
+                    salesCreated.push({
+                        ...data[0],
+                        date: new Date(data[0].created_at),
+                        total: parseFloat(data[0].total),
+                        items: itemsToPay,
+                        paymentMethod: data[0].payment_method,
+                        tableId: data[0].table_id,
+                        ticket_number: data[0].ticket_number || ticketNumber,
+                        card_tips: cardTips
+                    });
+                }
             }
 
-            if (error) {
-                console.error("DEBUG - payValuePartialTable Supabase Error:", error);
-                throw new Error(`Error en base de datos: ${error.message}`);
-            }
+            if (salesCreated.length > 0) {
+                setSalesHistory(prev => [...salesCreated, ...prev]);
 
-            if (data && data.length > 0) {
-                const newSale = {
-                    ...data[0],
-                    date: new Date(data[0].created_at),
-                    total: parseFloat(data[0].total),
-                    items: JSON.parse(data[0].items),
-                    paymentMethod: data[0].payment_method,
-                    tableId: data[0].table_id,
-                    ticket_number: data[0].ticket_number || ticketNumber
-                };
-                setSalesHistory(prev => [newSale, ...prev]);
-
-                // Update customer loyalty if applicable
                 if (customerData && customerData.id) {
                     recordSale(customerData.id, finalToPay);
                 }
 
-                // Update bill: represent this as a negative item to reduce the total
-                setTableBills(prev => {
-                    const currentBill = prev[tableId] || [];
-                    const creditItem = {
-                        id: 'payment-credit',
-                        uniqueId: `credit-${Date.now()}`,
-                        name: `ABONO PAGO ${paymentMethod}`,
-                        price: -amount,
-                        quantity: 1,
-                        category: 'Pagos'
-                    };
+                const currentBill = (tableBills[tableId] || []).filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+                const billTotal = calculateOrderTotal(currentBill);
+                const prevPaid = tablePaidAmounts[tableId] || 0;
+                const newPaid = prevPaid + amount;
+                const remaining = Math.max(0, billTotal - newPaid);
 
-                    const nextBill = [...currentBill, creditItem];
-
-                    // If total reaches 0 or less, close the table
-                    const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-                    if (totalRemaining <= 0.01) {
-                        updateTableStatus(tableId, 'free');
-                        if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                if (remaining <= 0.01) {
+                    updateTableStatus(tableId, 'free');
+                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                    setTableBills(prev => {
                         const next = { ...prev };
                         delete next[tableId];
                         return next;
+                    });
+                    setTablePaidAmounts(prev => {
+                        const next = { ...prev };
+                        delete next[tableId];
+                        return next;
+                    });
+                    const tableObj = tables.find(t => t.id === tableId);
+                    if (tableObj) {
+                        setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
                     }
-                    return { ...prev, [tableId]: nextBill };
-                });
-                return newSale;
+                } else {
+                    setTablePaidAmounts(prev => ({
+                        ...prev,
+                        [tableId]: newPaid
+                    }));
+                    setTableBills(prev => ({
+                        ...prev,
+                        [tableId]: currentBill
+                    }));
+                }
+
+                return {
+                    ...salesCreated[0],
+                    sales: salesCreated,
+                    ticket_number: salesCreated.map(s => s.ticket_number).filter(Boolean).join(' / '),
+                    remaining,
+                    billTotal,
+                    paidSoFar: newPaid
+                };
             }
         } catch (err) {
             console.error("DEBUG - payValuePartialTable Failure. Falling back to OFFLINE mode:", err);
             
-            const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
             const itemsToPay = [{
                 id: 'partial-payment',
                 uniqueId: `partial-${Date.now()}`,
@@ -1255,66 +1689,117 @@ export const OrderProvider = ({ children }) => {
                 price: amount,
                 quantity: 1
             }];
-            const discountAmount = isInvitation ? amount : (amount * discountPercent / 100);
+            const discountAmount = isInvitation ? amount : (amount * (parseFloat(discountPercent) || 0) / 100);
             const finalToPay = Math.max(0, amount - discountAmount);
 
-            const offlineSale = {
-                id: `offline-${Date.now()}`,
-                total: finalToPay,
-                payment_method: paymentMethod,
-                items: JSON.stringify(itemsToPay),
-                table_id: tableId,
-                ticket_number: nextLocalTicketNumber,
-                customer_info: customerData ? JSON.stringify(customerData) : null,
-                created_at: new Date().toISOString(),
-                isOffline: true
-            };
+            const offlineSalesList = [];
+            if (paymentMethod === 'Mixto' && mixedDetails) {
+                const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
+                const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
 
-            // Append to offline sales queue
-            setOfflineSales(prev => [...prev, offlineSale]);
+                if (cashVal > 0) {
+                    const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                    updateLocalTicketNumber(nextLocalTicketNumber);
+                    offlineSalesList.push({
+                        id: `offline-${Date.now()}-cash`,
+                        total: cashVal,
+                        payment_method: 'Efectivo',
+                        paymentMethod: 'Efectivo',
+                        items: itemsToPay,
+                        table_id: tableId,
+                        tableId,
+                        ticket_number: nextLocalTicketNumber,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: 0,
+                        created_at: new Date().toISOString(),
+                        date: new Date(),
+                        isOffline: true
+                    });
+                }
+                if (cardVal > 0) {
+                    const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                    updateLocalTicketNumber(nextLocalTicketNumber);
+                    offlineSalesList.push({
+                        id: `offline-${Date.now()}-card`,
+                        total: cardVal,
+                        payment_method: 'Tarjeta',
+                        paymentMethod: 'Tarjeta',
+                        items: itemsToPay,
+                        table_id: tableId,
+                        tableId,
+                        ticket_number: nextLocalTicketNumber,
+                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        card_tips: cardTips,
+                        created_at: new Date().toISOString(),
+                        date: new Date(),
+                        isOffline: true
+                    });
+                }
+            } else {
+                const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
+                updateLocalTicketNumber(nextLocalTicketNumber);
+                offlineSalesList.push({
+                    id: `offline-${Date.now()}`,
+                    total: finalToPay,
+                    payment_method: paymentMethod,
+                    paymentMethod,
+                    items: itemsToPay,
+                    table_id: tableId,
+                    tableId,
+                    ticket_number: nextLocalTicketNumber,
+                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    card_tips: cardTips,
+                    created_at: new Date().toISOString(),
+                    date: new Date(),
+                    isOffline: true
+                });
+            }
 
-            const localSaleForHistory = {
-                ...offlineSale,
-                date: new Date(offlineSale.created_at),
-                total: parseFloat(offlineSale.total),
-                items: itemsToPay,
-                paymentMethod: offlineSale.payment_method,
-                tableId: offlineSale.table_id,
-                ticket_number: offlineSale.ticket_number
-            };
+            setOfflineSales(prev => [...prev, ...offlineSalesList.map(s => ({ ...s, items: JSON.stringify(s.items) }))]);
+            setSalesHistory(prev => [...offlineSalesList, ...prev]);
 
-            setSalesHistory(prev => [localSaleForHistory, ...prev]);
-            updateLocalTicketNumber(nextLocalTicketNumber);
+            const currentBill = (tableBills[tableId] || []).filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+            const billTotal = calculateOrderTotal(currentBill);
+            const prevPaid = tablePaidAmounts[tableId] || 0;
+            const newPaid = prevPaid + amount;
+            const remaining = Math.max(0, billTotal - newPaid);
 
-            // Update bill: represent this as a negative item to reduce the total
-            setTableBills(prev => {
-                const currentBill = prev[tableId] || [];
-                const creditItem = {
-                    id: 'payment-credit',
-                    uniqueId: `credit-${Date.now()}`,
-                    name: `ABONO PAGO ${paymentMethod}`,
-                    price: -amount,
-                    quantity: 1,
-                    category: 'Pagos'
-                };
-
-                const nextBill = [...currentBill, creditItem];
-
-                // If total reaches 0 or less, close the table
-                const totalRemaining = nextBill.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-                if (totalRemaining <= 0.01) {
-                    updateTableStatus(tableId, 'free');
-                    if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+            if (remaining <= 0.01) {
+                updateTableStatus(tableId, 'free');
+                if (currentTable && currentTable.id === tableId) setCurrentTable(null);
+                setTableBills(prev => {
                     const next = { ...prev };
                     delete next[tableId];
                     return next;
+                });
+                setTablePaidAmounts(prev => {
+                    const next = { ...prev };
+                    delete next[tableId];
+                    return next;
+                });
+                const tableObj = tables.find(t => t.id === tableId);
+                if (tableObj) {
+                    setKitchenOrders(prev => prev.filter(ko => ko.table !== tableObj.name));
                 }
-                return { ...prev, [tableId]: nextBill };
-            });
+            } else {
+                setTablePaidAmounts(prev => ({
+                    ...prev,
+                    [tableId]: newPaid
+                }));
+                setTableBills(prev => ({
+                    ...prev,
+                    [tableId]: currentBill
+                }));
+            }
 
-            alert(`⚠️ PAGO PARCIAL REGISTRADO SIN CONEXIÓN (OFFLINE) ⚠️\n\nEl cobro se ha guardado localmente con el Ticket Nº ${nextLocalTicketNumber}.\n\nSe subirá automáticamente cuando vuelva la conexión.`);
-
-            return localSaleForHistory;
+            return {
+                ...offlineSalesList[0],
+                sales: offlineSalesList,
+                ticket_number: offlineSalesList.map(s => s.ticket_number).join(' / '),
+                remaining,
+                billTotal,
+                paidSoFar: newPaid
+            };
         }
         return null;
     };
@@ -1947,15 +2432,25 @@ export const OrderProvider = ({ children }) => {
             toggleItemInvitationInBill,
             clearOrder,
             calculateTotal: () => calculateOrderTotal(order),
-            calculateBillTotal: () => calculateOrderTotal(bill),
+            calculateBillTotal: (items = null) => {
+                if (items) return calculateOrderTotal(items);
+                if (!currentTable) return 0;
+                const rawBill = (tableBills[currentTable.id] || []).filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+                const bTotal = calculateOrderTotal(rawBill);
+                const paid = tablePaidAmounts[currentTable.id] || 0;
+                return Math.max(0, bTotal - paid);
+            },
             sendToKitchen,
             submitCustomerOrder,
             updateKitchenItemStatus,
             markOrderReady,
             closeTable,
+            closeTableMixed,
             forceClearTable,
             payPartialTable,
             payValuePartialTable,
+            tablePaidAmounts,
+            getTablePendingBalance,
             calculateOrderTotal,
             removeProductFromBill,
             updateBillQuantity,

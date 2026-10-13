@@ -376,8 +376,16 @@ const Analytics = () => {
         const avgChange = prevAvgTicket > 0 ? ((avgTicket - prevAvgTicket) / prevAvgTicket) * 100 : 0;
 
         // Payment Split
-        const cashRaw = filteredSales.filter(s => s.paymentMethod === 'Efectivo').reduce((acc, s) => acc + (parseFloat(s.total) || 0), 0);
-        const cardRaw = filteredSales.filter(s => s.paymentMethod === 'Tarjeta').reduce((acc, s) => acc + (parseFloat(s.total) || 0), 0);
+        const cashRaw = filteredSales.reduce((acc, s) => {
+            if (s.paymentMethod === 'Efectivo') return acc + (parseFloat(s.total) || 0);
+            if (s.paymentMethod === 'Mixto' && s.cash_amount) return acc + (parseFloat(s.cash_amount) || 0);
+            return acc;
+        }, 0);
+        const cardRaw = filteredSales.reduce((acc, s) => {
+            if (s.paymentMethod === 'Tarjeta') return acc + (parseFloat(s.total) || 0);
+            if (s.paymentMethod === 'Mixto' && s.card_amount) return acc + (parseFloat(s.card_amount) || 0);
+            return acc;
+        }, 0);
         const cardTipsRaw = filteredSales.reduce((acc, s) => acc + (parseFloat(s.card_tips) || 0), 0);
 
         // Hourly Heatmap Data (0-23h)
