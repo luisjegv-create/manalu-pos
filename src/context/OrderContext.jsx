@@ -65,6 +65,10 @@ export const OrderProvider = ({ children }) => {
     const [tableBills, setTableBills] = useState(() => safeParse('manalu_table_bills', {}));
     const [tablePaidAmounts, setTablePaidAmounts] = useState(() => safeParse('manalu_table_paid_amounts', {}));
 
+    // Audit and Deleted Bills Log (Recovery Trash Bin)
+    const [deletedBillsLog, setDeletedBillsLog] = useState(() => safeParse('manalu_deleted_bills_log', []));
+    const lastKitchenSendTimes = React.useRef({});
+
     // Active Orders/Tickets state
     const [tables, setTables] = useState(() => {
         const parsed = safeParse('manalu_tables', []);
@@ -498,27 +502,24 @@ export const OrderProvider = ({ children }) => {
                 tableBills,
                 timestamp: new Date().toISOString()
             };
-            // Local snapshot (Level 1) - DISABLED to save localStorage space, 
-            // the individual table_orders and table_bills keys are already persistent.
-            // localStorage.setItem('manalu_last_good_state', JSON.stringify(snapshot));
+            // Local snapshot (Level 1)
+            safeSetItem('manalu_last_good_state', JSON.stringify(snapshot));
             
-            // Cloud mirror (Level 2) - Only every 5 minutes to avoid spamming
+            // Cloud mirror (Level 2) - Every 3 minutes to kitchen_orders (completed, invisible to KDS)
             const lastCloudBackup = localStorage.getItem('manalu_last_cloud_backup');
             const now = new Date();
-            if (!lastCloudBackup || (now - new Date(lastCloudBackup)) > 300000) {
-                supabase.from('service_requests').insert([{
-                    table_id: 'SYSTEM',
-                    table_name: 'AUTO_MIRROR',
-                    type: 'system_backup',
-                    payload: JSON.stringify(snapshot),
-                    status: 'pending'
+            if (!lastCloudBackup || (now - new Date(lastCloudBackup)) > 180000) {
+                supabase.from('kitchen_orders').insert([{
+                    table_name: 'AUTO_MIRROR_BACKUP',
+                    items: JSON.stringify({ _is_system_snapshot: true, snapshot }),
+                    status: 'completed'
                 }]).then(() => {
                     localStorage.setItem('manalu_last_cloud_backup', now.toISOString());
-                });
+                }).catch(() => {});
             }
         };
 
-        const timer = setTimeout(autoBackup, 5000); // Wait 5s after any change to stabilize
+        const timer = setTimeout(autoBackup, 4000); // Wait 4s after any change to stabilize
         return () => clearTimeout(timer);
     }, [tables, tableOrders, tableBills]);
 
@@ -657,6 +658,15 @@ export const OrderProvider = ({ children }) => {
     const sendToKitchen = async () => {
         if (!currentTable || order.length === 0) return;
 
+        // Anti-duplicate protection: Ignore rapid re-sends within 2.5s for the same table
+        const nowMs = Date.now();
+        const lastSent = lastKitchenSendTimes.current[currentTable.id] || 0;
+        if (nowMs - lastSent < 2500) {
+            console.warn("sendToKitchen blocked: duplicate send prevented for table", currentTable.id);
+            return;
+        }
+        lastKitchenSendTimes.current[currentTable.id] = nowMs;
+
         // Take a snapshot and clear order state immediately to prevent duplicate sends on network latency
         const orderSnapshot = [...order];
         const customerSnapshot = selectedCustomer;
@@ -686,11 +696,13 @@ export const OrderProvider = ({ children }) => {
                 startTime: new Date().toISOString()
             }));
 
+        const safeTableName = currentTable.name || currentTable.id || 'Barra';
+
         if (kitchenItems.length > 0) {
             // Save to Supabase (KDS)
             try {
                 const { data, error } = await supabase.from('kitchen_orders').insert([{
-                    table_name: currentTable.name,
+                    table_name: safeTableName,
                     items: JSON.stringify(kitchenItems),
                     customer_info: customerSnapshot ? JSON.stringify(customerSnapshot) : null,
                     status: 'pending'
@@ -746,7 +758,21 @@ export const OrderProvider = ({ children }) => {
         }
         try {
             const rawBill = tableBills[tableId] || [];
-            const finalBill = rawBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+            const rawDraft = tableOrders[tableId] || [];
+
+            // BULLETPROOF MERGE: Combine both draft order and sent bill so NO item is ever omitted
+            const combinedBill = [...rawBill];
+            rawDraft.forEach(draftItem => {
+                const cleanItem = stripItem(draftItem);
+                const existing = combinedBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
+                if (existing) {
+                    existing.quantity += cleanItem.quantity;
+                } else {
+                    combinedBill.push(cleanItem);
+                }
+            });
+
+            const finalBill = combinedBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
             const cardTips = parseFloat(tips) || 0;
 
             if (finalBill && finalBill.length > 0) {
@@ -980,7 +1006,43 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
-    const forceClearTable = (tableId) => {
+    const forceClearTable = (tableId, reason = 'Eliminada manualmente') => {
+        const orderItems = tableOrders[tableId] || [];
+        const billItems = tableBills[tableId] || [];
+        const tableObj = tables.find(t => t.id === tableId);
+        const tableName = tableObj ? tableObj.name : `Mesa ${tableId}`;
+        const totalAmount = [...orderItems, ...billItems].reduce((sum, item) => sum + (item.isInvitation ? 0 : ((item.price || 0) * (item.quantity || 1))), 0);
+
+        // ALWAYS archive to trash log if there were any items
+        if (orderItems.length > 0 || billItems.length > 0) {
+            const trashRecord = {
+                id: `trash-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                tableId,
+                tableName,
+                orderItems,
+                billItems,
+                totalAmount,
+                reason,
+                deletedAt: new Date().toISOString(),
+                isRecovered: false
+            };
+            const existingLog = safeParse('manalu_deleted_bills_log', []);
+            const updatedLog = [trashRecord, ...existingLog].slice(0, 100);
+            safeSetItem('manalu_deleted_bills_log', JSON.stringify(updatedLog));
+            setDeletedBillsLog(updatedLog);
+
+            // Cloud mirror to kitchen_orders (completed, invisible to KDS)
+            try {
+                supabase.from('kitchen_orders').insert([{
+                    table_name: `[PAPELERA] ${tableName}`,
+                    items: JSON.stringify({ _is_trash_backup: true, trashRecord }),
+                    status: 'completed'
+                }]).then();
+            } catch (e) {
+                console.error("Error archiving deleted bill to cloud:", e);
+            }
+        }
+
         setTableOrders(prev => {
             const next = { ...prev };
             delete next[tableId];
@@ -997,8 +1059,6 @@ export const OrderProvider = ({ children }) => {
             return next;
         });
 
-        const tableObj = tables.find(t => t.id === tableId);
-        
         // Destruir ticket completamente
         setTables(prev => prev.filter(t => t.id !== tableId && t.linkedTo !== tableId));
 
@@ -1016,6 +1076,51 @@ export const OrderProvider = ({ children }) => {
         }
     };
 
+    const recoverDeletedBill = (trashId) => {
+        const log = safeParse('manalu_deleted_bills_log', []);
+        const target = log.find(entry => entry.id === trashId);
+        if (!target) return false;
+
+        const restoredTableId = target.tableId || `table-${Date.now()}`;
+        const restoredTableName = target.tableName || 'Mesa Recuperada';
+
+        // Add back to active tables if not already present
+        setTables(prev => {
+            if (prev.find(t => t.id === restoredTableId)) return prev;
+            return [...prev, {
+                id: restoredTableId,
+                name: restoredTableName,
+                zone: 'pedidos',
+                status: 'occupied',
+                diners: 1,
+                lastActionAt: new Date().toISOString()
+            }];
+        });
+
+        // Restore bill
+        if (target.billItems && target.billItems.length > 0) {
+            setTableBills(prev => ({
+                ...prev,
+                [restoredTableId]: target.billItems
+            }));
+        }
+
+        // Restore draft order
+        if (target.orderItems && target.orderItems.length > 0) {
+            setTableOrders(prev => ({
+                ...prev,
+                [restoredTableId]: target.orderItems
+            }));
+        }
+
+        // Mark as recovered
+        const updatedLog = log.map(entry => entry.id === trashId ? { ...entry, isRecovered: true } : entry);
+        safeSetItem('manalu_deleted_bills_log', JSON.stringify(updatedLog));
+        setDeletedBillsLog(updatedLog);
+
+        return true;
+    };
+
     const closeTableMixed = async (tableId, cashAmount, cardAmount, discountPercent = 0, isInvitation = false, customerData = null, tips = 0) => {
         if (checkoutInProgress.current[tableId]) {
             console.warn("Mesa ya en proceso de cobro:", tableId);
@@ -1025,7 +1130,21 @@ export const OrderProvider = ({ children }) => {
 
         try {
             const rawBill = tableBills[tableId] || [];
-            const finalBill = rawBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
+            const rawDraft = tableOrders[tableId] || [];
+
+            // BULLETPROOF MERGE: Combine both draft order and sent bill
+            const combinedBill = [...rawBill];
+            rawDraft.forEach(draftItem => {
+                const cleanItem = stripItem(draftItem);
+                const existing = combinedBill.find(b => b.id === cleanItem.id && !b.isModified && !cleanItem.isModified);
+                if (existing) {
+                    existing.quantity += cleanItem.quantity;
+                } else {
+                    combinedBill.push(cleanItem);
+                }
+            });
+
+            const finalBill = combinedBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
             const cardTips = parseFloat(tips) || 0;
             const tableObj = tables.find(t => t.id === tableId);
             const diners = tableObj ? (tableObj.diners || 1) : 1;
@@ -2447,6 +2566,8 @@ export const OrderProvider = ({ children }) => {
             closeTable,
             closeTableMixed,
             forceClearTable,
+            deletedBillsLog,
+            recoverDeletedBill,
             payPartialTable,
             payValuePartialTable,
             tablePaidAmounts,

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, PlusCircle, RefreshCw, Edit2 } from 'lucide-react';
+import { ArrowLeft, Clock, PlusCircle, RefreshCw, Edit2, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
 import TableOrderPreview from '../components/TableOrderPreview';
+import DeletedBillsModal from '../components/TPV/DeletedBillsModal';
 
 const TableTimer = ({ startTime }) => {
     const [elapsed, setElapsed] = useState(0);
@@ -44,8 +45,9 @@ const TableTimer = ({ startTime }) => {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { tables, selectTable, addTable, renameTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus } = useOrder();
+    const { tables, selectTable, addTable, renameTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus, deletedBillsLog = [], recoverDeletedBill } = useOrder();
     const { forceSync, isSyncing } = useInventory();
+    const [showTrashModal, setShowTrashModal] = useState(false);
     
     // Mostramos directamente todas las "Mesas" que ahora son nuestros Tickets/Pedidos Abiertos
     const activeTickets = tables;
@@ -98,6 +100,29 @@ const TableSelection = () => {
                 </div>
                 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <button
+                        onClick={() => setShowTrashModal(true)}
+                        title="Papelera de seguridad y recuperación de comandas borradas"
+                        style={{
+                            background: deletedBillsLog.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                            border: deletedBillsLog.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                            color: deletedBillsLog.length > 0 ? '#f87171' : '#94a3b8',
+                            borderRadius: '12px',
+                            padding: '1rem 1.4rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontWeight: 'bold',
+                            fontSize: '1.05rem',
+                            boxShadow: deletedBillsLog.length > 0 ? '0 4px 15px rgba(239, 68, 68, 0.2)' : 'none',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        <RotateCcw size={22} />
+                        <span>Papelera ({deletedBillsLog.length})</span>
+                    </button>
+
                     <button
                         onClick={forceSync}
                         disabled={isSyncing}
@@ -234,8 +259,12 @@ const TableSelection = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (window.confirm(`🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de "${ticket.name}"? Esta acción borrará el borrador y lo enviado a cocina.`)) {
-                                                        forceClearTable(ticket.id);
+                                                    const pendingTotal = [...tableOrderItems, ...tableBillItems].reduce((sum, item) => sum + (item.isInvitation ? 0 : ((item.price || 0) * (item.quantity || 1))), 0);
+                                                    const msg = pendingTotal > 0
+                                                        ? `🗑️ ¿Eliminar comanda de "${ticket.name}" (${pendingTotal.toFixed(2)}€)?\n\n🛡️ SEGURIDAD: Se guardará una copia completa en la Papelera de Seguridad por si necesitas recuperarla.`
+                                                        : `🗑️ ¿Eliminar la comanda vacía de "${ticket.name}"?`;
+                                                    if (window.confirm(msg)) {
+                                                        forceClearTable(ticket.id, 'Borrado manual desde Pedidos Abiertos');
                                                     }
                                                 }}
                                                 style={{
@@ -307,6 +336,13 @@ const TableSelection = () => {
                 }
                 `}
             </style>
+
+            <DeletedBillsModal
+                isOpen={showTrashModal}
+                onClose={() => setShowTrashModal(false)}
+                deletedBills={deletedBillsLog}
+                onRecover={recoverDeletedBill}
+            />
         </div>
     );
 };

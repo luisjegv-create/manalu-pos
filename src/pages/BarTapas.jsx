@@ -26,11 +26,13 @@ import {
     ClipboardList,
     LayoutGrid,
     RefreshCw,
-    Move
+    Move,
+    RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printBillTicket, printServiceTickets } from '../utils/printHelpers';
 import { compressImage } from '../utils/imageHelpers';
+import DeletedBillsModal from '../components/TPV/DeletedBillsModal';
 
 // Modular Components
 import CategoryTabs from '../components/TPV/CategoryTabs';
@@ -91,12 +93,15 @@ const BarTapas = () => {
         updateDiners,
         renameTable,
         offlineSales,
-        syncOfflineSales
+        syncOfflineSales,
+        deletedBillsLog = [],
+        recoverDeletedBill
     } = useOrder();
     const { customers } = useCustomers();
     const [activeCategory, setActiveCategory] = useState('raciones');
     const [activeSubcategory, setActiveSubcategory] = useState(null);
 
+    const [showTrashModal, setShowTrashModal] = useState(false);
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
     const [showTicket, setShowTicket] = useState(false);
@@ -902,6 +907,27 @@ const BarTapas = () => {
                                     }}
                                 >
                                     <RefreshCw size={20} className={isSyncing ? "spin-animation" : ""} />
+                                </button>
+                                {/* Papelera de Comandas Button */}
+                                <button
+                                    onClick={() => setShowTrashModal(true)}
+                                    title="Papelera de seguridad y recuperación de comandas borradas"
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.4rem',
+                                        background: deletedBillsLog?.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                        border: deletedBillsLog?.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                        color: deletedBillsLog?.length > 0 ? '#f87171' : '#94a3b8',
+                                        padding: '0.5rem 0.8rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.82rem',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <RotateCcw size={15} />
+                                    <span>Papelera ({deletedBillsLog?.length || 0})</span>
                                 </button>
                                 {/* Desktop Search Bar */}
                                 {!isMobile && (
@@ -1856,6 +1882,13 @@ const BarTapas = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            <DeletedBillsModal
+                isOpen={showTrashModal}
+                onClose={() => setShowTrashModal(false)}
+                deletedBills={deletedBillsLog}
+                onRecover={recoverDeletedBill}
+            />
         </div>
     );
 };

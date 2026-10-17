@@ -288,9 +288,13 @@ const OrderSummary = ({
                     {(order.length > 0 || (bill && bill.length > 0)) && (
                         <button
                             onClick={() => {
-                                if (window.confirm("🗑️ ¿Seguro que quieres eliminar completamente TODO el pedido de esta mesa (incluyendo lo enviado)? Esta acción es irreversible.")) {
+                                const currentTotal = calculateTotal() + calculateBillTotal();
+                                const msg = currentTotal > 0
+                                    ? `🗑️ ¿Eliminar comanda de "${currentTable?.name || 'esta mesa'}" (${currentTotal.toFixed(2)}€)?\n\n🛡️ SEGURIDAD: Se guardará una copia completa en la Papelera de Seguridad por si necesitas recuperarla.`
+                                    : `🗑️ ¿Eliminar comanda vacía de "${currentTable?.name || 'esta mesa'}"?`;
+                                if (window.confirm(msg)) {
                                     if (typeof forceClearTable === 'function') {
-                                        forceClearTable(currentTable?.id);
+                                        forceClearTable(currentTable?.id, 'Borrado manual desde barra TPV');
                                     } else {
                                         // Fallback manual if for some reason forceClearTable isn't passed yet
                                         const itemsToRemove = [...order];
@@ -298,7 +302,7 @@ const OrderSummary = ({
                                     }
                                 }
                             }}
-                            title="Borrar Mesa/Comanda"
+                            title="Borrar Mesa/Comanda (Se guarda copia en la papelera)"
                             style={{
                                 background: 'rgba(239, 68, 68, 0.15)',
                                 color: '#f87171',
@@ -525,7 +529,15 @@ const OrderSummary = ({
                                                     border: '1px solid rgba(255,255,255,0.1)'
                                                 }}>
                                                     <button
-                                                        onClick={() => updateBillQuantity(currentTable.id, item.uniqueId, -1)}
+                                                        onClick={() => {
+                                                            if (item.quantity === 1) {
+                                                                if (window.confirm(`⚠️ ¿Seguro que deseas ELIMINAR "${item.name}" de la comanda enviada a cocina?`)) {
+                                                                    updateBillQuantity(currentTable.id, item.uniqueId, -1);
+                                                                }
+                                                            } else {
+                                                                updateBillQuantity(currentTable.id, item.uniqueId, -1);
+                                                            }
+                                                        }}
                                                         style={{ width: '32px', height: '32px', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                                         title="Bajar cantidad / Eliminar"
                                                     >
@@ -601,6 +613,7 @@ const OrderSummary = ({
                             <>
                                 <button
                                     className="btn-primary"
+                                    disabled={isSendingOrder || isClosing}
                                     onClick={() => handleSendOrder(false, false)}
                                     style={{
                                         padding: '1.25rem 0.5rem',
@@ -611,17 +624,19 @@ const OrderSummary = ({
                                         border: 'none',
                                         boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)',
                                         color: 'white',
-                                        cursor: 'pointer',
+                                        cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer',
+                                        opacity: (isSendingOrder || isClosing) ? 0.6 : 1,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         gap: '0.5rem'
                                     }}
                                 >
-                                    <Printer size={20} /> ENVIAR
+                                    <Printer size={20} /> {isSendingOrder ? 'ENVIANDO...' : 'ENVIAR'}
                                 </button>
                                 <button
                                     className="btn-primary"
+                                    disabled={isSendingOrder || isClosing}
                                     onClick={() => handleFastPay('Efectivo')}
                                     style={{
                                         padding: '1.25rem 0.5rem',
@@ -632,14 +647,15 @@ const OrderSummary = ({
                                         border: 'none',
                                         boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
                                         color: 'white',
-                                        cursor: 'pointer',
+                                        cursor: (isSendingOrder || isClosing) ? 'not-allowed' : 'pointer',
+                                        opacity: (isSendingOrder || isClosing) ? 0.6 : 1,
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center'
                                     }}
                                 >
-                                    <Receipt size={18} /> EFECTIVO
+                                    <Receipt size={18} /> {isClosing ? 'COBRANDO...' : 'EFECTIVO'}
                                 </button>
                             </>
                         ) : (bill && bill.length > 0) && (
