@@ -4,6 +4,7 @@ import { printServiceTickets } from '../utils/printHelpers';
 import { useInventory } from './InventoryContext';
 import { useCustomers } from './CustomerContext';
 import { useEvents } from './EventContext';
+import { isDrinksOnlySale, isDrinksOnlyTable } from '../utils/orderClassification';
 
 const OrderContext = createContext();
 
@@ -239,7 +240,7 @@ export const OrderProvider = ({ children }) => {
 
                 const { data: dayData, error: dayError } = await supabase
                     .from('sales')
-                    .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation, diners')
+                    .select('id, created_at, total, total_amount, items, payment_method, table_id, ticket_number, discount_amount, is_invitation, diners, customer_info')
                     .gte('created_at', start.toISOString())
                     .lt('created_at', end.toISOString())
                     .order('created_at', { ascending: false });
@@ -249,15 +250,21 @@ export const OrderProvider = ({ children }) => {
                     syncError = dayError.message;
                     // Don't break, try next day
                 } else if (dayData && dayData.length > 0) {
-                    const mapped = dayData.map(s => ({
-                        ...s,
-                        date: new Date(s.created_at),
-                        total: parseFloat(s.total || s.total_amount || 0),
-                        items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
-                        paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
-                        tableId: s.table_id || s.tableId,
-                        diners: parseInt(s.diners) || 1
-                    }));
+                    const mapped = dayData.map(s => {
+                        const isDrinks = isDrinksOnlySale(s);
+                        const dinersVal = isDrinks ? 0 : (s.diners === 0 || s.diners === '0' ? 0 : (parseInt(s.diners) || 1));
+                        return {
+                            ...s,
+                            date: new Date(s.created_at),
+                            total: parseFloat(s.total || s.total_amount || 0),
+                            items: typeof s.items === 'string' ? (s.items.startsWith('[') ? JSON.parse(s.items) : []) : (s.items || []),
+                            paymentMethod: s.payment_method || s.paymentMethod || 'Efectivo',
+                            tableId: s.table_id || s.tableId,
+                            diners: dinersVal,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
+                        };
+                    });
                     allCloudSales = [...allCloudSales, ...mapped];
                 }
             }
@@ -787,7 +794,15 @@ export const OrderProvider = ({ children }) => {
                     const ticketNumber = await incrementTicketNumber();
 
                     const tableObj = tables.find(t => t.id === tableId);
-                    const diners = tableObj ? (tableObj.diners || 1) : 1;
+                    const isDrinks = isDrinksOnlyTable(tableObj);
+                    const diners = isDrinks ? 0 : (tableObj ? (parseInt(tableObj.diners) || 1) : 1);
+
+                    const customerPayload = {
+                        ...(customerData || {}),
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining',
+                        tableName: tableObj?.name || 'Mesa'
+                    };
 
                     // Build sale record
                     const saleRecord = {
@@ -796,7 +811,7 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(finalBill),
                         table_id: tableId,
                         ticket_number: ticketNumber,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        customer_info: JSON.stringify(customerPayload),
                         card_tips: cardTips,
                         diners: diners
                     };
@@ -848,7 +863,9 @@ export const OrderProvider = ({ children }) => {
                             tableId: data[0].table_id,
                             ticket_number: data[0].ticket_number || ticketNumber,
                             card_tips: parseFloat(data[0].card_tips) || cardTips,
-                            diners: parseInt(data[0].diners) || diners
+                            diners: data[0].diners !== undefined && data[0].diners !== null ? parseInt(data[0].diners) : diners,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
                         };
                         
                         setSalesHistory(prev => {
@@ -909,7 +926,14 @@ export const OrderProvider = ({ children }) => {
                     const discountAmount = (pendingTotal * discountPercent) / 100;
                     const total = isInvitation ? 0 : Math.max(0, pendingTotal - discountAmount);
                     const tableObj = tables.find(t => t.id === tableId);
-                    const diners = tableObj ? (tableObj.diners || 1) : 1;
+                    const isDrinks = isDrinksOnlyTable(tableObj);
+                    const diners = isDrinks ? 0 : (tableObj ? (parseInt(tableObj.diners) || 1) : 1);
+                    const customerPayload = {
+                        ...(customerData || {}),
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining',
+                        tableName: tableObj?.name || 'Mesa'
+                    };
                     
                     // Assign sequential ticket number
                     const nextLocalTicketNumber = (restaurantInfo.last_ticket_number || 0) + 1;
@@ -921,9 +945,11 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(finalBill),
                         table_id: tableId,
                         ticket_number: nextLocalTicketNumber,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        customer_info: JSON.stringify(customerPayload),
                         card_tips: cardTips,
                         diners: diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining',
                         created_at: new Date().toISOString(),
                         isOffline: true
                     };
@@ -941,7 +967,9 @@ export const OrderProvider = ({ children }) => {
                         tableId: offlineSale.table_id,
                         ticket_number: offlineSale.ticket_number,
                         card_tips: offlineSale.card_tips,
-                        diners: offlineSale.diners
+                        diners: offlineSale.diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     };
                     
                     setSalesHistory(prev => {
@@ -1147,7 +1175,14 @@ export const OrderProvider = ({ children }) => {
             const finalBill = combinedBill.filter(i => i.id !== 'payment-credit' && i.category !== 'Pagos');
             const cardTips = parseFloat(tips) || 0;
             const tableObj = tables.find(t => t.id === tableId);
-            const diners = tableObj ? (tableObj.diners || 1) : 1;
+            const isDrinks = isDrinksOnlyTable(tableObj);
+            const diners = isDrinks ? 0 : (tableObj ? (parseInt(tableObj.diners) || 1) : 1);
+            const customerPayload = {
+                ...(customerData || {}),
+                isDrinksOnly: isDrinks,
+                orderType: isDrinks ? 'drinks' : 'dining',
+                tableName: tableObj?.name || 'Mesa'
+            };
             const cashVal = parseFloat(cashAmount) || 0;
             const cardVal = parseFloat(cardAmount) || 0;
             const totalToCharge = cashVal + cardVal;
@@ -1165,7 +1200,7 @@ export const OrderProvider = ({ children }) => {
                     items: JSON.stringify(finalBill),
                     table_id: tableId,
                     ticket_number: ticketNumber1,
-                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    customer_info: JSON.stringify(customerPayload),
                     card_tips: 0,
                     diners
                 };
@@ -1191,7 +1226,9 @@ export const OrderProvider = ({ children }) => {
                         tableId,
                         ticket_number: cashData[0].ticket_number || ticketNumber1,
                         card_tips: 0,
-                        diners
+                        diners: cashData[0].diners !== undefined && cashData[0].diners !== null ? parseInt(cashData[0].diners) : diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     };
                     salesCreated.push(s);
                 } else {
@@ -1202,9 +1239,11 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(finalBill),
                         table_id: tableId,
                         ticket_number: ticketNumber1,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        customer_info: JSON.stringify(customerPayload),
                         card_tips: 0,
                         diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining',
                         created_at: new Date().toISOString(),
                         isOffline: true
                     };
@@ -1214,7 +1253,9 @@ export const OrderProvider = ({ children }) => {
                         date: new Date(),
                         paymentMethod: 'Efectivo',
                         tableId,
-                        items: finalBill
+                        items: finalBill,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     });
                 }
             }
@@ -1228,7 +1269,7 @@ export const OrderProvider = ({ children }) => {
                     items: JSON.stringify(finalBill),
                     table_id: tableId,
                     ticket_number: ticketNumber2,
-                    customer_info: customerData ? JSON.stringify(customerData) : null,
+                    customer_info: JSON.stringify(customerPayload),
                     card_tips: cardTips,
                     diners
                 };
@@ -1254,7 +1295,9 @@ export const OrderProvider = ({ children }) => {
                         tableId,
                         ticket_number: cardData[0].ticket_number || ticketNumber2,
                         card_tips: cardTips,
-                        diners
+                        diners: cardData[0].diners !== undefined && cardData[0].diners !== null ? parseInt(cardData[0].diners) : diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     };
                     salesCreated.push(s);
                 } else {
@@ -1265,9 +1308,11 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(finalBill),
                         table_id: tableId,
                         ticket_number: ticketNumber2,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
+                        customer_info: JSON.stringify(customerPayload),
                         card_tips: cardTips,
                         diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining',
                         created_at: new Date().toISOString(),
                         isOffline: true
                     };
@@ -1277,7 +1322,9 @@ export const OrderProvider = ({ children }) => {
                         date: new Date(),
                         paymentMethod: 'Tarjeta',
                         tableId,
-                        items: finalBill
+                        items: finalBill,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     });
                 }
             }
@@ -1355,6 +1402,16 @@ export const OrderProvider = ({ children }) => {
             let ticketNumber1 = null;
             let ticketNumber2 = null;
 
+            const tableObj = tables.find(t => t.id === tableId);
+            const isDrinks = isDrinksOnlyTable(tableObj);
+            const diners = isDrinks ? 0 : (tableObj ? (parseInt(tableObj.diners) || 1) : 1);
+            const customerPayload = {
+                ...(customerData || {}),
+                isDrinksOnly: isDrinks,
+                orderType: isDrinks ? 'drinks' : 'dining',
+                tableName: tableObj?.name || 'Mesa'
+            };
+
             if (paymentMethod === 'Mixto' && mixedDetails) {
                 const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
                 const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
@@ -1368,16 +1425,18 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(partialItems),
                         table_id: tableId,
                         ticket_number: ticketNumber1,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
-                        card_tips: 0
+                        customer_info: JSON.stringify(customerPayload),
+                        card_tips: 0,
+                        diners
                     };
 
                     let { data: cashData, error: cashErr } = await supabase.from('sales').insert([cashRecord]).select();
-                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('column'))) {
+                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('diners') || cashErr.message.includes('column'))) {
                         const retryCash = { ...cashRecord };
                         delete retryCash.card_tips;
                         delete retryCash.customer_info;
                         delete retryCash.ticket_number;
+                        delete retryCash.diners;
                         const { data: retryData } = await supabase.from('sales').insert([retryCash]).select();
                         cashData = retryData;
                     }
@@ -1390,7 +1449,10 @@ export const OrderProvider = ({ children }) => {
                             items: partialItems,
                             paymentMethod: 'Efectivo',
                             tableId,
-                            ticket_number: cashData[0].ticket_number || ticketNumber1
+                            ticket_number: cashData[0].ticket_number || ticketNumber1,
+                            diners,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
                         });
                     }
                 }
@@ -1404,16 +1466,18 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(partialItems),
                         table_id: tableId,
                         ticket_number: ticketNumber2,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
-                        card_tips: cardTips
+                        customer_info: JSON.stringify(customerPayload),
+                        card_tips: cardTips,
+                        diners
                     };
 
                     let { data: cardData, error: cardErr } = await supabase.from('sales').insert([cardRecord]).select();
-                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('column'))) {
+                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('diners') || cardErr.message.includes('column'))) {
                         const retryCard = { ...cardRecord };
                         delete retryCard.card_tips;
                         delete retryCard.customer_info;
                         delete retryCard.ticket_number;
+                        delete retryCard.diners;
                         const { data: retryData } = await supabase.from('sales').insert([retryCard]).select();
                         cardData = retryData;
                     }
@@ -1427,7 +1491,10 @@ export const OrderProvider = ({ children }) => {
                             paymentMethod: 'Tarjeta',
                             tableId,
                             ticket_number: cardData[0].ticket_number || ticketNumber2,
-                            card_tips: cardTips
+                            card_tips: cardTips,
+                            diners,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
                         });
                     }
                 }
@@ -1441,16 +1508,18 @@ export const OrderProvider = ({ children }) => {
                     items: JSON.stringify(partialItems),
                     table_id: tableId,
                     ticket_number: ticketNumber,
-                    customer_info: customerData ? JSON.stringify(customerData) : null,
-                    card_tips: cardTips
+                    customer_info: JSON.stringify(customerPayload),
+                    card_tips: cardTips,
+                    diners
                 };
 
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
-                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('column'))) {
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column'))) {
                     const retryRecord = { ...saleRecord };
                     delete retryRecord.card_tips;
                     delete retryRecord.customer_info;
                     delete retryRecord.ticket_number;
+                    delete retryRecord.diners;
                     const { data: retryData } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                 }
@@ -1464,7 +1533,10 @@ export const OrderProvider = ({ children }) => {
                         paymentMethod: data[0].payment_method,
                         tableId: data[0].table_id,
                         ticket_number: data[0].ticket_number || ticketNumber,
-                        card_tips: cardTips
+                        card_tips: cardTips,
+                        diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     });
                 }
             }
@@ -1643,6 +1715,16 @@ export const OrderProvider = ({ children }) => {
             let ticketNumber1 = null;
             let ticketNumber2 = null;
 
+            const tableObj = tables.find(t => t.id === tableId);
+            const isDrinks = isDrinksOnlyTable(tableObj);
+            const diners = isDrinks ? 0 : (tableObj ? (parseInt(tableObj.diners) || 1) : 1);
+            const customerPayload = {
+                ...(customerData || {}),
+                isDrinksOnly: isDrinks,
+                orderType: isDrinks ? 'drinks' : 'dining',
+                tableName: tableObj?.name || 'Mesa'
+            };
+
             if (paymentMethod === 'Mixto' && mixedDetails) {
                 const cashVal = parseFloat(mixedDetails.cashAmount) || 0;
                 const cardVal = parseFloat(mixedDetails.cardAmount) || 0;
@@ -1655,15 +1737,17 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(itemsToPay),
                         table_id: tableId,
                         ticket_number: ticketNumber1,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
-                        card_tips: 0
+                        customer_info: JSON.stringify(customerPayload),
+                        card_tips: 0,
+                        diners
                     };
                     let { data: cashData, error: cashErr } = await supabase.from('sales').insert([cashRecord]).select();
-                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('column'))) {
+                    if (cashErr && (cashErr.message.includes('card_tips') || cashErr.message.includes('customer_info') || cashErr.message.includes('ticket_number') || cashErr.message.includes('diners') || cashErr.message.includes('column'))) {
                         const retryCash = { ...cashRecord };
                         delete retryCash.card_tips;
                         delete retryCash.customer_info;
                         delete retryCash.ticket_number;
+                        delete retryCash.diners;
                         const { data: retryData } = await supabase.from('sales').insert([retryCash]).select();
                         cashData = retryData;
                     }
@@ -1675,7 +1759,10 @@ export const OrderProvider = ({ children }) => {
                             items: itemsToPay,
                             paymentMethod: 'Efectivo',
                             tableId,
-                            ticket_number: cashData[0].ticket_number || ticketNumber1
+                            ticket_number: cashData[0].ticket_number || ticketNumber1,
+                            diners,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
                         });
                     }
                 }
@@ -1688,15 +1775,17 @@ export const OrderProvider = ({ children }) => {
                         items: JSON.stringify(itemsToPay),
                         table_id: tableId,
                         ticket_number: ticketNumber2,
-                        customer_info: customerData ? JSON.stringify(customerData) : null,
-                        card_tips: cardTips
+                        customer_info: JSON.stringify(customerPayload),
+                        card_tips: cardTips,
+                        diners
                     };
                     let { data: cardData, error: cardErr } = await supabase.from('sales').insert([cardRecord]).select();
-                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('column'))) {
+                    if (cardErr && (cardErr.message.includes('card_tips') || cardErr.message.includes('customer_info') || cardErr.message.includes('ticket_number') || cardErr.message.includes('diners') || cardErr.message.includes('column'))) {
                         const retryCard = { ...cardRecord };
                         delete retryCard.card_tips;
                         delete retryCard.customer_info;
                         delete retryCard.ticket_number;
+                        delete retryCard.diners;
                         const { data: retryData } = await supabase.from('sales').insert([retryCard]).select();
                         cardData = retryData;
                     }
@@ -1709,7 +1798,10 @@ export const OrderProvider = ({ children }) => {
                             paymentMethod: 'Tarjeta',
                             tableId,
                             ticket_number: cardData[0].ticket_number || ticketNumber2,
-                            card_tips: cardTips
+                            card_tips: cardTips,
+                            diners,
+                            isDrinksOnly: isDrinks,
+                            orderType: isDrinks ? 'drinks' : 'dining'
                         });
                     }
                 }
@@ -1722,15 +1814,17 @@ export const OrderProvider = ({ children }) => {
                     items: JSON.stringify(itemsToPay),
                     table_id: tableId,
                     ticket_number: ticketNumber,
-                    customer_info: customerData ? JSON.stringify(customerData) : null,
-                    card_tips: cardTips
+                    customer_info: JSON.stringify(customerPayload),
+                    card_tips: cardTips,
+                    diners
                 };
                 let { data, error } = await supabase.from('sales').insert([saleRecord]).select();
-                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('column'))) {
+                if (error && (error.message.includes('card_tips') || error.message.includes('customer_info') || error.message.includes('ticket_number') || error.message.includes('diners') || error.message.includes('column'))) {
                     const retryRecord = { ...saleRecord };
                     delete retryRecord.card_tips;
                     delete retryRecord.customer_info;
                     delete retryRecord.ticket_number;
+                    delete retryRecord.diners;
                     const { data: retryData } = await supabase.from('sales').insert([retryRecord]).select();
                     data = retryData;
                 }
@@ -1743,7 +1837,10 @@ export const OrderProvider = ({ children }) => {
                         paymentMethod: data[0].payment_method,
                         tableId: data[0].table_id,
                         ticket_number: data[0].ticket_number || ticketNumber,
-                        card_tips: cardTips
+                        card_tips: cardTips,
+                        diners,
+                        isDrinksOnly: isDrinks,
+                        orderType: isDrinks ? 'drinks' : 'dining'
                     });
                 }
             }
@@ -2088,17 +2185,31 @@ export const OrderProvider = ({ children }) => {
         return items.reduce((total, item) => total + (item.isInvitation ? 0 : (item.price * item.quantity)), 0);
     };
 
-    const addTable = (zoneId, name, dinersCount = 1) => {
+    const addTable = (zoneId, name, dinersCount = 1, isDrinksOnly = false) => {
+        const isDrinks = isDrinksOnly || dinersCount === 0 || dinersCount === '0';
         const newTable = {
             id: `table-${Date.now()}`,
             zoneId,
-            name,
+            name: name || (isDrinks ? 'Solo Bebida' : 'Pedido'),
             status: 'occupied',
             lastActionAt: new Date().toISOString(),
-            diners: parseInt(dinersCount) || 1
+            diners: isDrinks ? 0 : (parseInt(dinersCount) || 1),
+            isDrinksOnly: isDrinks,
+            orderType: isDrinks ? 'drinks' : 'dining'
         };
         setTables(prev => [...prev, newTable]);
         return newTable;
+    };
+
+    const updateTableType = (tableId, isDrinksOnly, dinersCount = 1) => {
+        const isDrinks = !!isDrinksOnly;
+        const dinersVal = isDrinks ? 0 : Math.max(1, parseInt(dinersCount) || 1);
+        const updates = {
+            isDrinksOnly: isDrinks,
+            orderType: isDrinks ? 'drinks' : 'dining',
+            diners: dinersVal
+        };
+        updateTableDetails(tableId, updates);
     };
 
     const deleteTable = (tableId) => {
@@ -2227,8 +2338,12 @@ export const OrderProvider = ({ children }) => {
     };
 
     const updateDiners = (tableId, count) => {
-        const newCount = Math.max(1, count);
-        updateTableDetails(tableId, { diners: newCount });
+        const num = parseInt(count);
+        if (isNaN(num) || num <= 0) {
+            updateTableDetails(tableId, { diners: 0, isDrinksOnly: true, orderType: 'drinks' });
+        } else {
+            updateTableDetails(tableId, { diners: num, isDrinksOnly: false, orderType: 'dining' });
+        }
     };
 
     const requestService = async (tableId, tableName, type) => {
@@ -2598,6 +2713,7 @@ export const OrderProvider = ({ children }) => {
             performCashClose,
             syncWithCloud,
             updateDiners,
+            updateTableType,
             offlineSales,
             syncOfflineSales,
             // --- BACKUP & RECOVERY ---

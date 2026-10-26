@@ -4,6 +4,7 @@ import { useInventory } from '../context/InventoryContext';
 import { useOrder } from '../context/OrderContext';
 import { useCustomers } from '../context/CustomerContext';
 import { categories } from '../data/products';
+import { isDrinksOnlyTable } from '../utils/orderClassification';
 import {
     ArrowLeft,
     Trash2,
@@ -808,6 +809,33 @@ const BarTapas = () => {
                                         <span style={{ color: 'var(--color-primary)', fontSize: '0.9rem', fontWeight: 'bold' }}>
                                             {searchParams.get('mode') === 'quick' ? currentTable?.name || 'Venta Directa' : (currentTable ? currentTable.name : 'Mesa no asignada')}
                                         </span>
+                                        {currentTable && searchParams.get('mode') !== 'quick' && (
+                                            isDrinksOnlyTable(currentTable) ? (
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    background: 'rgba(168, 85, 247, 0.2)',
+                                                    color: '#c084fc',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #a855f7',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    🍷 Solo Bebida
+                                                </span>
+                                            ) : (
+                                                <span style={{
+                                                    fontSize: '0.75rem',
+                                                    background: 'rgba(59, 130, 246, 0.15)',
+                                                    color: '#60a5fa',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                                    fontWeight: 'bold'
+                                                }}>
+                                                    🍽️ Comida • 👥 {currentTable.diners || 1}
+                                                </span>
+                                            )
+                                        )}
                                         {currentTable && searchParams.get('mode') !== 'quick' && (() => {
                                             const todayStr = new Date().toISOString().split('T')[0];
                                             const reservation = reservations.find(r =>

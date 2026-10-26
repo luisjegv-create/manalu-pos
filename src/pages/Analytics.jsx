@@ -32,6 +32,7 @@ import { useInventory } from '../context/InventoryContext';
 import { printBillTicket, printCashCloseTicket } from '../utils/printHelpers';
 import ExpenseManagement from '../components/Inventory/ExpenseManagement';
 import StaffExpensesManagement from '../components/Inventory/StaffExpensesManagement';
+import { isDrinksOnlySale } from '../utils/orderClassification';
 
 const SidebarItem = ({ id, icon: Icon, label, activeSection, setActiveSection, colors }) => (
     <button
@@ -60,6 +61,7 @@ const Analytics = () => {
 
     const [activeSection, setActiveSection] = useState('dashboard'); // dashboard | sales | menu | cash
     const [dateRange, setDateRange] = useState('today');
+    const [salesTypeFilter, setSalesTypeFilter] = useState('all'); // 'all' | 'dining' | 'drinks'
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -396,9 +398,38 @@ const Analytics = () => {
         });
         const maxHour = Math.max(...hours, 1); // Avoid div by 0
 
-        // Diners Stats
-        const totalDiners = filteredSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
-        const prevTotalDiners = comparisonSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
+        // Separate Dining vs Drinks
+        const diningSales = filteredSales.filter(s => !isDrinksOnlySale(s));
+        const drinksSales = filteredSales.filter(s => isDrinksOnlySale(s));
+
+        const diningRevenue = diningSales.reduce((acc, s) => acc + (parseFloat(s.total || s.total_amount) || 0), 0);
+        const drinksRevenue = drinksSales.reduce((acc, s) => acc + (parseFloat(s.total || s.total_amount) || 0), 0);
+
+        const diningTicketCount = diningSales.length;
+        const drinksTicketCount = drinksSales.length;
+
+        // Diners: only dining tables count comensales
+        const diningDiners = diningSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
+        const diningAvgTicket = diningTicketCount > 0 ? diningRevenue / diningTicketCount : 0;
+        const diningAvgPerDiner = diningDiners > 0 ? diningRevenue / diningDiners : 0;
+        const drinksAvgTicket = drinksTicketCount > 0 ? drinksRevenue / drinksTicketCount : 0;
+
+        // Comparison period breakdown
+        const prevDiningSales = comparisonSales.filter(s => !isDrinksOnlySale(s));
+        const prevDrinksSales = comparisonSales.filter(s => isDrinksOnlySale(s));
+        const prevDiningRevenue = prevDiningSales.reduce((acc, s) => acc + (parseFloat(s.total || s.total_amount) || 0), 0);
+        const prevDiningTicketCount = prevDiningSales.length;
+        const prevDiningDiners = prevDiningSales.reduce((acc, s) => acc + (parseInt(s.diners) || 1), 0);
+        const prevDiningAvgTicket = prevDiningTicketCount > 0 ? prevDiningRevenue / prevDiningTicketCount : 0;
+        const prevDiningAvgPerDiner = prevDiningDiners > 0 ? prevDiningRevenue / prevDiningDiners : 0;
+
+        const diningAvgChange = prevDiningAvgTicket > 0 ? ((diningAvgTicket - prevDiningAvgTicket) / prevDiningAvgTicket) * 100 : 0;
+        const diningDinersChange = prevDiningDiners > 0 ? ((diningDiners - prevDiningDiners) / prevDiningDiners) * 100 : 0;
+        const diningAvgPerDinerChange = prevDiningAvgPerDiner > 0 ? ((diningAvgPerDiner - prevDiningAvgPerDiner) / prevDiningAvgPerDiner) * 100 : 0;
+
+        // Global Diners Stats
+        const totalDiners = filteredSales.reduce((acc, s) => acc + (isDrinksOnlySale(s) ? 0 : (parseInt(s.diners) || 1)), 0);
+        const prevTotalDiners = comparisonSales.reduce((acc, s) => acc + (isDrinksOnlySale(s) ? 0 : (parseInt(s.diners) || 1)), 0);
         const dinersChange = prevTotalDiners > 0 ? ((totalDiners - prevTotalDiners) / prevTotalDiners) * 100 : 0;
 
         const avgPerDiner = totalDiners > 0 ? totalRevenue / totalDiners : 0;
@@ -417,7 +448,15 @@ const Analytics = () => {
             productCost: currentStats.productCost,
             staffExp: currentStats.staffExp,
             otherExp: currentStats.otherExp,
-            hours, maxHour
+            hours, maxHour,
+            // Separate food tables vs drink-only stats
+            diningSales, drinksSales,
+            diningRevenue, drinksRevenue,
+            diningTicketCount, drinksTicketCount,
+            diningDiners, prevDiningDiners,
+            diningAvgTicket, prevDiningAvgTicket, diningAvgChange,
+            diningAvgPerDiner, prevDiningAvgPerDiner, diningAvgPerDinerChange, diningDinersChange,
+            drinksAvgTicket
         };
     }, [filteredSales, comparisonSales, expenses, getProductCost, dateRange]);
 
@@ -1293,6 +1332,74 @@ const Analytics = () => {
                             </div>
                         )}
 
+                        {/* SALES TYPE FILTER (TODAS | COMIDA | SOLO BEBIDA) */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '0.75rem',
+                            background: colors.surface,
+                            padding: '0.6rem 1rem',
+                            borderRadius: '16px',
+                            border: `1px solid ${colors.border}`,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                            flexWrap: 'wrap',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: colors.textMuted, marginRight: '0.25rem' }}>
+                                Separar Números:
+                            </span>
+                            <button
+                                onClick={() => setSalesTypeFilter('all')}
+                                style={{
+                                    padding: '0.5rem 1.1rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: salesTypeFilter === 'all' ? colors.primary : '#f1f5f9',
+                                    color: salesTypeFilter === 'all' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'all' ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none'
+                                }}
+                            >
+                                📊 Todas ({dashboardStats.ticketCount})
+                            </button>
+                            <button
+                                onClick={() => setSalesTypeFilter('dining')}
+                                style={{
+                                    padding: '0.5rem 1.1rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: salesTypeFilter === 'dining' ? '#059669' : '#f1f5f9',
+                                    color: salesTypeFilter === 'dining' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'dining' ? '0 4px 12px rgba(5, 150, 105, 0.25)' : 'none'
+                                }}
+                            >
+                                🍽️ Mesas Comida ({dashboardStats.diningTicketCount})
+                            </button>
+                            <button
+                                onClick={() => setSalesTypeFilter('drinks')}
+                                style={{
+                                    padding: '0.5rem 1.1rem',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: salesTypeFilter === 'drinks' ? '#7c3aed' : '#f1f5f9',
+                                    color: salesTypeFilter === 'drinks' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'drinks' ? '0 4px 12px rgba(124, 58, 237, 0.25)' : 'none'
+                                }}
+                            >
+                                🍷 Solo Bebida ({dashboardStats.drinksTicketCount})
+                            </button>
+                        </div>
+
                         {/* KPI CARDS */}
                         <div style={{
                             display: 'grid',
@@ -1305,19 +1412,26 @@ const Analytics = () => {
                                 transition: 'transform 0.2s'
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ventas Brutas</span>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>
+                                        {salesTypeFilter === 'dining' ? 'Ventas Comida' : salesTypeFilter === 'drinks' ? 'Ventas Solo Bebida' : 'Ventas Brutas'}
+                                    </span>
                                     <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.2)', color: colors.primary }}>
                                         <DollarSign size={18} />
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.totalRevenue.toFixed(2)}€</div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>
+                                    {(salesTypeFilter === 'dining' ? dashboardStats.diningRevenue : salesTypeFilter === 'drinks' ? dashboardStats.drinksRevenue : dashboardStats.totalRevenue).toFixed(2)}€
+                                </div>
                                 <div style={{ 
-                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
-                                    color: dashboardStats.revenueChange >= 0 ? colors.success : colors.danger,
+                                    fontSize: '0.75rem', fontWeight: '700', marginTop: '0.5rem',
+                                    color: colors.textMuted,
                                     display: 'flex', alignItems: 'center', gap: '0.25rem'
                                 }}>
-                                    {dashboardStats.revenueChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.revenueChange).toFixed(1)}%
-                                    <span style={{ color: colors.textMuted, fontWeight: '500' }}>vs prev.</span>
+                                    {salesTypeFilter === 'all' ? (
+                                        <span>🍽️ {dashboardStats.diningRevenue.toFixed(2)}€ comida | 🍷 {dashboardStats.drinksRevenue.toFixed(2)}€ bebida</span>
+                                    ) : (
+                                        <span>{salesTypeFilter === 'dining' ? '🍽️ Excluye tiques de solo bebida' : '🍷 Exclusivamente consumiciones'}</span>
+                                    )}
                                 </div>
                             </div>
 
@@ -1354,36 +1468,49 @@ const Analytics = () => {
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Tickets</span>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>
+                                        {salesTypeFilter === 'dining' ? 'Mesas Comida' : salesTypeFilter === 'drinks' ? 'Cuentas Solo Bebida' : 'Total Tickets'}
+                                    </span>
                                     <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.2)', color: colors.primary }}>
                                         <FileText size={18} />
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.ticketCount}</div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>
+                                    {salesTypeFilter === 'dining' ? dashboardStats.diningTicketCount : salesTypeFilter === 'drinks' ? dashboardStats.drinksTicketCount : dashboardStats.ticketCount}
+                                </div>
                                 <div style={{ 
-                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
-                                    color: dashboardStats.ticketChange >= 0 ? colors.success : colors.danger 
+                                    fontSize: '0.75rem', fontWeight: '700', marginTop: '0.5rem',
+                                    color: colors.textMuted
                                 }}>
-                                    {dashboardStats.ticketChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.ticketChange).toFixed(1)}%
+                                    🍽️ {dashboardStats.diningTicketCount} comidas | 🍷 {dashboardStats.drinksTicketCount} bebidas
                                 </div>
                             </div>
 
+                            {/* TICKET MEDIO (COMPUTED REAL DINING AVERAGE) */}
                             <div style={{ 
                                 padding: '1.5rem', background: colors.surface, borderRadius: '20px', 
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `2px solid ${salesTypeFilter === 'drinks' ? '#a855f7' : '#f59e0b'}`
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Ticket Medio</span>
-                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(217, 119, 6, 0.2)', color: colors.warning }}>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '800' }}>
+                                        {salesTypeFilter === 'drinks' ? 'Ticket Medio Solo Bebida' : 'Ticket Medio Mesas (Comida)'}
+                                    </span>
+                                    <div style={{ padding: '0.5rem', borderRadius: '10px', background: salesTypeFilter === 'drinks' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(217, 119, 6, 0.2)', color: salesTypeFilter === 'drinks' ? '#7c3aed' : colors.warning }}>
                                         <Users size={18} />
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.avgTicket.toFixed(2)}€</div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>
+                                    {(salesTypeFilter === 'drinks' ? dashboardStats.drinksAvgTicket : dashboardStats.diningAvgTicket).toFixed(2)}€
+                                </div>
                                 <div style={{ 
-                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
-                                    color: dashboardStats.avgChange >= 0 ? colors.success : colors.danger 
+                                    fontSize: '0.75rem', fontWeight: '700', marginTop: '0.5rem',
+                                    color: colors.textMuted
                                 }}>
-                                    {dashboardStats.avgChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.avgChange).toFixed(1)}%
+                                    {salesTypeFilter === 'drinks' ? (
+                                        <span>🍷 Promedio exclusivo de cuentas de bebida</span>
+                                    ) : (
+                                        <span>🍽️ Comida: <b style={{ color: '#059669' }}>{dashboardStats.diningAvgTicket.toFixed(2)}€</b> | 🍷 Bebida: <b style={{ color: '#7c3aed' }}>{dashboardStats.drinksAvgTicket.toFixed(2)}€</b></span>
+                                    )}
                                 </div>
                             </div>
 
@@ -1392,17 +1519,19 @@ const Analytics = () => {
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: `1px solid ${colors.border}`
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Total Comensales</span>
+                                    <span style={{ color: colors.textMuted, fontSize: '0.85rem', fontWeight: '700' }}>Comensales (Comida)</span>
                                     <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(5, 150, 105, 0.2)', color: colors.success }}>
                                         <Users size={18} />
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.totalDiners}</div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>
+                                    {salesTypeFilter === 'drinks' ? 0 : dashboardStats.diningDiners}
+                                </div>
                                 <div style={{ 
-                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
-                                    color: dashboardStats.dinersChange >= 0 ? colors.success : colors.danger 
+                                    fontSize: '0.75rem', fontWeight: '700', marginTop: '0.5rem',
+                                    color: colors.textMuted
                                 }}>
-                                    {dashboardStats.dinersChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.dinersChange).toFixed(1)}%
+                                    {salesTypeFilter === 'drinks' ? '0 comensales en solo bebida' : '👥 En mesas de comida (excluye tiques de barra)'}
                                 </div>
                             </div>
 
@@ -1416,12 +1545,14 @@ const Analytics = () => {
                                         <Users size={18} />
                                     </div>
                                 </div>
-                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>{dashboardStats.avgPerDiner.toFixed(2)}€</div>
+                                <div style={{ fontSize: '1.75rem', fontWeight: '900', color: colors.text }}>
+                                    {salesTypeFilter === 'drinks' ? '-' : `${dashboardStats.diningAvgPerDiner.toFixed(2)}€`}
+                                </div>
                                 <div style={{ 
-                                    fontSize: '0.8rem', fontWeight: '800', marginTop: '0.5rem',
-                                    color: dashboardStats.avgPerDinerChange >= 0 ? colors.success : colors.danger 
+                                    fontSize: '0.75rem', fontWeight: '700', marginTop: '0.5rem',
+                                    color: colors.textMuted
                                 }}>
-                                    {dashboardStats.avgPerDinerChange >= 0 ? '↑' : '↓'} {Math.abs(dashboardStats.avgPerDinerChange).toFixed(1)}%
+                                    {salesTypeFilter === 'drinks' ? 'No aplica a solo bebida' : '🍽️ Gasto real por persona que comió'}
                                 </div>
                             </div>
                         </div>
@@ -1920,157 +2051,293 @@ const Analytics = () => {
                              {searchTerm && <button onClick={() => setSearchTerm('')} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><CloseIcon size={18}/></button>}
                         </div>
 
-                        {filteredSales.length === 0 ? (
-                            <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                                <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No se han encontrado registros para este periodo.</p>
-                                <p style={{ fontSize: '0.9rem' }}>Prueba a cambiar el filtro arriba (ej: pulsando en "Semana" o "Mes") o pulsa el botón "Refrescar Datos".</p>
-                                {syncStatus.sales.error && (
-                                    <div style={{ marginTop: '1rem', color: '#ef4444', fontSize: '0.8rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
-                                        Error de conexión: {syncStatus.sales.error}
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="glass-panel animate-in" style={{ padding: '1.5rem', overflowX: 'auto' }}>
-                                {isMobile ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
-                                            <React.Fragment key={sale.id}>
-                                            <div style={{ 
-                                                padding: '1.25rem', background: colors.surface, borderRadius: '16px', 
-                                                marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                                                border: expandedSale === sale.id ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
-                                                transition: 'all 0.2s' 
-                                            }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
-                                                    <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(sale.date).toLocaleString()}</span>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</div>}
-                                                        {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: colors.warning, fontWeight: '800' }}>🎁 INVITACIÓN</div>}
-                                                        <span style={{ fontWeight: '900', color: colors.text, fontSize: '1.1rem' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>
-                                                        Mesa: <b style={{ color: colors.text }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
-                                                    </div>
-                                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                        <span style={{
-                                                            padding: '6px 12px', borderRadius: '8px',
-                                                            background: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
-                                                            color: '#ffffff',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                            fontSize: '0.75rem', fontWeight: '900',
-                                                            textTransform: 'uppercase', letterSpacing: '0.02em'
-                                                        }}>
-                                                            {sale.paymentMethod}
-                                                        </span>
-                                                        <button onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.textMuted }}><Info size={18} /></button>
-                                                        <button onClick={() => handleReprint(sale)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.success }}><Printer size={18} /></button>
-                                                        <button onClick={() => handleDeleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.danger }}><Trash2 size={16} /></button>
-                                                    </div>
-                                                </div>
+                        {/* FILTER PILLS FOR TRANSACTIONS VIEW */}
+                        <div style={{
+                            display: 'flex',
+                            gap: '0.75rem',
+                            marginBottom: '1.5rem',
+                            flexWrap: 'wrap',
+                            alignItems: 'center'
+                        }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: colors.textMuted, marginRight: '0.25rem' }}>
+                                Filtrar tipo:
+                            </span>
+                            <button
+                                onClick={() => setSalesTypeFilter('all')}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '10px',
+                                    border: `1px solid ${salesTypeFilter === 'all' ? 'transparent' : colors.border}`,
+                                    background: salesTypeFilter === 'all' ? colors.primary : colors.surface,
+                                    color: salesTypeFilter === 'all' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'all' ? '0 4px 12px rgba(79, 70, 229, 0.25)' : 'none'
+                                }}
+                            >
+                                📊 Todas ({filteredSales.length})
+                            </button>
+                            <button
+                                onClick={() => setSalesTypeFilter('dining')}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '10px',
+                                    border: `1px solid ${salesTypeFilter === 'dining' ? 'transparent' : colors.border}`,
+                                    background: salesTypeFilter === 'dining' ? '#059669' : colors.surface,
+                                    color: salesTypeFilter === 'dining' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'dining' ? '0 4px 12px rgba(5, 150, 105, 0.25)' : 'none'
+                                }}
+                            >
+                                🍽️ Mesas Comida ({filteredSales.filter(s => !isDrinksOnlySale(s)).length})
+                            </button>
+                            <button
+                                onClick={() => setSalesTypeFilter('drinks')}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    borderRadius: '10px',
+                                    border: `1px solid ${salesTypeFilter === 'drinks' ? 'transparent' : colors.border}`,
+                                    background: salesTypeFilter === 'drinks' ? '#7c3aed' : colors.surface,
+                                    color: salesTypeFilter === 'drinks' ? 'white' : colors.text,
+                                    fontWeight: '800',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: salesTypeFilter === 'drinks' ? '0 4px 12px rgba(124, 58, 237, 0.25)' : 'none'
+                                }}
+                            >
+                                🍷 Solo Bebida ({filteredSales.filter(s => isDrinksOnlySale(s)).length})
+                            </button>
+                        </div>
 
-                                                <AnimatePresence>
-                                                    {expandedSale === sale.id && (
-                                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-                                                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                                <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>DETALLE DE PEDIDO</div>
-                                                                { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
-                                                                    <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                            <span style={{ fontWeight: '700', color: colors.text, fontSize: '0.85rem' }}>{item.quantity}x {item.name}</span>
-                                                                            {item.notes && <span style={{ color: colors.warning, fontSize: '0.7rem', fontWeight: '600' }}>📝 {item.notes}</span>}
-                                                                        </div>
-                                                                        <span style={{ fontWeight: '800', color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
+                        {(() => {
+                            const displayedSales = filteredSales.filter(sale => {
+                                if (salesTypeFilter === 'dining') return !isDrinksOnlySale(sale);
+                                if (salesTypeFilter === 'drinks') return isDrinksOnlySale(sale);
+                                return true;
+                            });
+
+                            if (displayedSales.length === 0) {
+                                return (
+                                    <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+                                        <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No se han encontrado registros para este periodo y filtro.</p>
+                                        <p style={{ fontSize: '0.9rem' }}>Prueba a cambiar el filtro arriba (ej: pulsando en "Semana", "Mes" o "Todas") o pulsa el botón "Refrescar Datos".</p>
+                                        {syncStatus.sales.error && (
+                                            <div style={{ marginTop: '1rem', color: '#ef4444', fontSize: '0.8rem', padding: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px' }}>
+                                                Error de conexión: {syncStatus.sales.error}
                                             </div>
-                                            </React.Fragment>
-                                        ))}
+                                        )}
                                     </div>
-                                ) : (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                                        <thead>
-                                            <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: `1px solid rgba(255,255,255,0.1)` }}>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'right', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
-                                                <th style={{ padding: '1.25rem', textAlign: 'center', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => (
+                                );
+                            }
+
+                            return (
+                                <div className="glass-panel animate-in" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+                                    {isMobile ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                            {displayedSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => {
+                                                const isDrink = isDrinksOnlySale(sale);
+                                                const dinersCount = parseInt(sale.diners) || 0;
+                                                return (
                                                 <React.Fragment key={sale.id}>
-                                                    <tr 
-                                                        style={{ 
-                                                            borderBottom: `1px solid ${colors.border}`, 
-                                                            cursor: 'pointer', 
-                                                            background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
-                                                            transition: 'all 0.2s' 
-                                                        }}
-                                                        onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
-                                                    >
-                                                        <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '600' }}>{new Date(sale.date).toLocaleString()}</td>
-                                                        <td style={{ padding: '1.25rem', fontFamily: 'monospace', color: colors.textMuted, fontWeight: '700' }}>#{sale.ticket_number || sale.id?.toString().slice(-6).toUpperCase()}</td>
-                                                        <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '700' }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</td>
-                                                        <td style={{ padding: '1.25rem' }}>
+                                                <div style={{ 
+                                                    padding: '1.25rem', background: colors.surface, borderRadius: '16px', 
+                                                    marginBottom: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                                                    border: expandedSale === sale.id ? `2px solid ${colors.primary}` : `1px solid ${colors.border}`,
+                                                    transition: 'all 0.2s' 
+                                                }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', cursor: 'pointer' }} onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}>
+                                                        <span style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '700' }}>{new Date(sale.date).toLocaleString()}</span>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            {sale.discount_amount > 0 && <div style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</div>}
+                                                            {sale.is_invitation && <div style={{ fontSize: '0.7rem', color: colors.warning, fontWeight: '800' }}>🎁 INVITACIÓN</div>}
+                                                            <span style={{ fontWeight: '900', color: colors.text, fontSize: '1.1rem' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            <div style={{ fontSize: '0.9rem', color: colors.textMuted, fontWeight: '600' }}>
+                                                                Mesa: <b style={{ color: colors.text }}>{(sale.tableId || '-').toString().replace('table-', 'T')}</b>
+                                                            </div>
+                                                            {isDrink ? (
+                                                                <span style={{
+                                                                    background: 'rgba(168, 85, 247, 0.15)',
+                                                                    color: '#7c3aed',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.72rem',
+                                                                    fontWeight: '800'
+                                                                }}>
+                                                                    🍷 Solo Bebida
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{
+                                                                    background: 'rgba(5, 150, 105, 0.15)',
+                                                                    color: '#059669',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.72rem',
+                                                                    fontWeight: '800'
+                                                                }}>
+                                                                    🍽️ Comida {dinersCount > 0 ? `(${dinersCount}p)` : ''}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                             <span style={{
-                                                                padding: '6px 14px', borderRadius: '10px',
+                                                                padding: '6px 12px', borderRadius: '8px',
                                                                 background: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
                                                                 color: '#ffffff',
                                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                                fontSize: '0.8rem', fontWeight: '900',
+                                                                fontSize: '0.75rem', fontWeight: '900',
                                                                 textTransform: 'uppercase', letterSpacing: '0.02em'
                                                             }}>
                                                                 {sale.paymentMethod}
                                                             </span>
-                                                        </td>
-                                                        <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                                                <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ffffff' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
-                                                                {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</span>}
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '1.25rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                                                                <button onClick={() => handleReprint(sale)} title="Reimprimir" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(16, 185, 129, 0.1)', color: colors.success, cursor: 'pointer' }}><Printer size={18} /></button>
-                                                                <button onClick={() => handleDeleteSale(sale.id)} title="Borrar" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: colors.danger, cursor: 'pointer' }}><Trash2 size={18} /></button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    {expandedSale === sale.id && (
-                                                        <tr style={{ background: '#f8fafc' }}>
-                                                            <td colSpan={6} style={{ padding: '1.5rem', borderBottom: `1px solid ${colors.border}` }}>
-                                                                <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '800', marginBottom: '1rem', letterSpacing: '0.05em' }}>DETALLE DE LA TRANSACCIÓN</div>
-                                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-                                                                    {(typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
-                                                                        <div key={idx} style={{ padding: '1rem', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: `1px solid ${colors.border}` }}>
-                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '0.9rem', color: colors.text }}>
-                                                                                <span>{item.quantity}x {item.name}</span>
-                                                                                <span style={{ color: '#ffffff' }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                            <button onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)} style={{ background: '#f1f5f9', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.textMuted }}><Info size={18} /></button>
+                                                            <button onClick={() => handleReprint(sale)} style={{ background: 'rgba(16, 185, 129, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.success }}><Printer size={18} /></button>
+                                                            <button onClick={() => handleDeleteSale(sale.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.4rem', borderRadius: '8px', color: colors.danger }}><Trash2 size={16} /></button>
+                                                        </div>
+                                                    </div>
+
+                                                    <AnimatePresence>
+                                                        {expandedSale === sale.id && (
+                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
+                                                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                                    <div style={{ fontSize: '0.75rem', color: colors.textMuted, fontWeight: '800', letterSpacing: '0.05em' }}>DETALLE DE PEDIDO</div>
+                                                                    { (typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                        <div key={idx} style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                                <span style={{ fontWeight: '700', color: colors.text, fontSize: '0.85rem' }}>{item.quantity}x {item.name}</span>
+                                                                                {item.notes && <span style={{ color: colors.warning, fontSize: '0.7rem', fontWeight: '600' }}>📝 {item.notes}</span>}
                                                                             </div>
-                                                                            {item.notes && <div style={{ marginTop: '0.4rem', color: colors.warning, fontSize: '0.75rem', fontWeight: '600' }}>📝 {item.notes}</div>}
+                                                                            <span style={{ fontWeight: '800', color: colors.success }}>{(item.price * item.quantity).toFixed(2)}€</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </div>
+                                                </React.Fragment>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                            <thead>
+                                                <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: `1px solid rgba(255,255,255,0.1)` }}>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>FECHA Y HORA</th>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TICKET</th>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>MESA</th>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'left', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>METODO</th>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'right', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>TOTAL</th>
+                                                    <th style={{ padding: '1.25rem', textAlign: 'center', color: '#ffffff', fontWeight: '800', letterSpacing: '0.05em' }}>ACCIONES</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {displayedSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map((sale) => {
+                                                    const isDrink = isDrinksOnlySale(sale);
+                                                    const dinersCount = parseInt(sale.diners) || 0;
+                                                    return (
+                                                    <React.Fragment key={sale.id}>
+                                                        <tr 
+                                                            style={{ 
+                                                                borderBottom: `1px solid ${colors.border}`, 
+                                                                cursor: 'pointer', 
+                                                                background: expandedSale === sale.id ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
+                                                                transition: 'all 0.2s' 
+                                                            }}
+                                                            onClick={() => setExpandedSale(expandedSale === sale.id ? null : sale.id)}
+                                                        >
+                                                            <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '600' }}>{new Date(sale.date).toLocaleString()}</td>
+                                                            <td style={{ padding: '1.25rem', fontFamily: 'monospace', color: colors.textMuted, fontWeight: '700' }}>#{sale.ticket_number || sale.id?.toString().slice(-6).toUpperCase()}</td>
+                                                            <td style={{ padding: '1.25rem', color: colors.text, fontWeight: '700' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                                    <span>{(sale.tableId || '-').toString().replace('table-', 'T')}</span>
+                                                                    {isDrink ? (
+                                                                        <span style={{
+                                                                            background: 'rgba(168, 85, 247, 0.15)',
+                                                                            color: '#7c3aed',
+                                                                            padding: '2px 8px',
+                                                                            borderRadius: '6px',
+                                                                            fontSize: '0.72rem',
+                                                                            fontWeight: '800'
+                                                                        }}>
+                                                                            🍷 Bebida
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span style={{
+                                                                            background: 'rgba(5, 150, 105, 0.15)',
+                                                                            color: '#059669',
+                                                                            padding: '2px 8px',
+                                                                            borderRadius: '6px',
+                                                                            fontSize: '0.72rem',
+                                                                            fontWeight: '800'
+                                                                        }}>
+                                                                            🍽️ Comida {dinersCount > 0 ? `(${dinersCount}p)` : ''}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem' }}>
+                                                                <span style={{
+                                                                    padding: '6px 14px', borderRadius: '10px',
+                                                                    background: sale.paymentMethod === 'Efectivo' ? '#059669' : '#4f46e5',
+                                                                    color: '#ffffff',
+                                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                    fontSize: '0.8rem', fontWeight: '900',
+                                                                    textTransform: 'uppercase', letterSpacing: '0.02em'
+                                                                }}>
+                                                                    {sale.paymentMethod}
+                                                                </span>
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem', textAlign: 'right' }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                                                    <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#ffffff' }}>{parseFloat(sale.total || 0).toFixed(2)}€</span>
+                                                                    {sale.discount_amount > 0 && <span style={{ fontSize: '0.7rem', color: colors.danger, fontWeight: '800' }}>Desc: -{sale.discount_amount.toFixed(2)}€</span>}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ padding: '1.25rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                                    <button onClick={() => handleReprint(sale)} title="Reimprimir" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(16, 185, 129, 0.1)', color: colors.success, cursor: 'pointer' }}><Printer size={18} /></button>
+                                                                    <button onClick={() => handleDeleteSale(sale.id)} title="Borrar" style={{ padding: '0.5rem', borderRadius: '10px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: colors.danger, cursor: 'pointer' }}><Trash2 size={18} /></button>
+                                                                </div>
                                                             </td>
                                                         </tr>
-                                                    )}
-                                                </React.Fragment>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-                        )}
+                                                        {expandedSale === sale.id && (
+                                                            <tr style={{ background: '#f8fafc' }}>
+                                                                <td colSpan={6} style={{ padding: '1.5rem', borderBottom: `1px solid ${colors.border}` }}>
+                                                                    <div style={{ fontSize: '0.8rem', color: colors.textMuted, fontWeight: '800', marginBottom: '1rem', letterSpacing: '0.05em' }}>DETALLE DE LA TRANSACCIÓN</div>
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                                                                        {(typeof sale.items === 'string' ? JSON.parse(sale.items) : (sale.items || [])).map((item, idx) => (
+                                                                            <div key={idx} style={{ padding: '1rem', background: 'white', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', border: `1px solid ${colors.border}` }}>
+                                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', fontSize: '0.9rem', color: colors.text }}>
+                                                                                    <span>{item.quantity}x {item.name}</span>
+                                                                                    <span style={{ color: '#ffffff' }}>{(item.price * item.quantity).toFixed(2)}€</span>
+                                                                                </div>
+                                                                                {item.notes && <div style={{ marginTop: '0.4rem', color: colors.warning, fontSize: '0.75rem', fontWeight: '600' }}>📝 {item.notes}</div>}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 

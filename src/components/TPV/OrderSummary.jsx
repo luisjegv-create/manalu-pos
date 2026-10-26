@@ -4,6 +4,7 @@ import {
     User, Star, MessageSquare, Gift, Utensils
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isDrinksOnlyTable } from '../../utils/orderClassification';
 
 const OrderSummary = ({
     isMobile,
@@ -248,17 +249,77 @@ const OrderSummary = ({
                         )}
                     </div>
                     {currentTable && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px' }}>
-                            <Users size={12} color="var(--color-text-muted)" />
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '600' }}>
-                                {currentTable.diners || 1} { (currentTable.diners || 1) === 1 ? 'comensal' : 'comensales' }
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '2px', flexWrap: 'wrap' }}>
+                            {isDrinksOnlyTable(currentTable) ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{
+                                        background: 'rgba(168, 85, 247, 0.2)',
+                                        border: '1px solid #a855f7',
+                                        color: '#d8b4fe',
+                                        padding: '2px 6px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 'bold',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '3px'
+                                    }}>
+                                        🍷 Solo Bebida (0p)
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            const d = prompt('¿Cuántos comensales van a comer?', '2');
+                                            if (d !== null) updateDiners(currentTable.id, parseInt(d) || 2);
+                                        }}
+                                        title="Cambiar a Mesa de Comida con comensales"
+                                        style={{
+                                            background: 'rgba(16, 185, 129, 0.15)',
+                                            border: '1px solid #10b981',
+                                            color: '#10b981',
+                                            padding: '2px 6px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🍽️ + Comida
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Users size={12} color="var(--color-text-muted)" />
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: '600' }}>
+                                        {currentTable.diners || 1} { (currentTable.diners || 1) === 1 ? 'comensal' : 'comensales' }
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('¿Cambiar a Solo Bebida (0 comensales)? No alterará el ticket medio de comida.')) {
+                                                updateDiners(currentTable.id, 0);
+                                            }
+                                        }}
+                                        title="Cambiar a Solo Bebida (0 comensales)"
+                                        style={{
+                                            background: 'rgba(168, 85, 247, 0.15)',
+                                            border: '1px solid rgba(168, 85, 247, 0.4)',
+                                            color: '#c084fc',
+                                            padding: '2px 6px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.7rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        🍷 Solo Bebida
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {currentTable && (
+                    {currentTable && !isDrinksOnlyTable(currentTable) && (
                         <div style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
@@ -269,7 +330,16 @@ const OrderSummary = ({
                             border: '1px solid rgba(255,255,255,0.1)'
                         }}>
                             <button 
-                                onClick={() => updateDiners(currentTable.id, (currentTable.diners || 1) - 1)}
+                                onClick={() => {
+                                    const next = (currentTable.diners || 1) - 1;
+                                    if (next <= 0) {
+                                        if (confirm('¿Reducir a 0 comensales y marcar como Solo Bebida?')) {
+                                            updateDiners(currentTable.id, 0);
+                                        }
+                                    } else {
+                                        updateDiners(currentTable.id, next);
+                                    }
+                                }}
                                 style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
                                 <Minus size={14} />

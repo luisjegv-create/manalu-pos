@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, PlusCircle, RefreshCw, Edit2, RotateCcw } from 'lucid
 import { motion } from 'framer-motion';
 import { useOrder } from '../context/OrderContext';
 import { useInventory } from '../context/InventoryContext';
+import { isDrinksOnlyTable } from '../utils/orderClassification';
 import TableOrderPreview from '../components/TableOrderPreview';
 import DeletedBillsModal from '../components/TPV/DeletedBillsModal';
 
@@ -45,24 +46,36 @@ const TableTimer = ({ startTime }) => {
 
 const TableSelection = () => {
     const navigate = useNavigate();
-    const { tables, selectTable, addTable, renameTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus, deletedBillsLog = [], recoverDeletedBill } = useOrder();
+    const { tables, selectTable, addTable, updateTableType, renameTable, forceClearTable, tableOrders, kitchenOrders, tableBills, updateKitchenItemStatus, deletedBillsLog = [], recoverDeletedBill } = useOrder();
     const { forceSync, isSyncing } = useInventory();
     const [showTrashModal, setShowTrashModal] = useState(false);
     
     // Mostramos directamente todas las "Mesas" que ahora son nuestros Tickets/Pedidos Abiertos
     const activeTickets = tables;
 
-    const handleNewOrder = () => {
-        // Obtenemos un nombre para el ticket, si no pone nada, será "Pedido X"
-        const name = prompt('Nombre o número para el pedido (Ej: Paco, Barra 1, Llevar):');
+    const handleNewDrinksOnly = () => {
+        const name = prompt('Nombre o ubicación para SOLO BEBIDA (Ej: Barra 1, Paco, Terraza 3):', 'Barra');
+        if (name === null) return; // Cancelado
+        const newTicket = addTable('pedidos', (name && name.trim()) || 'Solo Bebida', 0, true);
+        selectTable(newTicket);
+        navigate('/bar-tapas');
+    };
+
+    const handleNewDiningOrder = () => {
+        const name = prompt('Nombre o número para MESA COMIDA (Ej: Mesa 1, Paco, Terraza):', 'Mesa');
         if (name === null) return; // Cancelado
 
-        const diners = prompt('¿Cuántos comensales?', '1');
+        const diners = prompt('¿Cuántos comensales van a comer?', '2');
         if (diners === null) return; // Cancelado
 
-        const newTicket = addTable('pedidos', name, diners);
+        const dinersCount = Math.max(1, parseInt(diners) || 2);
+        const newTicket = addTable('pedidos', (name && name.trim()) || 'Mesa', dinersCount, false);
         selectTable(newTicket);
-        navigate('/bar-tapas'); // Directo al TPV
+        navigate('/bar-tapas');
+    };
+
+    const handleNewOrder = () => {
+        handleNewDiningOrder();
     };
 
     const handleSelectTicket = (ticket) => {
@@ -145,24 +158,47 @@ const TableSelection = () => {
                     </button>
                     
                     <button
-                        onClick={handleNewOrder}
+                        onClick={handleNewDrinksOnly}
                         className="btn-glow"
+                        title="Abrir cuenta solo para bebidas (0 comensales, no altera el ticket medio de comida)"
                         style={{
-                            padding: '1.2rem 2.5rem',
+                            padding: '1rem 1.6rem',
+                            borderRadius: '12px',
+                            background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
+                            color: 'white',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '1.2rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.6rem',
+                            boxShadow: '0 4px 15px rgba(147, 51, 234, 0.45)'
+                        }}
+                    >
+                        🍷 SOLO BEBIDA
+                    </button>
+
+                    <button
+                        onClick={handleNewDiningOrder}
+                        className="btn-glow"
+                        title="Abrir mesa para comidas con comensales"
+                        style={{
+                            padding: '1rem 2rem',
                             borderRadius: '12px',
                             background: '#10b981',
                             color: 'white',
                             border: 'none',
                             cursor: 'pointer',
                             fontWeight: 'bold',
-                            fontSize: '1.4rem',
+                            fontSize: '1.25rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.75rem',
+                            gap: '0.6rem',
                             boxShadow: '0 4px 20px rgba(16, 185, 129, 0.5)'
                         }}
                     >
-                        <PlusCircle size={28} /> NUEVO PEDIDO
+                        <PlusCircle size={24} /> 🍽️ MESA COMIDA
                     </button>
                 </div>
             </header>
@@ -238,7 +274,65 @@ const TableSelection = () => {
                                     {minStartTime && !isAllServed && <TableTimer startTime={minStartTime} />}
                                     
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#fef3c7', paddingRight: '3rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{ticket.name}</h3>
+                                        <div>
+                                            <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#fef3c7', paddingRight: '1rem', wordBreak: 'break-word', lineHeight: '1.2' }}>{ticket.name}</h3>
+                                            {isDrinksOnlyTable(ticket) ? (
+                                                <span 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`¿Cambiar "${ticket.name}" a Mesa de Comida?`)) {
+                                                            const diners = prompt('¿Cuántos comensales van a comer?', '2');
+                                                            if (diners !== null) {
+                                                                updateTableType(ticket.id, false, parseInt(diners) || 2);
+                                                            }
+                                                        }
+                                                    }}
+                                                    title="Cuenta de Solo Bebida. Clic para cambiar a Mesa de Comida."
+                                                    style={{
+                                                        background: 'rgba(168, 85, 247, 0.2)',
+                                                        border: '1px solid #a855f7',
+                                                        color: '#d8b4fe',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 'bold',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        marginTop: '6px',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    🍷 Solo Bebida <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>(⇄ comida)</span>
+                                                </span>
+                                            ) : (
+                                                <span 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`¿Cambiar "${ticket.name}" a Solo Bebida (0 comensales)?`)) {
+                                                            updateTableType(ticket.id, true, 0);
+                                                        }
+                                                    }}
+                                                    title="Mesa de Comida. Clic para cambiar a Solo Bebida."
+                                                    style={{
+                                                        background: 'rgba(59, 130, 246, 0.15)',
+                                                        border: '1px solid rgba(59, 130, 246, 0.4)',
+                                                        color: '#93c5fd',
+                                                        padding: '3px 8px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.8rem',
+                                                        fontWeight: 'bold',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px',
+                                                        marginTop: '6px',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    🍽️ Comida • 👥 {ticket.diners || 1} pers. <span style={{ opacity: 0.6, fontSize: '0.72rem' }}>(⇄ bebida)</span>
+                                                </span>
+                                            )}
+                                        </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                                             <button
                                                 onClick={(e) => {

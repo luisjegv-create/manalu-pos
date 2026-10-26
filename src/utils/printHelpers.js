@@ -1553,14 +1553,20 @@ export const printDailyReport = (stats, categoryStats, periodInfo, companyInfo =
                         <div class="stat-value">${stats.totalRevenue.toFixed(2)}€</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Comensales</div>
-                        <div class="stat-value">${stats.totalDiners}</div>
+                        <div class="stat-label">${stats.drinksTicketCount > 0 ? 'Comensales Comida' : 'Comensales'}</div>
+                        <div class="stat-value">${(stats.diningDiners !== undefined && stats.drinksTicketCount > 0 ? stats.diningDiners : stats.totalDiners) || 0}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Ticket Medio</div>
-                        <div class="stat-value">${stats.avgTicket.toFixed(2)}€</div>
+                        <div class="stat-label">${stats.drinksTicketCount > 0 ? 'Tkt Medio Comida' : 'Ticket Medio'}</div>
+                        <div class="stat-value">${((stats.drinksTicketCount > 0 && stats.diningAvgTicket !== undefined) ? stats.diningAvgTicket : stats.avgTicket).toFixed(2)}€</div>
                     </div>
                 </div>
+                ${stats.drinksTicketCount > 0 ? `
+                <div style="margin-top: 12px; margin-bottom: 6px; font-size: 0.85rem; color: #334155; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <span>🍽️ <b>Mesas Comida (${stats.diningTicketCount || 0}):</b> ${(stats.diningAvgTicket || 0).toFixed(2)}€ med. | ${(stats.diningAvgPerDiner || 0).toFixed(2)}€/pers.</span>
+                    <span>🍷 <b>Solo Bebida (${stats.drinksTicketCount}):</b> ${(stats.drinksAvgTicket || 0).toFixed(2)}€ med.</span>
+                </div>
+                ` : ''}
 
                 <div class="section-title">Métodos de Cobro</div>
                 <div class="payment-section">
@@ -1610,8 +1616,8 @@ export const printDailyReport = (stats, categoryStats, periodInfo, companyInfo =
 
                 <div class="stats-grid" style="margin-top: 30px; grid-template-columns: repeat(2, 1fr);">
                     <div class="stat-card">
-                        <div class="stat-label">Gasto Medio x Comensal</div>
-                        <div class="stat-value" style="color: #4f46e5;">${stats.avgPerDiner.toFixed(2)}€</div>
+                        <div class="stat-label">${stats.drinksTicketCount > 0 ? 'Gasto Medio x Comensal (Comida)' : 'Gasto Medio x Comensal'}</div>
+                        <div class="stat-value" style="color: #4f46e5;">${((stats.drinksTicketCount > 0 && stats.diningAvgPerDiner !== undefined) ? stats.diningAvgPerDiner : stats.avgPerDiner).toFixed(2)}€</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Total Tickets</div>
@@ -1744,20 +1750,36 @@ export const printDailyTicketReport = (stats, categoryStats, periodProducts, per
                     <span class="bold">${stats.totalRevenue.toFixed(2)}€</span>
                 </div>
                 <div class="row">
-                    <span>Tickets:</span>
+                    <span>Tickets Totales:</span>
                     <span class="bold">${stats.ticketCount}</span>
                 </div>
+                ${stats.drinksTicketCount > 0 ? `
+                <div class="row" style="font-size: 0.85em; padding-left: 8px;">
+                    <span>- Mesas Comida:</span>
+                    <span>${stats.diningTicketCount || 0}</span>
+                </div>
+                <div class="row" style="font-size: 0.85em; padding-left: 8px;">
+                    <span>- Solo Bebida:</span>
+                    <span>${stats.drinksTicketCount || 0}</span>
+                </div>
+                ` : ''}
                 <div class="row">
-                    <span>Comensales:</span>
-                    <span class="bold">${stats.totalDiners}</span>
+                    <span>${stats.drinksTicketCount > 0 ? 'Comensales Comida:' : 'Comensales:'}</span>
+                    <span class="bold">${(stats.diningDiners !== undefined && stats.drinksTicketCount > 0 ? stats.diningDiners : stats.totalDiners) || 0}</span>
                 </div>
                 <div class="row">
-                    <span>Ticket Medio:</span>
-                    <span class="bold">${stats.avgTicket.toFixed(2)}€</span>
+                    <span>${stats.drinksTicketCount > 0 ? 'Tkt Medio Comida:' : 'Ticket Medio:'}</span>
+                    <span class="bold">${((stats.drinksTicketCount > 0 && stats.diningAvgTicket !== undefined) ? stats.diningAvgTicket : stats.avgTicket).toFixed(2)}€</span>
                 </div>
+                ${stats.drinksTicketCount > 0 ? `
+                <div class="row" style="font-size: 0.85em; padding-left: 8px;">
+                    <span>Tkt Medio Bebida:</span>
+                    <span>${(stats.drinksAvgTicket || 0).toFixed(2)}€</span>
+                </div>
+                ` : ''}
                 <div class="row">
-                    <span>Gasto x Pers:</span>
-                    <span class="bold">${stats.avgPerDiner.toFixed(2)}€</span>
+                    <span>${stats.drinksTicketCount > 0 ? 'Gasto x Pers Comida:' : 'Gasto x Pers:'}</span>
+                    <span class="bold">${((stats.drinksTicketCount > 0 && stats.diningAvgPerDiner !== undefined) ? stats.diningAvgPerDiner : stats.avgPerDiner).toFixed(2)}€</span>
                 </div>
             </div>
 
