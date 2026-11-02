@@ -47,9 +47,9 @@ const Dashboard = () => {
         },
         */
         {
-            title: "Almacén",
+            title: "Inventario",
             icon: Box,
-            description: "Control de stock matriz e ingredientes.",
+            description: "Control selectivo de stock, compras del jueves y descuento de ventas.",
             color: "blue",
             path: "/inventory"
         },
