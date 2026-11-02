@@ -22,7 +22,8 @@ import {
     Beef,
     Baby,
     Wine,
-    Fish
+    Fish,
+    Search
 } from 'lucide-react';
 
 const categoryIcons = {
@@ -52,6 +53,7 @@ const Recipes = () => {
     const [isAddingProduct, setIsAddingProduct] = useState(false);
     const [activeCategory, setActiveCategory] = useState('raciones');
     const [activeSubcategory, setActiveSubcategory] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const MODO_APERTURA_RAPIDA = true; // Activa la vista puramente orientada a carta e ignora escandallos
     
@@ -79,6 +81,26 @@ const Recipes = () => {
     const selectedProduct = salesProducts.find(p => p.id === selectedProductId);
     const dbId = selectedProductId ? (String(selectedProductId).startsWith('prod_') ? selectedProductId.replace('prod_', '') : selectedProductId.replace('wine_', '')) : null;
     const currentRecipe = (dbId && Array.isArray(recipes[dbId])) ? recipes[dbId] : [];
+
+    const normalizeText = (text) =>
+        String(text || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
+    const isSearching = searchTerm.trim().length > 0;
+    const filteredProducts = salesProducts.filter(p => {
+        if (isSearching) {
+            const query = normalizeText(searchTerm.trim());
+            const catName = categoriesData.find(c => c.id === p.category)?.name || p.category || '';
+            return (
+                normalizeText(p.name).includes(query) ||
+                normalizeText(catName).includes(query) ||
+                normalizeText(p.subcategory).includes(query)
+            );
+        }
+        return p.category === activeCategory && (!activeSubcategory || p.subcategory === activeSubcategory);
+    });
 
     // Helper to get ingredient details
     const getIng = (id) => ingredients.find(i => i.id === id);
@@ -209,25 +231,97 @@ const Recipes = () => {
             }}>
 
                 <div className="glass-panel" style={{
-                    height: isMobile ? '400px' : 'calc(100vh - 200px)',
+                    height: isMobile ? '450px' : 'calc(100vh - 200px)',
                     overflowY: 'auto',
                     padding: '1rem',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1rem'
                 }}>
+                    {/* Buscador rápido de platos y bebidas */}
+                    <div style={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 10,
+                        background: 'var(--glass-bg)',
+                        paddingBottom: '0.5rem'
+                    }}>
+                        <div style={{ position: 'relative' }}>
+                            <Search
+                                size={18}
+                                style={{
+                                    position: 'absolute',
+                                    left: '0.85rem',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    color: isSearching ? '#60a5fa' : '#94a3b8',
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                            <input
+                                type="text"
+                                placeholder="🔍 Buscar plato o bebida..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem 2.2rem 0.75rem 2.6rem',
+                                    borderRadius: '10px',
+                                    border: isSearching ? '2px solid var(--color-primary)' : '1px solid rgba(255, 255, 255, 0.25)',
+                                    background: 'rgba(15, 23, 42, 0.75)',
+                                    color: 'white',
+                                    fontSize: '0.95rem',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                                    boxShadow: isSearching ? '0 0 0 3px rgba(79, 70, 229, 0.25)' : '0 2px 6px rgba(0,0,0,0.2)'
+                                }}
+                            />
+                            {isSearching && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    title="Limpiar búsqueda"
+                                    style={{
+                                        position: 'absolute',
+                                        right: '0.6rem',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '24px',
+                                        height: '24px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        padding: 0
+                                    }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Categorías</h3>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
                             {categoriesData.map(cat => {
                                 const IconComp = categoryIcons[cat.icon] || Utensils;
+                                const isCatActive = !isSearching && activeCategory === cat.id;
                                 return (
                                     <button
                                         key={cat.id}
-                                        onClick={() => { setActiveCategory(cat.id); setActiveSubcategory(null); }}
+                                        onClick={() => {
+                                            setActiveCategory(cat.id);
+                                            setActiveSubcategory(null);
+                                            setSearchTerm('');
+                                        }}
                                         style={{
                                             padding: '0.5rem',
-                                            background: activeCategory === cat.id ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                                            background: isCatActive ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
                                             border: 'none',
                                             borderRadius: '8px',
                                             color: 'white',
@@ -248,7 +342,7 @@ const Recipes = () => {
                         </div>
                     </div>
 
-                    {categoriesData.find(c => c.id === activeCategory)?.subcategories && (
+                    {!isSearching && categoriesData.find(c => c.id === activeCategory)?.subcategories && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
                                 <button
@@ -289,54 +383,83 @@ const Recipes = () => {
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Productos</h3>
-                        {salesProducts
-                            .filter(p => p.category === activeCategory && (!activeSubcategory || p.subcategory === activeSubcategory))
-                            .map(product => (
-                                <button
-                                    key={product.id}
-                                    onClick={() => setSelectedProductId(product.id)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '0.75rem',
-                                        borderRadius: '12px',
-                                        border: selectedProductId === product.id ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.15)',
-                                        background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.08)',
-                                        color: 'white',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{
-                                            width: '32px',
-                                            height: '32px',
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                {isSearching ? `Resultados (${filteredProducts.length})` : 'Productos'}
+                            </h3>
+                        </div>
+                        {filteredProducts.length === 0 ? (
+                            <div style={{
+                                padding: '2rem 1rem',
+                                textAlign: 'center',
+                                color: 'var(--color-text-muted)',
+                                fontSize: '0.85rem',
+                                border: '1px dashed var(--glass-border)',
+                                borderRadius: '10px'
+                            }}>
+                                No se encontraron platos o bebidas con "{searchTerm}"
+                            </div>
+                        ) : (
+                            filteredProducts.map(product => {
+                                const catLabel = categoriesData.find(c => c.id === product.category)?.name || product.category;
+                                return (
+                                    <button
+                                        key={product.id}
+                                        onClick={() => setSelectedProductId(product.id)}
+                                        style={{
                                             display: 'flex',
                                             alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '1rem',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            borderRadius: '6px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
-                                                ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                : product.image || '🍽️'}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', gap: '8px' }}>
-                                                <span>PVP: {product.price.toFixed(2)}€</span>
-                                                <span style={{ color: '#fbbf24' }}>Coste: {getProductCost(product.id).toFixed(2)}€</span>
+                                            justifyContent: 'space-between',
+                                            padding: '0.75rem',
+                                            borderRadius: '12px',
+                                            border: selectedProductId === product.id ? '2px solid var(--color-primary)' : '1px solid rgba(255,255,255,0.15)',
+                                            background: selectedProductId === product.id ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.08)',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            textAlign: 'left',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '1rem',
+                                                background: 'rgba(255,255,255,0.05)',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden'
+                                            }}>
+                                                {(String(product.image || '').startsWith('data:image') || String(product.image || '').startsWith('http') || String(product.image || '').startsWith('/'))
+                                                    ? <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    : product.image || '🍽️'}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{product.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                    <span>PVP: {product.price.toFixed(2)}€</span>
+                                                    <span style={{ color: '#fbbf24' }}>Coste: {getProductCost(product.id).toFixed(2)}€</span>
+                                                    {isSearching && (
+                                                        <span style={{
+                                                            fontSize: '0.65rem',
+                                                            background: 'rgba(255,255,255,0.12)',
+                                                            padding: '0.1rem 0.4rem',
+                                                            borderRadius: '6px',
+                                                            color: '#cbd5e1'
+                                                        }}>
+                                                            {catLabel}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <ChevronRight size={14} />
-                                </button>
-                            ))}
+                                        <ChevronRight size={14} />
+                                    </button>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
 
@@ -715,4 +838,3 @@ const Recipes = () => {
 };
 
 export default Recipes;
-

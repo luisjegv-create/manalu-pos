@@ -635,7 +635,7 @@ const BarTapas = () => {
     // Search Logic (Unified for Mobile Fullscreen and Desktop)
     const filteredProductsBySearch = searchQuery.trim() === ''
         ? []
-        : salesProducts.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        : salesProducts.filter(p => String(p.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(searchQuery.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()));
 
     return (
         <div style={{

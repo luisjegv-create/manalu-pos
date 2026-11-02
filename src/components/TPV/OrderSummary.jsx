@@ -167,7 +167,7 @@ const OrderSummary = ({
                                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
                                     style={{ width: '100%', padding: '0.6rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', marginBottom: '0.5rem' }}
                                 />
-                                {customers.filter(c => c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).map(c => (
+                                {customers.filter(c => String(c.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(customerSearchQuery.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())).map(c => (
                                     <div
                                         key={c.id}
                                         onClick={() => { selectCustomer(c); setShowCustomerSearch(false); }}
